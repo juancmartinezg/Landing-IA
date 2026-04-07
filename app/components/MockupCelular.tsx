@@ -1,126 +1,111 @@
-'use client'; // Necesario para animaciones y hooks en App Router
+'use client';
 import React, { useState, useEffect } from 'react';
 
-// Definición de la conversación simulada
+// Definición de la conversación
 const conversacion = [
-  { id: 1, tipo: 'cliente', texto: 'Hola! Quiero info sobre el plan Growth', tiempo: '10:01 AM' },
-  { id: 2, tipo: 'bot', texto: '¡Hola! Claro que sí. El plan Growth ($300/mes) te ofrece flujos ilimitados, IA avanzada y soporte prioritario para hasta 500 clientes.', tiempo: '10:01 AM' },
-  { id: 3, tipo: 'cliente', texto: '¿Incluye integración con pagos locales?', tiempo: '10:02 AM' },
-  { id: 4, tipo: 'bot', texto: '¡Absolutamente! Podrás cobrar directamente por WhatsApp usando Stripe, PayPal o transferencias locales configuradas.', tiempo: '10:02 AM' },
-  { id: 5, tipo: 'cliente', texto: 'Genial, ¿cómo empiezo?', tiempo: '10:03 AM' },
-  { id: 6, tipo: 'bot', texto: '¡Súper! Solo dale clic al botón "Comenzar prueba gratuita" en la web o llena el formulario y te daremos acceso inmediato. 🚀', tiempo: '10:03 AM' },
+  { id: 1, tipo: 'bot', texto: '¡Hola! Bienvenido a clientes.bot', tiempo: '10:01 AM' },
+  { id: 2, tipo: 'cliente', texto: 'Hola, ¿cómo funciona?', tiempo: '10:01 AM' },
+  { id: 3, tipo: 'bot', texto: 'Automatizo tu WhatsApp con IA para vender más.', tiempo: '10:02 AM' },
+  { id: 4, tipo: 'cliente', texto: '¿Puede cobrar pagos locales?', tiempo: '10:02 AM' },
+  { id: 5, tipo: 'bot', texto: '¡Sí! Integración total con pagos y CRM. 🚀', tiempo: '10:03 AM' },
 ];
 
 export default function MockupCelular() {
   const [mensajesVisibles, setMensajesVisibles] = useState<typeof conversacion>([]);
   const [estaEscribiendo, setEstaEscribiendo] = useState(false);
   const [indice, setIndice] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (indice < conversacion.length) {
+    if (mounted && indice < conversacion.length) {
       const msgActual = conversacion[indice];
-      
       if (msgActual.tipo === 'bot') {
-        // Simular que el bot está escribiendo
         setEstaEscribiendo(true);
-        const timerEscribiendo = setTimeout(() => {
+        const t = setTimeout(() => {
           setEstaEscribiendo(false);
           setMensajesVisibles((prev) => [...prev, msgActual]);
           setIndice(indice + 1);
-        }, 1500); // Pausa de escritura
-        return () => clearTimeout(timerEscribiendo);
+        }, 1500);
+        return () => clearTimeout(t);
       } else {
-        // Mensaje del cliente aparece más rápido
-        const timerCliente = setTimeout(() => {
+        const t = setTimeout(() => {
           setMensajesVisibles((prev) => [...prev, msgActual]);
           setIndice(indice + 1);
-        }, 1000); // Pausa de lectura
-        return () => clearTimeout(timerCliente);
+        }, 1000);
+        return () => clearTimeout(t);
       }
-    } else {
-      // Reiniciar el bucle después de que termina la conversación
-      const timerReiniciar = setTimeout(() => {
-        setMensajesVisibles([]);
-        setIndice(0);
-      }, 5000); // Pausa final antes de reiniciar
-      return () => clearTimeout(timerReiniciar);
+    } else if (mounted) {
+      const t = setTimeout(() => { setMensajesVisibles([]); setIndice(0); }, 5000);
+      return () => clearTimeout(t);
     }
-  }, [indice]);
+  }, [indice, mounted]);
+
+  if (!mounted) return <div className="mx-auto w-[280px] h-[580px] bg-slate-900 rounded-[3rem]" />;
 
   return (
-    <div className="relative w-full max-w-[320px] aspect-[9/18.5] mx-auto">
-      
-      {/* 1. MARCO DEL TELÉFONO (Fotorrealista) */}
-      <div className="absolute inset-0 bg-[#080E1C] rounded-[3rem] border-[12px] border-[#1A2333] shadow-[-10px_10px_30px_rgba(0,0,0,0.5),_10px_-10px_30px_rgba(255,255,255,0.03)] overflow-hidden z-10 flex flex-col">
-        
-        {/* Notch/Isla Dinámica */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#1A2333] rounded-b-2xl z-20 flex items-center justify-center">
-          <div className="w-10 h-1 bg-black rounded-full opacity-30"></div>
-        </div>
+    <div className="mx-auto w-[280px] h-[580px] bg-[#0B141A] border-[10px] border-[#1A2333] rounded-[3rem] overflow-hidden flex flex-col shadow-2xl relative">
+       
+       {/* 1. HEADER */}
+       <div className="bg-[#111B21] pt-10 pb-3 px-4 border-b border-white/5 text-center shrink-0 z-20">
+          <p className="text-xs font-bold text-white uppercase tracking-widest">clientes.bot</p>
+          <p className="text-[10px] text-emerald-500 animate-pulse font-medium">en línea</p>
+       </div>
 
-        {/* 2. HEADER DE WHATSAPP */}
-        <div className="bg-[#111B21] pt-8 pb-3 px-4 flex items-center gap-3 border-b border-white/5 relative z-10">
-          <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-white text-lg">C</div>
-          <div>
-            <div className="font-bold text-sm flex items-center gap-1.5">
-              clientes.bot AI
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            </div>
-            <div className="text-[11px] text-emerald-400 font-medium">en línea</div>
-          </div>
-          <div className="ml-auto flex gap-4 text-gray-400">
-            <span>📞</span>
-            <span>📹</span>
-            <span>⋮</span>
-          </div>
-        </div>
-
-        {/* 3. ÁREA DE CHAT (Fondo de WhatsApp) */}
-        <div className="flex-1 bg-[#0B141A] p-4 overflow-y-auto flex flex-col-reverse relative group">
-          {/* Fondo sutil de WhatsApp */}
-          <div className="absolute inset-0 opacity-[0.03] bg-[url('/wa-bg.png')] bg-repeat"></div>
+       {/* 2. ÁREA DE CHAT (SOLO TU IMAGEN) */}
+       <div className="flex-1 relative overflow-hidden shrink-0">
           
-          <div className="flex flex-col gap-3 relative z-10">
-            {mensajesVisibles.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.tipo === 'cliente' ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
-                <div className={`max-w-[80%] p-3 rounded-xl shadow-md relative ${msg.tipo === 'cliente' ? 'bg-[#005C4B] rounded-br-none' : 'bg-[#202C33] rounded-bl-none'}`}>
-                  {/* Triangulito de la burbuja */}
-                  <div className={`absolute bottom-0 w-3 h-3 ${msg.tipo === 'cliente' ? 'bg-[#005C4B] -right-1.5 rounded-bl-full' : 'bg-[#202C33] -left-1.5 rounded-br-full'}`}></div>
-                  
-                  <p className="text-[12px] leading-relaxed text-white">{msg.texto}</p>
-                  <span className="text-[9px] text-gray-400 mt-1 block text-right">{msg.tiempo}</span>
+          {/* TU IMAGEN AL 100% DE OPACIDAD */}
+          <div 
+            className="absolute inset-0 z-0" 
+            style={{ 
+              backgroundImage: "url('/wa-bg.png')", 
+              backgroundSize: 'cover', // O 'contain' si quieres que se vea el patrón completo
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              backgroundColor: '#E5DDD5' // Color de respaldo por si la imagen tarda en cargar
+            }}
+          ></div>
+
+          {/* Burbujas de mensajes sobre la imagen */}
+          <div className="absolute inset-0 z-10 p-4 flex flex-col gap-3 overflow-y-auto">
+            {mensajesVisibles.map((m) => (
+              <div 
+                key={m.id} 
+                className={`p-3 rounded-xl text-[11px] max-w-[85%] shadow-md animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+                  m.tipo === 'cliente' 
+                    ? 'bg-[#DCF8C6] self-end rounded-br-none text-[#111B21]' 
+                    : 'bg-white self-start rounded-bl-none text-[#111B21]'
+                }`}
+              >
+                <p className="leading-relaxed">{m.texto}</p>
+                <div className="flex justify-end items-center gap-1 mt-1">
+                  <span className="text-[8px] text-gray-500 opacity-70 uppercase">{m.tiempo}</span>
+                  {m.tipo === 'bot' && <span className="text-sky-500 text-[10px] font-bold">✓✓</span>}
                 </div>
               </div>
             ))}
 
-            {/* Indicador de "Escribiendo..." */}
             {estaEscribiendo && (
-              <div className="flex justify-start animate-fadeIn">
-                <div className="bg-[#202C33] p-3 rounded-xl rounded-bl-none">
-                  <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                    <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></div>
-                  </div>
+              <div className="flex justify-start">
+                <div className="bg-white/90 p-2.5 rounded-xl rounded-bl-none shadow-sm flex gap-1">
+                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
                 </div>
               </div>
             )}
           </div>
-        </div>
+       </div>
 
-        {/* 4. FOOTER DE ESCRITURA */}
-        <div className="bg-[#111B21] p-3 flex items-center gap-3 border-t border-white/5 relative z-10">
-          <div className="flex-1 bg-[#2A3942] rounded-full px-4 py-2 text-xs text-gray-500">
-            Mensaje...
+       {/* 3. FOOTER */}
+       <div className="p-3 bg-[#111B21] flex items-center gap-2 border-t border-white/5 z-20">
+          <div className="flex-1 bg-[#2A3942] rounded-full h-8 flex items-center px-4 text-[10px] text-gray-400">
+            Escribiendo...
           </div>
-          <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-white text-lg">
-            🎤
-          </div>
-        </div>
-      </div>
-
-      {/* Sombras y reflejos externos para fotorrealismo */}
-      <div className="absolute inset-4 bg-indigo-600/10 rounded-[2.5rem] blur-2xl z-0"></div>
+          <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-xs">🎤</div>
+       </div>
     </div>
   );
 }
