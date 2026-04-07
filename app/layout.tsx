@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next"; // Importamos Viewport por separado para Next.js 14/15
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,21 +12,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Configuración de metadatos unificada
+// ✅ CONFIGURACIÓN ÚNICA Y CORRECTA
 export const metadata: Metadata = {
-  title: "JMC SaaS - CRM & IA",
-  description: "Solución B2B de automatización e IA",
+  title: "clientes.bot - Gestión de Clientes con IA",
+  description: "Automatización de WhatsApp, CRM y pagos para tu negocio.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "JMC SaaS",
+    title: "clientes.bot",
+  },
+  icons: {
+    icon: "/icon-192x192.png",
+    apple: "/icon-192x192.png",
   },
 };
 
-// En versiones nuevas de Next.js, el viewport se exporta aparte
+// ✅ VIEWPORT SEPARADO (ESTÁNDAR NEXT.JS 15+)
 export const viewport: Viewport = {
-  themeColor: "#1e40af",
+  themeColor: "#6366F1", // El morado de tu diseño
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -42,7 +46,9 @@ export default function RootLayout({
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-[#0B0F1A]">
+        {children}
+      </body>
     </html>
   );
 }
