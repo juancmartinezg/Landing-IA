@@ -1,5 +1,6 @@
+'use client';
 import React from 'react';
-
+import MockupCelular from './components/MockupCelular'; // Asegúrate de que la ruta sea correcta
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0B0F1A] text-white selection:bg-indigo-500/30 font-sans">
@@ -51,12 +52,8 @@ export default function LandingPage() {
           </div>
 
           {/* Placeholder del Celular (Imagen de tu diseño) */}
-          <div className="relative w-full max-w-[300px] aspect-[9/19] bg-gray-900 rounded-[3rem] border-[8px] border-gray-800 shadow-2xl overflow-hidden mb-20">
-             <div className="absolute top-0 w-full h-6 bg-gray-800 flex justify-center items-end pb-1"><div className="w-16 h-1 bg-black rounded-full"></div></div>
-             <div className="p-4 pt-10 flex flex-col gap-2">
-                <div className="bg-indigo-600 text-[10px] p-2 rounded-lg self-start max-w-[80%]">¡Hola! Soy el asistente de JMC, ¿en qué puedo ayudarte?</div>
-                <div className="bg-gray-700 text-[10px] p-2 rounded-lg self-end max-w-[80%]">Quiero agendar una cita</div>
-             </div>
+          <div className="mt-16 mb-24 relative z-10 scale-110 md:scale-125">
+            <MockupCelular />
           </div>
         </div>
       </section>
