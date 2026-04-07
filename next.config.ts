@@ -11,7 +11,7 @@ const withPWA = withPWAInit({
 const nextConfig = {
   reactStrictMode: true,
   // Forzamos webpack para evitar conflictos con Turbopack y PWA
-  webpack: (config) => {
+  webpack: (config: any) => {
     return config;
   },
 };
