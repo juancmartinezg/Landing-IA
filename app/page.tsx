@@ -195,7 +195,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 flex flex-col text-left">
               <h3 className="text-lg font-bold mb-2">Starter</h3>
-              <div className="text-4xl font-black mb-6">$150<span className="text-sm text-gray-500">/mes</span></div>
+              <div className="text-4xl font-black mb-6">$200<span className="text-sm text-gray-500">/mes</span></div>
               <ul className="space-y-4 mb-8 text-sm text-gray-400">
                 <li>✅ 1 Línea de WhatsApp</li>
                 <li>✅ 500 Chats al mes</li>
@@ -206,10 +206,11 @@ export default function LandingPage() {
             <div className="p-10 rounded-[2.5rem] bg-indigo-600 text-white flex flex-col text-left shadow-2xl shadow-indigo-600/20 scale-105 z-10 relative overflow-hidden">
               <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase">Popular</div>
               <h3 className="text-lg font-bold mb-2">Growth</h3>
-              <div className="text-4xl font-black mb-6">$300<span className="text-sm opacity-70">/mes</span></div>
+              <div className="text-4xl font-black mb-6">$350<span className="text-sm opacity-70">/mes</span></div>
               <ul className="space-y-4 mb-8 text-sm opacity-90">
-                <li>✅ 3 Líneas de WhatsApp</li>
-                <li>✅ Chats Ilimitados</li>
+                <li>✅ 1 Línea de WhatsApp</li>
+                <li>✅ 2.000 Chats al mes</li>
+                <li>✅ Soporte Estándar</li>
                 <li>✅ CRM Avanzado e IA con Memoria</li>
               </ul>
               <button className="w-full py-4 rounded-2xl bg-white text-indigo-600 font-black hover:bg-gray-100 transition-all">Empezar ahora</button>
@@ -218,8 +219,9 @@ export default function LandingPage() {
               <h3 className="text-lg font-bold mb-2">Enterprise</h3>
               <div className="text-4xl font-black mb-6">Custom</div>
               <ul className="space-y-4 mb-8 text-sm text-gray-400">
-                <li>✅ Líneas Ilimitadas</li>
+                <li>✅ Todo lo del plan Growth</li>
                 <li>✅ Entrenamiento IA Personalizado</li>
+                <li>✅ IA de Voz Para Recibir y Hacer Llamadas</li>
                 <li>✅ Account Manager Dedicado</li>
               </ul>
               <button className="w-full py-4 rounded-2xl bg-indigo-600/10 text-indigo-400 font-bold hover:bg-indigo-600 hover:text-white transition-all">Contactar ventas</button>
@@ -281,7 +283,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div>
                 <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest">Nombre</label>
-                <input type="text" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white" placeholder="Juan Martínez" required />
+                <input type="text" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white" placeholder="Camilo Pérez" required />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest">Empresa</label>
@@ -290,7 +292,7 @@ export default function LandingPage() {
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest">Email Corporativo</label>
-              <input type="email" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white" placeholder="juan@empresa.com" required />
+              <input type="email" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white" placeholder="Camilo@empresa.com" required />
             </div>
             <button type="submit" className="w-full py-6 rounded-2xl bg-indigo-600 font-black text-xl shadow-xl shadow-indigo-600/20 hover:bg-indigo-500 transition-all mt-6 text-white uppercase tracking-widest">
               Obtener Acceso Inmediato
