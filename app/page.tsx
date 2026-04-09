@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import MockupCelular from './components/MockupCelular'; 
+import ChatWidget from './components/ChatWidget';
 
 export default function LandingPage() {
   return (
@@ -188,43 +189,65 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 7. PLANES */}
+      {/* 7. PLANES: Estrategia Cero Fricción */}
       <section id="planes" className="py-20 px-6">
         <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-16">Planes transparentes</h2>
+          <h2 className="text-3xl md:text-5xl font-black mb-16 uppercase tracking-tighter font-sans">
+            Escala tu negocio sin <br/>
+            <span className="text-indigo-500">tocar una sola línea de código</span>
+          </h2>
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 flex flex-col text-left">
-              <h3 className="text-lg font-bold mb-2">Starter</h3>
-              <div className="text-4xl font-black mb-6">$200<span className="text-sm text-gray-500">/mes</span></div>
-              <ul className="space-y-4 mb-8 text-sm text-gray-400">
-                <li>✅ 1 Línea de WhatsApp</li>
-                <li>✅ 500 Chats al mes</li>
-                <li>✅ Soporte Estándar</li>
+            {/* Plan Starter */}
+            <div className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 flex flex-col text-left hover:border-indigo-500/30 transition-all">
+              <h3 className="text-lg font-bold mb-2 font-sans">Starter Core</h3>
+              <p className="text-gray-500 text-[10px] uppercase font-bold mb-6 tracking-widest">Configuración Express con Facebook</p>
+              <div className="text-4xl font-black mb-8 font-sans">$200<span className="text-sm text-gray-600 font-medium">/mes</span></div>
+              <ul className="space-y-4 mb-10 flex-1 text-sm text-gray-400 font-sans">
+                <li>✅ Autoconfiguración en 30 segundos</li>
+                <li>✅ Motor de Respuesta IA 24/7</li>
+                <li>✅ 1 Línea de WhatsApp Business</li>
+                <li>✅ 500 Conversaciones Inteligentes</li>
+                <li className="text-gray-600">❌ Agendamiento Nativo</li>
               </ul>
-              <button className="w-full py-4 rounded-2xl bg-indigo-600/10 text-indigo-400 font-bold hover:bg-indigo-600 hover:text-white transition-all">Empezar ahora</button>
+              <button className="w-full py-4 rounded-2xl bg-indigo-600/10 text-indigo-400 font-bold hover:bg-indigo-600 hover:text-white transition-all font-sans uppercase text-xs tracking-widest">
+                Iniciar ahora
+              </button>
             </div>
-            <div className="p-10 rounded-[2.5rem] bg-indigo-600 text-white flex flex-col text-left shadow-2xl shadow-indigo-600/20 scale-105 z-10 relative overflow-hidden">
-              <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase">Popular</div>
-              <h3 className="text-lg font-bold mb-2">Growth</h3>
-              <div className="text-4xl font-black mb-6">$350<span className="text-sm opacity-70">/mes</span></div>
-              <ul className="space-y-4 mb-8 text-sm opacity-90">
-                <li>✅ 1 Línea de WhatsApp</li>
-                <li>✅ 2.000 Chats al mes</li>
-                <li>✅ Soporte Estándar</li>
-                <li>✅ CRM Avanzado e IA con Memoria</li>
+
+            {/* Plan Growth */}
+            <div className="p-10 rounded-[2.5rem] bg-indigo-600 text-white flex flex-col text-left shadow-2xl shadow-indigo-600/40 scale-105 z-10 relative overflow-hidden group">
+              <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Recomendado</div>
+              <h3 className="text-lg font-bold mb-2 font-sans">Growth Engine</h3>
+              <p className="text-indigo-100 text-[10px] uppercase font-bold mb-6 tracking-widest">Ventas en Piloto Automático</p>
+              <div className="text-4xl font-black mb-8 font-sans">$350<span className="text-sm opacity-70 font-medium">/mes</span></div>
+              <ul className="space-y-4 mb-10 flex-1 text-sm font-sans">
+                <li>✅ 2.000 Chats con Memoria Proactiva</li>
+                <li>✅ Agendamiento en Calendario</li>
+                <li>✅ Control de CRM y Leads</li>
+                <li>✅ Generación de Enlaces de Pago</li>
+                <li>✅ Detección de Intención de Compra</li>
               </ul>
-              <button className="w-full py-4 rounded-2xl bg-white text-indigo-600 font-black hover:bg-gray-100 transition-all">Empezar ahora</button>
+              <button className="w-full py-4 rounded-2xl bg-white text-indigo-600 font-black hover:bg-gray-100 transition-all shadow-lg font-sans uppercase text-xs tracking-widest">
+                Activar Growth
+              </button>
             </div>
-            <div className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 flex flex-col text-left">
-              <h3 className="text-lg font-bold mb-2">Enterprise</h3>
-              <div className="text-4xl font-black mb-6">Custom</div>
-              <ul className="space-y-4 mb-8 text-sm text-gray-400">
-                <li>✅ Todo lo del plan Growth</li>
-                <li>✅ Entrenamiento IA Personalizado</li>
-                <li>✅ IA de Voz Para Recibir y Hacer Llamadas</li>
-                <li>✅ Account Manager Dedicado</li>
+
+            {/* Plan Enterprise */}
+            <div className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 flex flex-col text-left hover:border-indigo-500/30 transition-all">
+              <h3 className="text-lg font-bold mb-2 font-sans">Enterprise Ultra</h3>
+              <p className="text-gray-500 text-[10px] uppercase font-bold mb-6 tracking-widest">Omnicanalidad de Élite</p>
+              <div className="text-4xl font-black mb-8 font-sans">Custom</div>
+              <ul className="space-y-4 mb-10 flex-1 text-sm text-gray-400 font-sans">
+                <li>✅ Motor de Voz para Llamadas IA</li>
+                <li>✅ Entrenamiento con Documentación Privada</li>
+                <li>✅ Líneas y Sucursales Ilimitadas</li>
+                <li>✅ Panel de Supervisión Multicanal</li>
+                <li>✅ Soporte Prioritario 24/7</li>
               </ul>
-              <button className="w-full py-4 rounded-2xl bg-indigo-600/10 text-indigo-400 font-bold hover:bg-indigo-600 hover:text-white transition-all">Contactar ventas</button>
+              <button className="w-full py-4 rounded-2xl bg-indigo-600/10 text-indigo-400 font-bold hover:bg-indigo-600 hover:text-white transition-all font-sans uppercase text-xs tracking-widest">
+                Hablar con Experto
+              </button>
             </div>
           </div>
         </div>
@@ -277,27 +300,64 @@ export default function LandingPage() {
       <section id="contacto" className="py-20 px-6">
         <div className="max-w-3xl mx-auto bg-gradient-to-br from-indigo-900/40 to-indigo-600/10 border border-white/10 p-12 rounded-[3rem] text-center text-white relative shadow-2xl">
           <div className="absolute -top-6 -left-6 w-20 h-20 bg-indigo-500/20 blur-3xl"></div>
+          
           <h2 className="text-4xl font-black mb-4">Únete a la revolución</h2>
           <p className="text-gray-400 mb-10">Deja de perder clientes por tiempos de respuesta largos. Automatiza hoy.</p>
-          <form className="space-y-4 text-left">
+
+          {/* Reemplaza "TU_ID_AQUÍ" por el ID que te de Formspree */}
+          <form 
+            action="https://formspree.io/f/TU_ID_AQUÍ" 
+            method="POST"
+            className="space-y-4 text-left"
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest">Nombre</label>
-                <input type="text" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white" placeholder="Camilo Pérez" required />
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest font-sans">Nombre</label>
+                <input 
+                  type="text" 
+                  name="nombre" 
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white font-sans" 
+                  placeholder="Camilo Pérez" 
+                  required 
+                />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest">Empresa</label>
-                <input type="text" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white" placeholder="Bot S.A." required />
+                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest font-sans">Empresa</label>
+                <input 
+                  type="text" 
+                  name="empresa" 
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white font-sans" 
+                  placeholder="Bot S.A." 
+                  required 
+                />
               </div>
             </div>
+
             <div>
-              <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest">Email Corporativo</label>
-              <input type="email" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white" placeholder="Camilo@empresa.com" required />
+              <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest font-sans">Email Corporativo</label>
+              <input 
+                type="email" 
+                name="email" 
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white font-sans" 
+                placeholder="Camilo@empresa.com" 
+                required 
+              />
             </div>
-            <button type="submit" className="w-full py-6 rounded-2xl bg-indigo-600 font-black text-xl shadow-xl shadow-indigo-600/20 hover:bg-indigo-500 transition-all mt-6 text-white uppercase tracking-widest">
+
+            {/* Campo oculto para evitar SPAM (Honeypot) */}
+            <input type="text" name="_gotcha" style={{ display: 'none' }} />
+
+            <button 
+              type="submit" 
+              className="w-full py-6 rounded-2xl bg-indigo-600 font-black text-xl shadow-xl shadow-indigo-600/20 hover:bg-indigo-500 transition-all mt-6 text-white uppercase tracking-widest font-sans"
+            >
               Obtener Acceso Inmediato
             </button>
           </form>
+
+          <p className="mt-6 text-[10px] text-gray-500 uppercase tracking-tighter font-sans">
+            Al enviar, aceptas recibir una propuesta personalizada vía email o WhatsApp.
+          </p>
         </div>
       </section>
 
@@ -336,6 +396,9 @@ export default function LandingPage() {
           animation: bounce-slow 4s ease-in-out infinite;
         }
       `}</style>
+      
+      <ChatWidget />
+
     </div>
   );
 }
