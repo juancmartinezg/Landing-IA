@@ -1,0 +1,168 @@
+'use client';
+import { useState, useEffect } from 'react';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+export default function ServicesPage() {
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: '', description: '', category: 'servicio',
+    regular_price: '', deposit_required: '', currency: 'COP',
+    image_url: '', duration_hours: '1', service_type: 'personalizado',
+  });
+  const loadServices = () => {
+    fetch(`${API_URL}/services`, { headers: { 'client-id': 'JMC' } })
+      .then(res => res.json())
+      .then(data => { setServices(data.services || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+  useEffect(() => { loadServices(); }, []);
+  const handleAdd = async () => {
+    setSaving(true);
+    try {
+      await fetch(`${API_URL}/services`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description,
+          category: form.category,
+          image_url: form.image_url,
+          pricing: {
+            regular_price: parseInt(form.regular_price) || 0,
+            deposit_required: parseInt(form.deposit_required) || 0,
+            currency: form.currency,
+            deposit_type: 'percentage',
+            deposit_percentage: 50,
+          },
+          scheduling: {
+            service_type: form.service_type,
+            duration_hours: parseInt(form.duration_hours) || 1,
+            group_booking: false,
+            scheduling_mode: 'calendar',
+          },
+        }),
+      });
+      setShowForm(false);
+      setForm({ name: '', description: '', category: 'servicio', regular_price: '', deposit_required: '', currency: 'COP', image_url: '', duration_hours: '1', service_type: 'personalizado' });
+      loadServices();
+    } catch (err) {
+      console.error('Error:', err);
+    }
+    setSaving(false);
+  };
+  const handleDelete = async (slug: string) => {
+    if (!confirm('Eliminar este servicio?')) return;
+    await fetch(`${API_URL}/services`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+      body: JSON.stringify({ slug }),
+    });
+    loadServices();
+  };
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Servicios 🛍️</h1>
+        <button onClick={() => setShowForm(!showForm)} className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-sm font-bold transition-all">
+          {showForm ? 'Cancelar' : '+ Agregar'}
+        </button>
+      </div>
+      {showForm && (
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 mb-6">
+          <h3 className="font-bold mb-4">Nuevo Servicio</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Nombre *</label>
+              <input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+                placeholder="Ej: Corte de cabello" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Categoria</label>
+              <input value={form.category} onChange={(e) => setForm({...form, category: e.target.value})}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+                placeholder="Ej: servicio, curso, producto" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Descripcion</label>
+              <textarea value={form.description} onChange={(e) => setForm({...form, description: e.target.value})}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white h-20 resize-none"
+                placeholder="Describe tu servicio..." />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Precio</label>
+              <input type="number" value={form.regular_price} onChange={(e) => setForm({...form, regular_price: e.target.value})}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+                placeholder="50000" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Anticipo requerido</label>
+              <input type="number" value={form.deposit_required} onChange={(e) => setForm({...form, deposit_required: e.target.value})}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+                placeholder="25000" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Duracion (horas)</label>
+              <input type="number" value={form.duration_hours} onChange={(e) => setForm({...form, duration_hours: e.target.value})}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+                placeholder="1" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Tipo</label>
+              <select value={form.service_type} onChange={(e) => setForm({...form, service_type: e.target.value})}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white">
+                <option value="personalizado">Personalizado</option>
+                <option value="regular">Regular / Grupal</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">URL de imagen</label>
+              <input value={form.image_url} onChange={(e) => setForm({...form, image_url: e.target.value})}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+                placeholder="https://..." />
+            </div>
+          </div>
+          <button onClick={handleAdd} disabled={saving || !form.name}
+            className="mt-4 bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50">
+            {saving ? 'Guardando...' : 'Guardar servicio'}
+          </button>
+        </div>
+      )}
+      {loading ? (
+        <div className="text-center py-12 text-gray-500">Cargando...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {services.map((svc, i) => (
+            <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl overflow-hidden hover:border-indigo-500/30 transition-all group">
+              {svc.image_url && (
+                <img src={svc.image_url} alt={svc.name} className="w-full h-40 object-cover" />
+              )}
+              <div className="p-5">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold">{svc.name}</h3>
+                  <span className={`text-[10px] px-2 py-1 rounded-full ${svc.active !== false ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                    {svc.active !== false ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-400 mb-3">{svc.description}</p>
+                <div className="flex justify-between items-center mb-3">
+                  <p className="text-lg font-bold text-emerald-400">${svc.pricing?.regular_price?.toLocaleString()} {svc.pricing?.currency}</p>
+                  <p className="text-xs text-gray-500">{svc.scheduling?.service_type} | {svc.scheduling?.duration_hours}h</p>
+                </div>
+                {svc.pricing?.deposit_required > 0 && (
+                  <p className="text-xs text-gray-500 mb-3">Anticipo: ${svc.pricing.deposit_required.toLocaleString()}</p>
+                )}
+                <button onClick={() => handleDelete(svc.slug)}
+                  className="w-full py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100">
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
