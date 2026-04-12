@@ -1,17 +1,27 @@
 'use client';
 import { useAuth } from '../../providers';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 export default function LoginPage() {
   const { user, loading, loginWithGoogle, loginWithEmail } = useAuth();
   const router = useRouter();
+  const [checked, setChecked] = useState(false);
   useEffect(() => {
-    // Si ya hay sesion, ir directo al dashboard
+    if (checked) return;
+    setChecked(true);
+    
     const stored = localStorage.getItem('cb_user');
-    if (stored || user) {
-      router.push('/dashboard');
+    if (stored) {
+      router.replace('/dashboard');
     }
-  }, [user, router]);
+  }, [checked, router]);
+  if (!checked || loading) {
+    return (
+      <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center px-4">
       <div className="w-full max-w-md">

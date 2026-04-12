@@ -5,9 +5,12 @@ import { useEffect } from 'react';
 export default function DashboardPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
-  useEffect(() => {
+ useEffect(() => {
     if (!loading && !user) {
-      router.push('/auth/login');
+      const stored = localStorage.getItem('cb_user');
+      if (!stored) {
+        router.push('/auth/login');
+      }
     }
   }, [user, loading, router]);
   if (loading) {
