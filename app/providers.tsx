@@ -10,12 +10,16 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: () => void;
+  loginWithGoogle: () => void;
+  loginWithEmail: () => void;
   logout: () => void;
 }
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   login: () => {},
+  loginWithGoogle: () => {},
+  loginWithEmail: () => {},
   logout: () => {},
 });
 export const useAuth = () => useContext(AuthContext);
@@ -37,10 +41,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
     setLoading(false);
   }, []);
-  const login = () => {
+  const loginWithGoogle = () => {
+    const url = `${COGNITO_DOMAIN}/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&identity_provider=Google`;
+    window.location.href = url;
+  };
+  const loginWithEmail = () => {
     const url = `${COGNITO_DOMAIN}/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
     window.location.href = url;
   };
+  const login = loginWithGoogle; // Default
   const logout = () => {
     localStorage.removeItem('cb_user');
     localStorage.removeItem('cb_tokens');
@@ -49,7 +58,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     window.location.href = logoutUrl;
   };
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, loginWithEmail, logout }}>
       {children}
     </AuthContext.Provider>
   );
