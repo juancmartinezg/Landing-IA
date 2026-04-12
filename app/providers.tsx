@@ -32,14 +32,27 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    // Verificar si hay sesion guardada
-    const stored = localStorage.getItem('cb_user');
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {}
-    }
-    setLoading(false);
+    const checkUser = () => {
+      const stored = localStorage.getItem('cb_user');
+      if (stored) {
+        try {
+          setUser(JSON.parse(stored));
+        } catch {}
+      }
+      setLoading(false);
+    };
+    checkUser();
+    // Escuchar cambios en localStorage (cuando callback guarda tokens)
+    window.addEventListener('storage', checkUser);
+    
+    // Tambien verificar cada segundo por 5 segundos (para mismo tab)
+    const interval = setInterval(checkUser, 1000);
+    const timeout = setTimeout(() => clearInterval(interval), 5000);
+    return () => {
+      window.removeEventListener('storage', checkUser);
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
   }, []);
   const loginWithGoogle = () => {
     const url = `${COGNITO_DOMAIN}/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&identity_provider=Google`;
