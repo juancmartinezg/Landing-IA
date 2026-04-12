@@ -1,7 +1,17 @@
 'use client';
 import { useAuth } from '../../providers';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 export default function LoginPage() {
-  const { loginWithGoogle, loginWithEmail } = useAuth();
+  const { user, loading, loginWithGoogle, loginWithEmail } = useAuth();
+  const router = useRouter();
+  useEffect(() => {
+    // Si ya hay sesion, ir directo al dashboard
+    const stored = localStorage.getItem('cb_user');
+    if (stored || user) {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
   return (
     <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
