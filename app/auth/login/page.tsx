@@ -1,11 +1,11 @@
 'use client';
-import { signIn } from 'next-auth/react';
+import { useAuth } from '../../../app/providers';
 export default function LoginPage() {
+  const { login } = useAuth();
   return (
     <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         
-        {/* Logo */}
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-2 mb-4">
             <img src="/cb-logo.png" alt="Logo" className="w-12 h-12 object-contain" />
@@ -13,12 +13,10 @@ export default function LoginPage() {
           </div>
           <p className="text-gray-400 text-sm">Inicia sesion para acceder a tu dashboard</p>
         </div>
-        {/* Card de Login */}
         <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
           
-          {/* Boton Google */}
           <button
-            onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+            onClick={login}
             className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-bold py-4 px-6 rounded-2xl hover:bg-gray-100 transition-all mb-4"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -29,53 +27,30 @@ export default function LoginPage() {
             </svg>
             Continuar con Google
           </button>
-          {/* Separador */}
           <div className="flex items-center gap-4 my-6">
             <div className="flex-1 h-px bg-white/10"></div>
             <span className="text-gray-500 text-xs uppercase tracking-widest">o</span>
             <div className="flex-1 h-px bg-white/10"></div>
           </div>
-          {/* Form Email */}
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            const form = e.target as HTMLFormElement;
-            const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-            signIn('cognito', { callbackUrl: '/dashboard' });
-          }}>
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">Email</label>
-              <input
-                type="email"
-                name="email"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white"
-                placeholder="tu@empresa.com"
-                required
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">Contrasena</label>
-              <input
-                type="password"
-                name="password"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-lg shadow-indigo-600/20"
-            >
-              Iniciar sesion
-            </button>
-          </form>
-          {/* Links */}
+          <button
+            onClick={login}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-lg shadow-indigo-600/20"
+          >
+            Iniciar sesion con email
+          </button>
           <div className="mt-6 text-center">
             <p className="text-gray-500 text-sm">
               No tienes cuenta?{' '}
-              <a href="#" className="text-indigo-400 hover:text-indigo-300 font-bold">Registrate gratis</a>
+              <button onClick={login} className="text-indigo-400 hover:text-indigo-300 font-bold">
+                Registrate gratis
+              </button>
             </p>
           </div>
+        </div>
+        <div className="text-center mt-6">
+          <a href="/" className="text-gray-500 text-sm hover:text-white transition-colors">
+            ← Volver al inicio
+          </a>
         </div>
       </div>
     </div>
