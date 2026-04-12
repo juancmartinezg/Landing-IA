@@ -25,9 +25,14 @@ export default function LandingPage() {
             <a href="#planes" className="hover:text-white transition-colors">Planes</a>
             <a href="#contacto" className="hover:text-white transition-colors">Contacto</a>
           </div>
-          <button className="bg-indigo-600 hover:bg-indigo-500 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-600/20 text-white font-sans">
-            Prueba gratis
-          </button>
+         <div className="flex items-center gap-2">
+            <a href="/auth/login" className="border border-white/10 hover:border-indigo-500/50 hover:bg-white/5 px-3 py-2 md:px-6 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold transition-all text-white font-sans whitespace-nowrap">
+              Iniciar sesion
+            </a>
+            <a href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 md:px-6 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold transition-all shadow-lg shadow-indigo-600/20 text-white font-sans whitespace-nowrap">
+              Prueba gratis
+            </a>
+          </div>
         </div>
       </nav>
 
@@ -46,9 +51,9 @@ export default function LandingPage() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 mb-16 relative z-10">
-            <button className="bg-indigo-600 hover:scale-105 px-10 py-5 rounded-2xl font-black text-lg transition-all shadow-xl shadow-indigo-600/25 text-white">
+            <a href="/auth/login" className="bg-indigo-600 hover:scale-105 px-10 py-5 rounded-2xl font-black text-lg transition-all shadow-xl shadow-indigo-600/25 text-white inline-block">
               Comenzar prueba gratuita →
-            </button>
+            </a>
             <a href="#dashboard" className="bg-white/5 hover:bg-white/10 border border-white/10 px-10 py-5 rounded-2xl font-bold text-lg transition-all text-white flex items-center justify-center">
               Ver Dashboard
             </a>
