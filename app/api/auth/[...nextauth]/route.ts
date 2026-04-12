@@ -24,9 +24,9 @@ const handler = NextAuth({
       }
       return token;
     },
-    async session({ session, token }) {
-      session.accessToken = token.accessToken as string;
-      session.idToken = token.idToken as string;
+    async session({ session, token }: any) {
+      session.accessToken = token.accessToken;
+      session.idToken = token.idToken;
       return session;
     },
   },
