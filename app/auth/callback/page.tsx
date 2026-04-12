@@ -1,9 +1,10 @@
 'use client';
+import { Suspense } from 'react';
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 const COGNITO_DOMAIN = 'https://us-east-1kijdadxdl.auth.us-east-1.amazoncognito.com';
 const CLIENT_ID = '4r4jhvvutib915k449sr67kuce';
-export default function CallbackPage() {
+function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
   useEffect(() => {
@@ -13,7 +14,6 @@ export default function CallbackPage() {
       return;
     }
     const redirectUri = `${window.location.origin}/auth/callback`;
-    // Intercambiar code por tokens
     fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -27,7 +27,6 @@ export default function CallbackPage() {
       .then(res => res.json())
       .then(data => {
         if (data.id_token) {
-          // Decodificar JWT para obtener datos del usuario
           const payload = JSON.parse(atob(data.id_token.split('.')[1]));
           
           const user = {
@@ -54,11 +53,23 @@ export default function CallbackPage() {
       });
   }, [searchParams, router]);
   return (
+    <div className="text-center">
+      <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-white text-sm">Iniciando sesion...</p>
+    </div>
+  );
+}
+export default function CallbackPage() {
+  return (
     <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-white text-sm">Iniciando sesion...</p>
-      </div>
+      <Suspense fallback={
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-sm">Cargando...</p>
+        </div>
+      }>
+        <CallbackHandler />
+      </Suspense>
     </div>
   );
 }
