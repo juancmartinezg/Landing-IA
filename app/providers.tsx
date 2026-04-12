@@ -21,8 +21,8 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 const COGNITO_DOMAIN = 'https://us-east-1kijdadxdl.auth.us-east-1.amazoncognito.com';
 const CLIENT_ID = '4r4jhvvutib915k449sr67kuce';
-const REDIRECT_URI = typeof window !== 'undefined' 
-  ? `${window.location.origin}/auth/callback`
+const REDIRECT_URI = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+  ? 'https://clientes.bot/auth/callback'
   : 'http://localhost:3000/auth/callback';
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
