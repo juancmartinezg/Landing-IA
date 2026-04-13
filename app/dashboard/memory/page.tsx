@@ -27,10 +27,9 @@ export default function MemoryPage() {
     if (!confirm('¿Eliminar esta respuesta aprendida?')) return;
     setDeleting(normalized_question);
     try {
-      const res = await fetch(`${API_URL}/memory`, {
+      const res = await fetch(`${API_URL}/memory?nq=${encodeURIComponent(normalized_question)}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
-        body: JSON.stringify({ normalized_question }),
+        headers: { 'client-id': 'JMC' },
       });
       if (res.ok) {
         showToast('✓ Respuesta eliminada');
@@ -145,15 +144,15 @@ export default function MemoryPage() {
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+          className="bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
         >
-          <option value="all">Todas las fuentes</option>
-          <option value="manual_ingest">Base (ingesta manual)</option>
-          <option value="auto_promoted">Auto-promovidas</option>
-          <option value="manual_training">Entrenamiento manual</option>
-          <option value="manual_edit">Editadas</option>
-          <option value="human_agent">Asesor</option>
-          <option value="gemini">IA (Gemini)</option>
+          <option value="all" className="bg-[#1a1f2e] text-white">Todas las fuentes</option>
+          <option value="manual_ingest" className="bg-[#1a1f2e] text-white">Base (ingesta manual)</option>
+          <option value="auto_promoted" className="bg-[#1a1f2e] text-white">Auto-promovidas</option>
+          <option value="manual_training" className="bg-[#1a1f2e] text-white">Entrenamiento manual</option>
+          <option value="manual_edit" className="bg-[#1a1f2e] text-white">Editadas</option>
+          <option value="human_agent" className="bg-[#1a1f2e] text-white">Asesor</option>
+          <option value="gemini" className="bg-[#1a1f2e] text-white">IA (Gemini)</option>
         </select>
       </div>
       {loading ? (
