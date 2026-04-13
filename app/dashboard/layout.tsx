@@ -109,6 +109,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </a>
               ))}
             </nav>
+            <div className="p-4 border-t border-white/5">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-xs font-bold">
+                  {user?.name?.charAt(0) || user?.email?.charAt(0) || '?'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{user?.name || 'Usuario'}</p>
+                  <p className="text-[10px] text-gray-500 truncate">{user?.email}</p>
+                </div>
+              </div>
+              <button onClick={logout} className="w-full text-xs text-red-400 hover:text-red-300 py-2 rounded-lg hover:bg-red-500/10 transition-all">
+                Cerrar sesion
+              </button>
+            </div>
           </aside>
         </div>
       )}

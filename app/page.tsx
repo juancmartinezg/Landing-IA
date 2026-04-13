@@ -10,14 +10,13 @@ export default function LandingPage() {
       {/* 1. NAVBAR (Cambia solo esto) */}
       <nav className="fixed top-0 w-full z-50 bg-[#0B0F1A]/80 backdrop-blur-md border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center text-white">
-          <div className="flex items-center gap-2">
-            {/* ESTE ES EL CAMBIO CLAVE: Quitamos el div azul y ponemos la imagen */}
+          <div className="flex flex-col md:flex-row items-center gap-0 md:gap-2">
             <img 
               src="/cb-logo.png" 
               alt="C.B. Logo" 
-              className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]"
+              className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]"
             />
-            <span className="text-xl font-bold tracking-tighter text-white font-sans">clientes.bot</span>
+            <span className="text-[9px] md:text-xl font-bold tracking-tighter text-white font-sans">clientes.bot</span>
           </div>
           <div className="hidden md:flex gap-8 text-sm font-medium text-gray-400 font-sans">
             <a href="#beneficios" className="hover:text-white transition-colors">Beneficios</a>
