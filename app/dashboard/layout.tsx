@@ -1,5 +1,6 @@
 'use client';
 import { useAuth } from '../providers';
+import ToastProvider from '../components/Toast';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 const menuItems = [
@@ -137,8 +138,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span className="text-sm text-gray-400 hidden md:block">{user?.email}</span>
         </header>
         {/* Page Content */}
-        <main className="p-6">
-          {children}
+         <main className="p-6">
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </main>
       </div>
     </div>
