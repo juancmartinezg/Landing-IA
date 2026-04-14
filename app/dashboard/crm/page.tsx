@@ -14,6 +14,8 @@ export default function CRMPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterTag, setFilterTag] = useState('all');
   const [newTag, setNewTag] = useState('');
+  const [newNote, setNewNote] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
   useEffect(() => {
     fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
@@ -78,6 +80,18 @@ export default function CRMPage() {
     loadDetail(phone);
     fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json()).then(data => setLeads(data.leads || []));
+  };
+  const addNote = async (phone: string) => {
+    if (!newNote.trim()) return;
+    setSavingNote(true);
+    await fetch(`${API_URL}/leads/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+      body: JSON.stringify({ phone, text: newNote.trim() }),
+    });
+    setNewNote('');
+    setSavingNote(false);
+    loadDetail(phone);
   };
   const exportCSV = () => {
     const headers = 'Nombre,Telefono,Estado,Servicio,Visitas\n';
@@ -380,6 +394,69 @@ export default function CRMPage() {
                   </div>
                 )}
               </div>              
+              {/* Acciones rápidas */}
+              <div className="mb-4 pt-4 border-t border-white/5">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Acciones rápidas</p>
+                <div className="flex flex-wrap gap-2">
+                  <a href={`https://wa.me/${selectedLead.lead?.phoneNumber}`} target="_blank"
+                    className="text-[10px] px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold transition-all">
+                    💬 Enviar WhatsApp
+                  </a>
+                  <button onClick={() => {
+                    const slug = selectedLead.lead?.service_of_interest?.toLowerCase().replace(/\s+/g, '-') || '';
+                    if (slug) {
+                      fetch(`${API_URL}/conversations/send`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                        body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, content: `Hola! Te envío el enlace para completar tu reserva 🎯` }),
+                      });
+                    }
+                  }}
+                    className="text-[10px] px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white font-bold transition-all">
+                    💳 Enviar link pago
+                  </button>
+                  <button onClick={() => {
+                    if (selectedLead.lead?.phoneNumber) {
+                      updateStage(selectedLead.lead.phoneNumber, 'contactado');
+                      addNote(selectedLead.lead.phoneNumber);
+                      setNewNote('Contactado por el asesor');
+                    }
+                  }}
+                    className="text-[10px] px-3 py-1.5 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600 hover:text-white font-bold transition-all">
+                    📞 Marcar contactado
+                  </button>
+                </div>
+              </div>
+              {/* Notas */}
+              <div className="mb-4 pt-4 border-t border-white/5">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">📝 Notas</p>
+                <div className="flex gap-1 mb-2">
+                  <input value={newNote} onChange={(e) => setNewNote(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newNote.trim()) addNote(selectedLead.lead?.phoneNumber);
+                    }}
+                    placeholder="Agregar nota..."
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 text-white" />
+                  <button onClick={() => addNote(selectedLead.lead?.phoneNumber)}
+                    disabled={!newNote.trim() || savingNote}
+                    className="text-xs bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white px-3 py-2 rounded-lg font-bold transition-all disabled:opacity-30">
+                    {savingNote ? '...' : '📝'}
+                  </button>
+                </div>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {(selectedLead.lead?.notes || []).map((note: any, i: number) => (
+                    <div key={i} className="text-[10px] p-2 rounded-lg bg-white/[0.03] border border-white/5">
+                      <p className="text-gray-300">{note.text}</p>
+                      <p className="text-gray-600 mt-1">
+                        {new Date((note.created_at || 0) * 1000).toLocaleDateString()} {new Date((note.created_at || 0) * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                      </p>
+                    </div>
+                  ))}
+                  {!(selectedLead.lead?.notes || []).length && (
+                    <p className="text-[10px] text-gray-600 text-center py-2">Sin notas</p>
+                  )}
+                </div>
+              </div>
               {/* Timeline unificada */}
               <div className="pt-4 border-t border-white/5">
                 <h4 className="font-bold mb-2">📋 Timeline</h4>
