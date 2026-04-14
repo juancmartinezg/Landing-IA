@@ -17,9 +17,9 @@ export default function WhatsAppPage() {
     setTimeout(() => setToast(null), 4000);
   };
   useEffect(() => {
-    fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' }
+    fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
-      .then(data => { setConfig(data); setLoading(faimport { useState, useEffect, useCallback } from 'react';lse); })
+      .then(data => { setConfig(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
   const isConnected = config?.phone_number_id && config?.waba_id;
