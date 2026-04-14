@@ -26,13 +26,30 @@ export default function WhatsAppPage() {
     console.log('Embedded Signup response:', JSON.stringify(response));
     setConnecting(true);
     if (response.authResponse) {
-      const code = response.authResponse.code;
+      if (response.authResponse) {
+      const accessToken = response.authResponse.accessToken;
       try {
-        const res = await fetch(`${API_URL}/meta/exchange`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
-          body: JSON.stringify({ code }),
-        });
+        const res = await fetch(
+          `${API_URL}/meta/exchange?access_token=${encodeURIComponent(accessToken)}`,
+          {
+            method: 'POST',
+            headers: { 'client-id': 'JMC' },
+          }
+        );
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('✅ ¡WhatsApp conectado exitosamente!');
+          setConfig({
+            ...config,
+            phone_number_id: data.phone_number_id,
+            waba_id: data.waba_id,
+          });
+        } else {
+          showToast('Error: ' + (data.error || 'No se pudo conectar'));
+        }
+      } catch (err) {
+        showToast('Error de conexión con el servidor');
+      }
         const data = await res.json();
         if (res.ok && data.success) {
           showToast('✅ ¡WhatsApp conectado exitosamente!');
