@@ -215,6 +215,63 @@ export default function CRMPage() {
           ))}
         </select>
       </div>
+      {/* Alertas inteligentes */}
+      {(() => {
+        const now = Date.now() / 1000;
+        const alerts: any[] = [];
+        filtered.forEach(l => {
+          const lastUpdate = Number(l.last_updated || 0);
+          const hoursSince = lastUpdate ? (now - lastUpdate) / 3600 : 0;
+          const status = (l.lead_status || '').toLowerCase();
+          const tags = l.tags || [];
+          const score = l.lead_score || 0;
+          const visits = l.visit_count || 0;
+          // Alerta: no responde hace 48h con intención de compra
+          if (hoursSince > 48 && (status.includes('intencion') || status.includes('interesado') || score >= 60)) {
+            alerts.push({ phone: l.phoneNumber, name: l.customer_name || 'Sin nombre',
+              text: `No responde hace ${Math.floor(hoursSince)}h y tenía intención de compra`,
+              color: 'bg-red-500/10 border-red-500/20 text-red-400', icon: '🔴' });
+          }
+          // Alerta: preguntó precio varias veces (visitas >= 3)
+          else if (visits >= 3 && !status.includes('cerrado') && !status.includes('pagado')) {
+            alerts.push({ phone: l.phoneNumber, name: l.customer_name || 'Sin nombre',
+              text: `${visits} visitas — posiblemente listo para cerrar`,
+              color: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400', icon: '🟡' });
+          }
+          // Alerta: lead caliente sin contactar
+          if (tags.includes('caliente') && (l.lead_stage || 'nuevo') === 'nuevo') {
+            alerts.push({ phone: l.phoneNumber, name: l.customer_name || 'Sin nombre',
+              text: `Lead caliente sin contactar`,
+              color: 'bg-orange-500/10 border-orange-500/20 text-orange-400', icon: '🟠' });
+          }
+          // Alerta: score alto sin seguimiento
+          if (score >= 70 && !['cerrado_ganado', 'negociacion'].includes(l.lead_stage || '')) {
+            alerts.push({ phone: l.phoneNumber, name: l.customer_name || 'Sin nombre',
+              text: `Score ${score}/100 — requiere seguimiento inmediato`,
+              color: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', icon: '🟢' });
+          }
+        });
+        return alerts.length > 0 ? (
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-bold">🔔 Alertas</span>
+              <span className="text-[10px] text-gray-500">{alerts.length}</span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {alerts.slice(0, 5).map((a, i) => (
+                <div key={i} onClick={() => { loadDetail(a.phone); setView('list'); }}
+                  className={`min-w-[250px] border rounded-xl p-3 cursor-pointer hover:scale-[1.02] transition-all ${a.color}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span>{a.icon}</span>
+                    <span className="text-xs font-bold truncate">{a.name}</span>
+                  </div>
+                  <p className="text-[10px]">{a.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null;
+      })()}
      {view === 'kanban' ? (
         /* ==================== VISTA KANBAN CON DRAG & DROP ==================== */
         <DndContext
