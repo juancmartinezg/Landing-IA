@@ -178,48 +178,51 @@ export default function CRMPage() {
     a.click();
   };
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <div className="overflow-hidden">
+      <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
         <h1 className="text-lg sm:text-2xl font-bold">CRM / Leads 👥</h1>
        <div className="flex gap-2">
           <button onClick={() => setView(view === 'list' ? 'kanban' : 'list')}
-            className="bg-white/5 border border-white/10 hover:bg-white/10 px-4 py-2 rounded-xl text-sm font-bold transition-all">
+            className="bg-white/5 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-xl text-xs font-bold transition-all">
             {view === 'list' ? '📊 Kanban' : '📋 Lista'}
           </button>
-          <button onClick={exportCSV} className="bg-white/5 border border-white/10 hover:bg-white/10 px-4 py-2 rounded-xl text-sm font-bold transition-all">
-            📥 Exportar CSV
+          <button onClick={exportCSV} className="bg-white/5 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hidden sm:block">
+            📥 CSV
           </button>
         </div>
       </div>
       {/* Filtros */}
-      <div className="flex flex-col md:flex-row gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre, teléfono, servicio, tags, notas..."
-          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+          placeholder="Buscar..."
+          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-indigo-500 text-white"
         />
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
-        >
-          <option value="all">Todos los estados</option>
-          {statuses.map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <select
-          value={filterTag}
-          onChange={(e) => setFilterTag(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
-        >
-          <option value="all">Todos los tags</option>
-          {allTags.map(t => (
-            <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="flex-1 sm:flex-none bg-[#0B0F1A] border border-white/10 rounded-xl px-2 py-2 text-xs outline-none focus:border-indigo-500 text-white"
+          >
+            <option value="all" className="bg-[#1a1f2e] text-white">Estado</option>
+            {statuses.map(s => (
+              <option key={s} value={s} className="bg-[#1a1f2e] text-white">{s}</option>
+            ))}
+          </select>
+          <select
+            value={filterTag}
+            onChange={(e) => setFilterTag(e.target.value)}
+            className="flex-1 sm:flex-none bg-[#0B0F1A] border border-white/10 rounded-xl px-2 py-2 text-xs outline-none focus:border-indigo-500 text-white"
+          >
+            <option value="all" className="bg-[#1a1f2e] text-white">Tags</option>
+            {allTags.map(t => (
+              <option key={t} value={t} className="bg-[#1a1f2e] text-white">{t.replace(/_/g, ' ')}</option>
+            ))}
+          </select>
+        </div>
+      </div>
       </div>
       {/* Alertas inteligentes */}
       {(() => {
@@ -266,7 +269,7 @@ export default function CRMPage() {
             <div className="flex gap-2 overflow-x-auto pb-2">
               {alerts.slice(0, 5).map((a, i) => (
                 <div key={i} onClick={() => { loadDetail(a.phone); setView('list'); }}
-                  className={`min-w-[250px] border rounded-xl p-3 cursor-pointer hover:scale-[1.02] transition-all ${a.color}`}>
+                  className={`min-w-[200px] sm:min-w-[250px] border rounded-xl p-2 sm:p-3 cursor-pointer hover:scale-[1.02] transition-all ${a.color}`}>
                   <div className="flex items-center gap-2 mb-1">
                     <span>{a.icon}</span>
                     <span className="text-xs font-bold truncate">{a.name}</span>
@@ -305,7 +308,7 @@ export default function CRMPage() {
             }
           }}
         >
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
           {[
             { id: 'nuevo', label: '🆕 Nuevo', color: 'border-gray-500/30', bg: 'bg-gray-500/5' },
             { id: 'contactado', label: '📞 Contactado', color: 'border-blue-500/30', bg: 'bg-blue-500/5' },
