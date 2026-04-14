@@ -90,7 +90,8 @@ export default function ChatPage() {
     setSelectedPhone(phone);
     setSelectedConvId(null);
     setBotMessages([]);
-    setTakenOver(false);
+    const conv = botConvs.find(c => c.phone === phone);
+    setTakenOver(conv?.flow_state === 'PAUSED_FOR_HUMAN');
     setNewMessage('');
     loadBotMessages(phone);
   };
