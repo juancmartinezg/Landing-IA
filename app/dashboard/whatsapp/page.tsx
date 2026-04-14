@@ -27,8 +27,6 @@ export default function WhatsAppPage() {
       'whatsapp_business_management',
       'whatsapp_business_messaging',
       'business_management',
-      'ads_management',
-      'ads_read',
     ].join(',');
     const state = JSON.stringify({ client_id: 'JMC', ts: Date.now() });
     const url = `https://www.facebook.com/v21.0/dialog/oauth?` +
