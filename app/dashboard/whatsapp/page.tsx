@@ -1,12 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Script from 'next/script';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const META_APP_ID = '27398458396409385';
+const META_CONFIG_ID = '694128837119269';
 export default function WhatsAppPage() {
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [sdkReady, setSdkReady] = useState(false);
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
@@ -18,24 +21,57 @@ export default function WhatsAppPage() {
       .catch(() => setLoading(false));
   }, []);
   const isConnected = config?.phone_number_id && config?.waba_id;
-  const handleConnect = () => {
+  // Callback cuando el usuario completa el signup
+  const handleSignupResponse = useCallback(async (response: any) => {
+    console.log('Embedded Signup response:', response);
     setConnecting(true);
-    const redirectUri = window.location.hostname === 'localhost'
-      ? 'http://localhost:3000/auth/meta-callback'
-      : 'https://clientes.bot/auth/meta-callback';
-    const scope = [
-      'whatsapp_business_management',
-      'whatsapp_business_messaging',
-      'business_management',
-    ].join(',');
-    const state = JSON.stringify({ client_id: 'JMC', ts: Date.now() });
-    const url = `https://www.facebook.com/v21.0/dialog/oauth?` +
-      `client_id=${META_APP_ID}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&scope=${scope}` +
-      `&state=${encodeURIComponent(state)}` +
-      `&response_type=code`;
-    window.location.href = url;
+    if (response.authResponse) {
+      const code = response.authResponse.code;
+      try {
+        const res = await fetch(`${API_URL}/meta/exchange`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+          body: JSON.stringify({
+            code,
+            redirect_uri: window.location.origin + '/auth/meta-callback',
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('✅ ¡WhatsApp conectado exitosamente!');
+          setConfig({
+            ...config,
+            phone_number_id: data.phone_number_id,
+            waba_id: data.waba_id,
+          });
+        } else {
+          showToast('Error: ' + (data.error || 'No se pudo conectar'));
+        }
+      } catch (err) {
+        showToast('Error de conexión con el servidor');
+      }
+    } else {
+      showToast('Cancelaste la conexión o hubo un error');
+    }
+    setConnecting(false);
+  }, [config]);
+  // Iniciar el Embedded Signup
+  const handleConnect = () => {
+    const FB = (window as any).FB;
+    if (!FB) {
+      showToast('Facebook SDK no cargado. Recarga la página.');
+      return;
+    }
+    FB.login(handleSignupResponse, {
+      config_id: META_CONFIG_ID,
+      response_type: 'code',
+      override_default_response_type: true,
+      extras: {
+        setup: {},
+        featureType: '',
+        sessionInfoVersion: '3',
+      },
+    });
   };
   const handleDisconnect = async () => {
     if (!confirm('¿Desconectar WhatsApp? El bot dejará de responder.')) return;
@@ -55,9 +91,27 @@ export default function WhatsAppPage() {
       showToast('Error desconectando');
     }
   };
+  const initFacebookSDK = () => {
+    const FB = (window as any).FB;
+    if (FB) {
+      FB.init({
+        appId: META_APP_ID,
+        cookie: true,
+        xfbml: true,
+        version: 'v21.0',
+      });
+      setSdkReady(true);
+    }
+  };
   if (loading) return <div className="text-center py-12 text-gray-500">Cargando...</div>;
   return (
     <div>
+      {/* Facebook SDK */}
+      <Script
+        src="https://connect.facebook.net/en_US/sdk.js"
+        strategy="lazyOnload"
+        onLoad={initFacebookSDK}
+      />
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-[#1a1f2e] border border-white/10 rounded-xl px-5 py-3 text-sm font-medium shadow-xl">
           {toast}
@@ -66,7 +120,6 @@ export default function WhatsAppPage() {
       <h1 className="text-2xl font-bold mb-6">Conectar WhatsApp 📱</h1>
       {isConnected ? (
         <div>
-          {/* Estado conectado */}
           <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-8 mb-6">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-14 h-14 bg-emerald-500/20 rounded-full flex items-center justify-center">
@@ -103,7 +156,6 @@ export default function WhatsAppPage() {
               Desconectar WhatsApp
             </button>
           </div>
-          {/* Acciones rápidas */}
           <h3 className="font-bold mb-4">Acciones rápidas</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <a href="/dashboard/chat" className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 hover:border-indigo-500/30 transition-all group">
@@ -125,7 +177,6 @@ export default function WhatsAppPage() {
         </div>
       ) : (
         <div className="max-w-2xl mx-auto">
-          {/* Estado desconectado */}
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-8 text-center mb-6">
             <p className="text-5xl mb-4">📱</p>
             <h2 className="text-xl font-bold mb-2">Conecta tu WhatsApp Business</h2>
@@ -134,16 +185,15 @@ export default function WhatsAppPage() {
             </p>
             <button
               onClick={handleConnect}
-              disabled={connecting}
+              disabled={connecting || !sdkReady}
               className="bg-[#25D366] hover:bg-[#1da851] text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-lg text-lg disabled:opacity-50"
             >
-              {connecting ? 'Conectando...' : '🔗 Conectar con Facebook'}
+              {connecting ? 'Conectando...' : !sdkReady ? 'Cargando...' : '🔗 Conectar con Facebook'}
             </button>
             <p className="text-[10px] text-gray-600 mt-4">
               Al conectar, autorizas a clientes.bot a gestionar mensajes de tu línea de WhatsApp Business.
             </p>
           </div>
-          {/* Pasos */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-white/[0.03] border border-white/5 rounded-xl p-5 text-center">
               <p className="text-2xl mb-2">1️⃣</p>
@@ -161,7 +211,6 @@ export default function WhatsAppPage() {
               <p className="text-xs text-gray-400">Tu bot se activa automáticamente y empieza a responder</p>
             </div>
           </div>
-          {/* FAQ */}
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
             <h3 className="font-bold mb-4">Preguntas Frecuentes</h3>
             <div className="space-y-4">
@@ -176,10 +225,6 @@ export default function WhatsAppPage() {
               <div>
                 <p className="text-sm font-bold text-indigo-400 mb-1">¿Puedo desconectarlo después?</p>
                 <p className="text-sm text-gray-400">Sí, puedes desconectar tu WhatsApp en cualquier momento.</p>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-indigo-400 mb-1">¿Qué permisos se solicitan?</p>
-                <p className="text-sm text-gray-400">Gestión de WhatsApp Business, mensajería y administración del negocio. No accedemos a tu información personal.</p>
               </div>
             </div>
           </div>
