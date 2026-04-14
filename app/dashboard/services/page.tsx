@@ -103,7 +103,7 @@ export default function ServicesPage() {
     try {
       const res = await fetch(`${API_URL}/services?slug=${encodeURIComponent(slug)}`, {
         method: 'DELETE',
-        headers: { 'client-id': 'JMC' },
+        headers: { 'client-id': user?.companyId || '' },
       });
       if (res.ok) {
         showToast('✓ Servicio eliminado');
