@@ -1,7 +1,72 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../providers';
+import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+function KanbanColumn({ id, label, color, bg, count, value, children }: any) {
+  const { setNodeRef, isOver } = useSortable({ id, data: { type: 'column' } });
+  return (
+    <div ref={setNodeRef}
+      className={`min-w-[220px] flex-1 border rounded-2xl p-3 transition-all ${color} ${
+        isOver ? `${bg} border-2 scale-[1.01]` : 'bg-white/[0.02]'
+      }`}>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-xs font-bold">{label}</h3>
+        <span className="text-[10px] text-gray-500">{count}</span>
+      </div>
+      {value > 0 && <p className="text-[10px] text-emerald-400 mb-2">${value.toLocaleString()} COP</p>}
+      <div className="space-y-2 max-h-[500px] overflow-y-auto">{children}</div>
+      {count === 0 && <p className="text-[10px] text-gray-600 text-center py-4">Arrastra leads aquí</p>}
+    </div>
+  );
+}
+function KanbanCard({ lead, onClick }: any) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: lead.phoneNumber,
+    data: { type: 'card', stage: lead.lead_stage || 'nuevo' },
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}
+      className={`bg-white/[0.03] border border-white/5 rounded-xl p-3 cursor-grab active:cursor-grabbing hover:bg-white/[0.06] transition-all ${
+        isDragging ? 'shadow-lg shadow-indigo-500/20 border-indigo-500/50' : ''
+      }`}
+      onClick={onClick}>
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-7 h-7 bg-indigo-600/20 rounded-full flex items-center justify-center text-[10px] font-bold text-indigo-400">
+          {(lead.customer_name || 'U').charAt(0)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium truncate">{lead.customer_name || 'Sin nombre'}</p>
+          <p className="text-[9px] text-gray-600">{lead.phoneNumber}</p>
+        </div>
+      </div>
+      {lead.service_of_interest && <p className="text-[9px] text-gray-500 truncate">{lead.service_of_interest}</p>}
+      {(lead.tags || []).length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {(lead.tags || []).slice(0, 2).map((tag: string, i: number) => (
+            <span key={i} className="text-[8px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400">
+              {tag.replace(/_/g, ' ')}
+            </span>
+          ))}
+        </div>
+      )}
+      {(lead.lead_score || 0) > 0 && (
+        <div className="mt-1 w-full h-1 bg-white/5 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${
+            lead.lead_score >= 70 ? 'bg-emerald-500' : lead.lead_score >= 40 ? 'bg-yellow-500' : 'bg-gray-500'
+          }`} style={{width: `${lead.lead_score}%`}}></div>
+        </div>
+      )}
+    </div>
+  );
+}
 export default function CRMPage() {
   const { user } = useAuth();
   const [leads, setLeads] = useState<any[]>([]);
@@ -150,74 +215,45 @@ export default function CRMPage() {
           ))}
         </select>
       </div>
-      {view === 'kanban' ? (
-        /* ==================== VISTA KANBAN ==================== */
+     {view === 'kanban' ? (
+        /* ==================== VISTA KANBAN CON DRAG & DROP ==================== */
+        <DndContext
+          sensors={useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))}
+          collisionDetection={closestCenter}
+          onDragEnd={(event) => {
+            const { active, over } = event;
+            if (!over) return;
+            const phone = active.id as string;
+            const newStage = over.id as string;
+            const lead = filtered.find(l => l.phoneNumber === phone);
+            if (lead && (lead.lead_stage || 'nuevo') !== newStage) {
+              updateStage(phone, newStage);
+            }
+          }}
+        >
         <div className="flex gap-4 overflow-x-auto pb-4">
           {[
-            { id: 'nuevo', label: '🆕 Nuevo', color: 'border-gray-500/30' },
-            { id: 'contactado', label: '📞 Contactado', color: 'border-blue-500/30' },
-            { id: 'interesado', label: '🔥 Interesado', color: 'border-yellow-500/30' },
-            { id: 'negociacion', label: '🤝 Negociación', color: 'border-purple-500/30' },
-            { id: 'cerrado_ganado', label: '✅ Ganado', color: 'border-emerald-500/30' },
-            { id: 'cerrado_perdido', label: '❌ Perdido', color: 'border-red-500/30' },
+            { id: 'nuevo', label: '🆕 Nuevo', color: 'border-gray-500/30', bg: 'bg-gray-500/5' },
+            { id: 'contactado', label: '📞 Contactado', color: 'border-blue-500/30', bg: 'bg-blue-500/5' },
+            { id: 'interesado', label: '🔥 Interesado', color: 'border-yellow-500/30', bg: 'bg-yellow-500/5' },
+            { id: 'negociacion', label: '🤝 Negociación', color: 'border-purple-500/30', bg: 'bg-purple-500/5' },
+            { id: 'cerrado_ganado', label: '✅ Ganado', color: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
+            { id: 'cerrado_perdido', label: '❌ Perdido', color: 'border-red-500/30', bg: 'bg-red-500/5' },
           ].map(stage => {
             const stageLeads = filtered.filter(l => (l.lead_stage || 'nuevo') === stage.id);
-            const stageValue = stageLeads.reduce((sum, l) => {
-              const payment = l.amount || 0;
-              return sum + (typeof payment === 'number' ? payment : 0);
-            }, 0);
+            const stageValue = stageLeads.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
             return (
-              <div key={stage.id} className={`min-w-[250px] flex-1 bg-white/[0.02] border ${stage.color} rounded-2xl p-3`}>
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-xs font-bold">{stage.label}</h3>
-                  <span className="text-[10px] text-gray-500">{stageLeads.length}</span>
-                </div>
-                {stageValue > 0 && (
-                  <p className="text-[10px] text-emerald-400 mb-2">${stageValue.toLocaleString()} COP</p>
-                )}
-                <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                  {stageLeads.map((lead, i) => (
-                    <div key={i} onClick={() => { loadDetail(lead.phoneNumber); setView('list'); }}
-                      className="bg-white/[0.03] border border-white/5 rounded-xl p-3 cursor-pointer hover:bg-white/[0.06] transition-all">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-7 h-7 bg-indigo-600/20 rounded-full flex items-center justify-center text-[10px] font-bold text-indigo-400">
-                          {(lead.customer_name || 'U').charAt(0)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{lead.customer_name || 'Sin nombre'}</p>
-                          <p className="text-[9px] text-gray-600">{lead.phoneNumber}</p>
-                        </div>
-                      </div>
-                      {lead.service_of_interest && (
-                        <p className="text-[9px] text-gray-500 truncate">{lead.service_of_interest}</p>
-                      )}
-                      {(lead.tags || []).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {(lead.tags || []).slice(0, 2).map((tag: string, ti: number) => (
-                            <span key={ti} className="text-[8px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400">
-                              {tag.replace(/_/g, ' ')}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {(lead.lead_score || 0) > 0 && (
-                        <div className="mt-1 w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${
-                            lead.lead_score >= 70 ? 'bg-emerald-500' :
-                            lead.lead_score >= 40 ? 'bg-yellow-500' : 'bg-gray-500'
-                          }`} style={{width: `${lead.lead_score}%`}}></div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {stageLeads.length === 0 && (
-                    <p className="text-[10px] text-gray-600 text-center py-4">Sin leads</p>
-                  )}
-                </div>
-              </div>
+              <KanbanColumn key={stage.id} id={stage.id} label={stage.label} color={stage.color} bg={stage.bg}
+                count={stageLeads.length} value={stageValue}>
+                {stageLeads.map((lead) => (
+                  <KanbanCard key={lead.phoneNumber} lead={lead}
+                    onClick={() => { loadDetail(lead.phoneNumber); setView('list'); }} />
+                ))}
+              </KanbanColumn>
             );
           })}
         </div>
+        </DndContext>
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Lista de Leads */}
