@@ -31,7 +31,7 @@ export default function MemoryPage() {
     try {
       const res = await fetch(`${API_URL}/memory?nq=${encodeURIComponent(normalized_question)}`, {
         method: 'DELETE',
-        headers: { 'client-id': 'JMC' },
+        headers: { 'client-id': user?.companyId || '' },
       });
       if (res.ok) {
         showToast('✓ Respuesta eliminada');
@@ -54,7 +54,7 @@ export default function MemoryPage() {
       });
       const res = await fetch(`${API_URL}/memory?${params.toString()}`, {
         method: 'PUT',
-        headers: { 'client-id': 'JMC' },
+        headers: { 'client-id': user?.companyId || '' },
       });
       if (res.ok) {
         showToast('✓ Respuesta actualizada');
