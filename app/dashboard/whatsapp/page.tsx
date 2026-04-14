@@ -81,9 +81,9 @@ const handleSignupResponse = useCallback(async (response: any) => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
         body: JSON.stringify({
-          phone_number_id: '',
-          waba_id: '',
-          meta_access_token: '',
+          phone_number_id: 'DISCONNECTED',
+          waba_id: 'DISCONNECTED',
+          meta_access_token: 'DISCONNECTED',
         }),
       });
       setConfig({ ...config, phone_number_id: '', waba_id: '', meta_access_token: '' });
