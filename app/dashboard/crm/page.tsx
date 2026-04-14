@@ -12,6 +12,8 @@ export default function CRMPage() {
   const [loadingAi, setLoadingAi] = useState(false);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterTag, setFilterTag] = useState('all');
+  const [newTag, setNewTag] = useState('');
   useEffect(() => {
     fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
@@ -36,8 +38,11 @@ export default function CRMPage() {
     if (filterStatus !== 'all') {
       result = result.filter(l => l.lead_status === filterStatus);
     }
+    if (filterTag !== 'all') {
+      result = result.filter(l => (l.tags || []).includes(filterTag));
+    }
     setFiltered(result);
-  }, [search, filterStatus, leads]);
+  }, [search, filterStatus, filterTag, leads]);
   const loadDetail = (phone: string) => {
     fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
@@ -51,7 +56,29 @@ export default function CRMPage() {
       .then(data => { setAiInsight(data); setLoadingAi(false); })
       .catch(() => setLoadingAi(false));
   };
+  const allTags = [...new Set(leads.flatMap(l => l.tags || []))];
   const statuses = [...new Set(leads.map(l => l.lead_status).filter(Boolean))];
+  const updateTags = async (phone: string, action: string, tags: string[]) => {
+    await fetch(`${API_URL}/leads/tags`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+      body: JSON.stringify({ phone, action, tags }),
+    });
+    loadDetail(phone);
+    // Actualizar lista
+    fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(res => res.json()).then(data => setLeads(data.leads || []));
+  };
+  const updateStage = async (phone: string, stage: string) => {
+    await fetch(`${API_URL}/leads/stage`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+      body: JSON.stringify({ phone, stage }),
+    });
+    loadDetail(phone);
+    fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(res => res.json()).then(data => setLeads(data.leads || []));
+  };
   const exportCSV = () => {
     const headers = 'Nombre,Telefono,Estado,Servicio,Visitas\n';
     const rows = filtered.map(l =>
@@ -89,6 +116,16 @@ export default function CRMPage() {
           <option value="all">Todos los estados</option>
           {statuses.map(s => (
             <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <select
+          value={filterTag}
+          onChange={(e) => setFilterTag(e.target.value)}
+          className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+        >
+          <option value="all">Todos los tags</option>
+          {allTags.map(t => (
+            <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
           ))}
         </select>
       </div>
@@ -168,6 +205,83 @@ export default function CRMPage() {
                 </div>
               </div>
               
+              {/* Score + Stage + Tags manuales */}
+              <div className="mb-4 pt-4 border-t border-white/5">
+                {/* Etapa del pipeline */}
+                <div className="mb-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Etapa</p>
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      { id: 'nuevo', label: '🆕 Nuevo', color: 'gray' },
+                      { id: 'contactado', label: '📞 Contactado', color: 'blue' },
+                      { id: 'interesado', label: '🔥 Interesado', color: 'yellow' },
+                      { id: 'negociacion', label: '🤝 Negociación', color: 'purple' },
+                      { id: 'cerrado_ganado', label: '✅ Ganado', color: 'green' },
+                      { id: 'cerrado_perdido', label: '❌ Perdido', color: 'red' },
+                    ].map(s => (
+                      <button key={s.id} onClick={() => updateStage(selectedLead.lead?.phoneNumber, s.id)}
+                        className={`text-[9px] px-2 py-1 rounded-full font-bold transition-all ${
+                          (selectedLead.lead?.lead_stage || 'nuevo') === s.id
+                            ? s.color === 'green' ? 'bg-emerald-500 text-white' :
+                              s.color === 'red' ? 'bg-red-500 text-white' :
+                              s.color === 'yellow' ? 'bg-yellow-500 text-black' :
+                              s.color === 'purple' ? 'bg-purple-500 text-white' :
+                              s.color === 'blue' ? 'bg-blue-500 text-white' :
+                              'bg-gray-500 text-white'
+                            : 'bg-white/5 text-gray-500 hover:bg-white/10'
+                        }`}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Score */}
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-500">Lead Score</span>
+                    <span className={`font-bold ${
+                      (selectedLead.lead?.lead_score || 0) >= 70 ? 'text-emerald-400' :
+                      (selectedLead.lead?.lead_score || 0) >= 40 ? 'text-yellow-400' : 'text-gray-400'
+                    }`}>{selectedLead.lead?.lead_score || 0}/100</span>
+                  </div>
+                  <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${
+                      (selectedLead.lead?.lead_score || 0) >= 70 ? 'bg-emerald-500' :
+                      (selectedLead.lead?.lead_score || 0) >= 40 ? 'bg-yellow-500' : 'bg-gray-500'
+                    }`} style={{width: `${selectedLead.lead?.lead_score || 0}%`}}></div>
+                  </div>
+                </div>
+                {/* Tags manuales */}
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Tags</p>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {(selectedLead.lead?.tags || []).map((tag: string, i: number) => (
+                      <span key={i} className="text-[10px] px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center gap-1">
+                        {tag.replace(/_/g, ' ')}
+                        <button onClick={() => updateTags(selectedLead.lead?.phoneNumber, 'remove', [tag])}
+                          className="hover:text-red-400 font-bold">×</button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-1">
+                    <input value={newTag} onChange={(e) => setNewTag(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newTag.trim()) {
+                          updateTags(selectedLead.lead?.phoneNumber, 'add', [newTag.trim().toLowerCase().replace(/\s+/g, '_')]);
+                          setNewTag('');
+                        }
+                      }}
+                      placeholder="Agregar tag..."
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] outline-none focus:border-indigo-500 text-white" />
+                    <button onClick={() => {
+                      if (newTag.trim()) {
+                        updateTags(selectedLead.lead?.phoneNumber, 'add', [newTag.trim().toLowerCase().replace(/\s+/g, '_')]);
+                        setNewTag('');
+                      }
+                    }} className="text-[10px] bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white px-2 py-1 rounded-lg font-bold transition-all">+</button>
+                  </div>
+                </div>
+              </div>
               {selectedLead.payment && (
                 <div className="mb-4 pt-4 border-t border-white/5">
                   <h4 className="font-bold mb-2 text-emerald-400">💳 Pago</h4>
