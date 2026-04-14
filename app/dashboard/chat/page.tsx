@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function ChatPage() {
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<any[]>([]);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
@@ -19,7 +21,7 @@ export default function ChatPage() {
   const pollRef = useRef<any>(null);
   // Cargar conversaciones de Chatwoot
   const loadConversations = () => {
-    fetch(`${API_URL}/chatwoot`, { headers: { 'client-id': 'JMC' } })
+    fetch(`${API_URL}/chatwoot`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => {
         setConversations(data.conversations || []);
@@ -30,7 +32,7 @@ export default function ChatPage() {
   // Cargar mensajes de una conversación
   const loadMessages = (convId: string) => {
     fetch(`${API_URL}/chatwoot/messages?conversation_id=${convId}`, {
-      headers: { 'client-id': 'JMC' }
+      headers: { 'client-id': user?.companyId || '' }
     })
       .then(res => res.json())
       .then(data => {
@@ -91,7 +93,7 @@ export default function ChatPage() {
       }
       const res = await fetch(`${API_URL}/chatwoot/send`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
         body: JSON.stringify(bodyPayload),
       });
       if (res.ok) {

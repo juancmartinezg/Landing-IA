@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const emptyForm = {
   name: '', description: '', category: 'servicio',
@@ -7,6 +8,7 @@ const emptyForm = {
   image_url: '', duration_hours: '1', service_type: 'personalizado',
 };
 export default function ServicesPage() {
+  const { user } = useAuth();
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -20,7 +22,7 @@ export default function ServicesPage() {
   };
   const loadServices = () => {
     setLoading(true);
-    fetch(`${API_URL}/services`, { headers: { 'client-id': 'JMC' } })
+    fetch(`${API_URL}/services`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => { setServices(data.services || []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -77,14 +79,14 @@ export default function ServicesPage() {
       if (editingSlug) {
         await fetch(`${API_URL}/services`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+          headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
           body: JSON.stringify({ slug: editingSlug, ...payload }),
         });
         showToast('✓ Servicio actualizado');
       } else {
         await fetch(`${API_URL}/services`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+          headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
           body: JSON.stringify(payload),
         });
         showToast('✓ Servicio creado');

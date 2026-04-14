@@ -1,11 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function AppointmentsPage() {
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    fetch(`${API_URL}/appointments`, { headers: { 'client-id': 'JMC' } })
+    fetch(`${API_URL}/appointments`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => { setAppointments(data.appointments || []); setLoading(false); })
       .catch(() => setLoading(false));

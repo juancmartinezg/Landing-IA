@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 const COGNITO_DOMAIN = 'https://us-east-1kijdadxdl.auth.us-east-1.amazoncognito.com';
 const CLIENT_ID = '4r4jhvvutib915k449sr67kuce';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -25,15 +26,28 @@ function CallbackHandler() {
       }),
     })
       .then(res => res.json())
-      .then(data => {
+      .then(async (data) => {
         if (data.id_token) {
           const payload = JSON.parse(atob(data.id_token.split('.')[1]));
-          
+          const email = payload.email || '';
+          const name = payload.name || payload.email || '';
+          // Buscar company_id en UserMapping
+          let companyId = '';
+          try {
+            const meRes = await fetch(`${API_URL}/me?email=${encodeURIComponent(email)}`);
+            if (meRes.ok) {
+              const meData = await meRes.json();
+              companyId = meData.company_id || '';
+            }
+          } catch (err) {
+            console.error('Error fetching /me:', err);
+          }
           const user = {
-            email: payload.email || '',
-            name: payload.name || payload.email || '',
+            email,
+            name,
             sub: payload.sub || '',
             accessToken: data.access_token || '',
+            companyId,
           };
           localStorage.setItem('cb_user', JSON.stringify(user));
           localStorage.setItem('cb_tokens', JSON.stringify({
@@ -41,7 +55,11 @@ function CallbackHandler() {
             access_token: data.access_token,
             refresh_token: data.refresh_token,
           }));
-          router.push('/dashboard');
+          if (!companyId) {
+            router.push('/onboarding');
+          } else {
+            router.push('/dashboard');
+          }
         } else {
           console.error('Token exchange failed:', data);
           router.push('/auth/login');

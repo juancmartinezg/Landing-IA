@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function CRMPage() {
+  const { user } = useAuth();
   const [leads, setLeads] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -9,7 +11,7 @@ export default function CRMPage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   useEffect(() => {
-    fetch(`${API_URL}/leads`, { headers: { 'client-id': 'JMC' } })
+    fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => {
         const items = data.leads || [];
@@ -35,7 +37,7 @@ export default function CRMPage() {
     setFiltered(result);
   }, [search, filterStatus, leads]);
   const loadDetail = (phone: string) => {
-    fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': 'JMC' } })
+    fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => setSelectedLead(data));
   };

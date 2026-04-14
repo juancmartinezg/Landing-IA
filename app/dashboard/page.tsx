@@ -7,7 +7,7 @@ export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    fetch(`${API_URL}/analytics`, { headers: { 'client-id': 'JMC' } })
+    fetch(`${API_URL}/analytics`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => { setAnalytics(data); setLoading(false); })
       .catch(() => setLoading(false));

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const ALL_DAYS = [
   { id: 0, label: 'Lunes' },
@@ -11,6 +12,7 @@ const ALL_DAYS = [
   { id: 6, label: 'Domingo' },
 ];
 export default function SettingsPage() {
+  const { user } = useAuth();
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,7 +52,7 @@ export default function SettingsPage() {
     setTimeout(() => setToast(null), 3000);
   };
   useEffect(() => {
-    fetch(`${API_URL}/config`, { headers: { 'client-id': 'JMC' } })
+    fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => {
         setConfig(data);
@@ -79,7 +81,7 @@ export default function SettingsPage() {
     try {
       await fetch(`${API_URL}/config`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
         body: JSON.stringify(form),
       });
       setConfig({ ...config, ...form });
@@ -95,7 +97,7 @@ export default function SettingsPage() {
     try {
       await fetch(`${API_URL}/config`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
         body: JSON.stringify({
           scheduling: {
             timezone: schedForm.timezone,
@@ -129,7 +131,7 @@ export default function SettingsPage() {
     try {
       await fetch(`${API_URL}/config`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
         body: JSON.stringify({ prompt: promptText }),
       });
       setConfig({ ...config, prompt: promptText });

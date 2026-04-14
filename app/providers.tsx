@@ -1,10 +1,12 @@
 'use client';
 import { createContext, useContext, useState, useEffect } from 'react';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 interface User {
   email: string;
   name: string;
   sub: string;
   accessToken: string;
+  companyId: string;
 }
 interface AuthContextType {
   user: User | null;
@@ -32,27 +34,37 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    const checkUser = () => {
+    const checkUser = async () => {
       const stored = localStorage.getItem('cb_user');
       if (stored) {
         try {
-          setUser(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          if (parsed.companyId) {
+            setUser(parsed);
+            setLoading(false);
+            return;
+          }
+          // Si no tiene companyId, buscarlo en /me
+          if (parsed.email) {
+            try {
+              const res = await fetch(`${API_URL}/me?email=${encodeURIComponent(parsed.email)}`);
+              if (res.ok) {
+                const data = await res.json();
+                parsed.companyId = data.company_id || '';
+              } else {
+                parsed.companyId = '';
+              }
+            } catch {
+              parsed.companyId = '';
+            }
+            localStorage.setItem('cb_user', JSON.stringify(parsed));
+          }
+          setUser(parsed);
         } catch {}
       }
       setLoading(false);
     };
     checkUser();
-    // Escuchar cambios en localStorage (cuando callback guarda tokens)
-    window.addEventListener('storage', checkUser);
-    
-    // Tambien verificar cada segundo por 5 segundos (para mismo tab)
-    const interval = setInterval(checkUser, 1000);
-    const timeout = setTimeout(() => clearInterval(interval), 5000);
-    return () => {
-      window.removeEventListener('storage', checkUser);
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
   }, []);
   const loginWithGoogle = () => {
     const url = `${COGNITO_DOMAIN}/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&identity_provider=Google`;
@@ -62,7 +74,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     const url = `${COGNITO_DOMAIN}/oauth2/authorize?client_id=${CLIENT_ID}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
     window.location.href = url;
   };
-  const login = loginWithGoogle; // Default
+  const login = loginWithGoogle;
   const logout = () => {
     localStorage.removeItem('cb_user');
     localStorage.removeItem('cb_tokens');

@@ -1,11 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function AnalyticsPage() {
+  const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    fetch(`${API_URL}/analytics`, { headers: { 'client-id': 'JMC' } })
+    fetch(`${API_URL}/analytics`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));

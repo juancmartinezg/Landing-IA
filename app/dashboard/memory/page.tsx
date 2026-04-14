@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function MemoryPage() {
+  const { user } = useAuth();
   const [memories, setMemories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<string | null>(null);
@@ -17,7 +19,7 @@ export default function MemoryPage() {
   };
   const loadMemories = () => {
     setLoading(true);
-    fetch(`${API_URL}/memory`, { headers: { 'client-id': 'JMC' } })
+   fetch(`${API_URL}/memory`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => { setMemories(data.memories || []); setLoading(false); })
       .catch(() => { setMemories([]); setLoading(false); });
@@ -46,10 +48,13 @@ export default function MemoryPage() {
     if (!editAnswer.trim()) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API_URL}/memory`, {
+      const params = new URLSearchParams({
+        nq: normalized_question,
+        answer: editAnswer,
+      });
+      const res = await fetch(`${API_URL}/memory?${params.toString()}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
-        body: JSON.stringify({ normalized_question, answer: editAnswer }),
+        headers: { 'client-id': 'JMC' },
       });
       if (res.ok) {
         showToast('✓ Respuesta actualizada');

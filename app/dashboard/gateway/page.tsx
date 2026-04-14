@@ -1,14 +1,16 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function GatewayPage() {
+  const { user } = useAuth();
   const [gateway, setGateway] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [configuring, setConfiguring] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [keys, setKeys] = useState<any>({});
   useEffect(() => {
-    fetch(`${API_URL}/gateway`, { headers: { 'client-id': 'JMC' } })
+    fetch(`${API_URL}/gateway`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => { setGateway(data); setLoading(false); })
       .catch(() => setLoading(false));
@@ -41,7 +43,7 @@ export default function GatewayPage() {
     try {
       await fetch(`${API_URL}/gateway`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
         body: JSON.stringify({ gateway_name: gwId, gateway_keys: keys }),
       });
       setGateway({ ...gateway, gateway_name: gwId, gateway_active: true });

@@ -1,7 +1,9 @@
 'use client';
 import { useState } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function TrainingPage() {
+  const { user } = useAuth();
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [saving, setSaving] = useState(false);
@@ -13,7 +15,7 @@ export default function TrainingPage() {
     try {
       await fetch(`${API_URL}/training`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+       headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
         body: JSON.stringify({ question: question.trim(), answer: answer.trim() }),
       });
       setHistory(prev => [{ question, answer, time: new Date().toLocaleTimeString() }, ...prev]);

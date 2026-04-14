@@ -1,12 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function PaymentsPage() {
+  const { user } = useAuth();
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   useEffect(() => {
-    fetch(`${API_URL}/payments`, { headers: { 'client-id': 'JMC' } })
+   fetch(`${API_URL}/payments`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => { setPayments(data.payments || []); setLoading(false); })
       .catch(() => setLoading(false));

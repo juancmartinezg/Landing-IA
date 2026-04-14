@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function TemplatesPage() {
+  const { user } = useAuth();
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
@@ -93,7 +95,7 @@ REGLAS:
       const prompt = promptTemplates[tpl.id] || promptTemplates.ventas;
       await fetch(`${API_URL}/config`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
         body: JSON.stringify({
           business_item_name: tpl.default_config?.business_item_name || 'servicio',
           btn_book: tpl.default_config?.btn_book || 'Reservar',
