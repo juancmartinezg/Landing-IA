@@ -21,6 +21,7 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
+  const [takenOver, setTakenOver] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<any>(null);
   // Cargar conversaciones del bot
@@ -89,6 +90,8 @@ export default function ChatPage() {
     setSelectedPhone(phone);
     setSelectedConvId(null);
     setBotMessages([]);
+    setTakenOver(false);
+    setNewMessage('');
     loadBotMessages(phone);
   };
   const selectCwConv = (convId: string) => {
@@ -113,6 +116,45 @@ export default function ChatPage() {
     } catch (err) {
       console.error('Error enviando:', err);
     }
+    setSending(false);
+  };
+  // === Takeover: asesor toma/devuelve control ===
+  const handleTakeover = async (phone: string) => {
+    try {
+      await fetch(`${API_URL}/conversations/takeover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ phone }),
+      });
+      setTakenOver(true);
+      loadBotConvs();
+    } catch (err) { console.error('Error takeover:', err); }
+  };
+  const handleRelease = async (phone: string) => {
+    try {
+      await fetch(`${API_URL}/conversations/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ phone }),
+      });
+      setTakenOver(false);
+      setNewMessage('');
+      loadBotConvs();
+    } catch (err) { console.error('Error release:', err); }
+  };
+  const handleSendBot = async () => {
+    if (!newMessage.trim() || !selectedPhone) return;
+    setSending(true);
+    const msg = newMessage.trim();
+    setNewMessage('');
+    try {
+      await fetch(`${API_URL}/conversations/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ phone: selectedPhone, content: msg }),
+      });
+      loadBotMessages(selectedPhone);
+    } catch (err) { console.error('Error send:', err); }
     setSending(false);
   };
   const formatTime = (ts: any) => {
@@ -288,11 +330,26 @@ export default function ChatPage() {
                   <p className="text-[11px] text-gray-500">{selectedDetail}</p>
                 </div>
               </div>
-              <span className={`text-[10px] px-3 py-1 rounded-full ${
-                tab === 'bot' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'
-              }`}>
-                {tab === 'bot' ? '🤖 Bot' : '🙋 Asesor'}
-              </span>
+              <div className="flex items-center gap-2">
+                {tab === 'bot' && selectedPhone && (
+                  takenOver ? (
+                    <button onClick={() => handleRelease(selectedPhone)}
+                      className="text-[10px] px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 font-bold transition-all">
+                      🤖 Devolver al bot
+                    </button>
+                  ) : (
+                    <button onClick={() => handleTakeover(selectedPhone)}
+                      className="text-[10px] px-3 py-1.5 rounded-full bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/40 font-bold transition-all">
+                      🙋 Tomar control
+                    </button>
+                  )
+                )}
+                <span className={`text-[10px] px-3 py-1 rounded-full ${
+                  tab === 'bot' ? (takenOver ? 'bg-yellow-500/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-400') : 'bg-indigo-500/20 text-indigo-400'
+                }`}>
+                  {tab === 'bot' ? (takenOver ? '🙋 Asesor activo' : '🤖 Bot') : '🙋 Asesor'}
+                </span>
+              </div>
             </div>
             {/* Mensajes */}
             <div className="flex-1 overflow-y-auto px-6 py-4"
@@ -358,10 +415,43 @@ export default function ChatPage() {
                 </div>
               </div>
             )}
-            {/* Info para tab Bot */}
-            {tab === 'bot' && (
+            {/* Input para tab Bot cuando asesor tiene control */}
+            {tab === 'bot' && takenOver && selectedPhone && (
+              <div className="px-4 py-3 border-t border-yellow-500/20 bg-[#080B14]">
+                <div className="flex items-end gap-2 max-w-3xl mx-auto">
+                  <div className="flex-1 bg-yellow-500/5 border border-yellow-500/20 rounded-2xl px-4 py-3">
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendBot();
+                        }
+                      }}
+                      placeholder="Escribir como asesor..."
+                      className="w-full bg-transparent outline-none text-sm text-white resize-none max-h-24"
+                      rows={1}
+                    />
+                  </div>
+                  <button
+                    onClick={handleSendBot}
+                    disabled={!newMessage.trim() || sending}
+                    className="w-10 h-10 bg-yellow-600 hover:bg-yellow-500 rounded-full flex items-center justify-center transition-all disabled:opacity-30 shrink-0"
+                  >
+                    {sending ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <span className="text-white text-lg">➤</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+            {/* Info para tab Bot cuando bot tiene control */}
+            {tab === 'bot' && !takenOver && (
               <div className="px-4 py-3 border-t border-white/5 bg-[#080B14] text-center">
-                <p className="text-[10px] text-gray-600">Esta conversación es manejada por el bot automáticamente</p>
+                <p className="text-[10px] text-gray-600">Esta conversación es manejada por el bot • Haz clic en "Tomar control" para intervenir</p>
               </div>
             )}
           </>
