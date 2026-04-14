@@ -23,7 +23,7 @@ export default function WhatsAppPage() {
   const isConnected = config?.phone_number_id && config?.waba_id;
   // Callback cuando el usuario completa el signup
   const handleSignupResponse = useCallback(async (response: any) => {
-    console.log('Embedded Signup response:', response);
+    console.log('Embedded Signup response:', JSON.stringify(response));
     setConnecting(true);
     if (response.authResponse) {
       const code = response.authResponse.code;
