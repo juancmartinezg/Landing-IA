@@ -82,6 +82,7 @@ export default function CRMPage() {
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [view, setView] = useState<'list' | 'kanban'>('list');
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   useEffect(() => {
     fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
@@ -279,7 +280,7 @@ export default function CRMPage() {
      {view === 'kanban' ? (
         /* ==================== VISTA KANBAN CON DRAG & DROP ==================== */
         <DndContext
-          sensors={useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))}
+           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={(event) => {
             const { active, over } = event;
