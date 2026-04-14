@@ -3,6 +3,7 @@ import { useAuth } from '../providers';
 import ToastProvider from '../components/Toast';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const menuItems = [
   { href: '/dashboard', label: 'Metricas', icon: '📊' },
   { href: '/dashboard/crm', label: 'CRM / Leads', icon: '👥' },
@@ -23,12 +24,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [brandName, setBrandName] = useState('');
+  const [brandLogo, setBrandLogo] = useState('');
   useEffect(() => {
     if (!loading && !user) {
       const stored = localStorage.getItem('cb_user');
       if (!stored) {
         router.push('/auth/login');
       }
+    }
+    if (user?.companyId) {
+      fetch(`${API_URL}/config`, { headers: { 'client-id': user.companyId } })
+        .then(res => res.json())
+        .then(data => {
+          setBrandName(data.brand_name || '');
+          setBrandLogo(data.brand_logo_url || '');
+        })
+        .catch(() => {});
     }
   }, [user, loading, router]);
   if (loading) {
@@ -135,7 +147,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             ☰
           </button>
           <div className="flex-1"></div>
-          <span className="text-sm text-gray-400 hidden md:block">{user?.email}</span>
+          <div className="flex items-center gap-3">
+            {brandLogo && (
+              <img src={brandLogo} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white/5" />
+            )}
+            <div className="hidden md:block text-right">
+              <p className="text-sm font-medium text-white">{brandName || user?.name || 'Mi Negocio'}</p>
+              <p className="text-[10px] text-gray-500">{user?.email}</p>
+            </div>
+          </div>
         </header>
         {/* Page Content */}
          <main className="p-6">

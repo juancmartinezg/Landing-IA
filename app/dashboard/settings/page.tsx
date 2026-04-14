@@ -270,15 +270,50 @@ export default function SettingsPage() {
               )}
             </div>
             <div>
-              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">URL del logo</label>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Logo del negocio</label>
               {editing ? (
-                <input value={form.brand_logo_url} onChange={(e) => setForm({...form, brand_logo_url: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white" />
+                <div className="flex gap-3 items-start">
+                  <div className="flex-1">
+                    <input value={form.brand_logo_url} onChange={(e) => setForm({...form, brand_logo_url: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+                      placeholder="URL del logo o sube uno..." />
+                  </div>
+                  <label className="bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white px-4 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all shrink-0">
+                    📷 Subir
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const res = await fetch(`${API_URL}/upload-url?file_name=${encodeURIComponent(file.name)}&folder=profile`, {
+                          headers: { 'client-id': user?.companyId || '' }
+                        });
+                        const data = await res.json();
+                        if (data.upload_url) {
+                          await fetch(data.upload_url, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': data.content_type },
+                            body: file,
+                          });
+                          setForm({...form, brand_logo_url: data.public_url});
+                          showToast('✓ Logo subido');
+                        }
+                      } catch (err) {
+                        showToast('Error subiendo logo');
+                      }
+                    }} />
+                  </label>
+                </div>
               ) : (
                 <div className="flex items-center gap-3">
-                  {config?.brand_logo_url && <img src={config.brand_logo_url} className="w-10 h-10 rounded-lg object-contain bg-white/5" />}
-                  <p className="text-white font-medium text-sm truncate">{config?.brand_logo_url || '-'}</p>
+                  {config?.brand_logo_url ? (
+                    <img src={config.brand_logo_url} className="w-14 h-14 rounded-xl object-contain bg-white/5 p-1" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center text-gray-500 text-xs">Sin logo</div>
+                  )}
                 </div>
+              )}
+              {editing && form.brand_logo_url && (
+                <img src={form.brand_logo_url} alt="Preview" className="mt-3 h-16 rounded-xl object-contain" />
               )}
             </div>
           </div>
