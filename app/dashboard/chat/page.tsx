@@ -31,8 +31,8 @@ export default function ChatPage() {
       .catch(() => setLoadingBot(false));
   };
   // Cargar mensajes de una conversacion del bot
-  const loadBotMessages = (phone: string) => {
-    setLoadingBotMsgs(true);
+  const loadBotMessages = (phone: string, isPolling = false) => {
+    if (!isPolling) setLoadingBotMsgs(true);
     fetch(`${API_URL}/conversations?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => {
@@ -50,8 +50,8 @@ export default function ChatPage() {
       .catch(() => setLoadingCw(false));
   };
   // Cargar mensajes de Chatwoot
-  const loadCwMessages = (convId: string) => {
-    setLoadingCwMsgs(true);
+  const loadCwMessages = (convId: string, isPolling = false) => {
+    if (!isPolling) setLoadingCwMsgs(true);
     fetch(`${API_URL}/chatwoot/messages?conversation_id=${convId}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => {
@@ -75,9 +75,9 @@ export default function ChatPage() {
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
     if (tab === 'bot' && selectedPhone) {
-      pollRef.current = setInterval(() => loadBotMessages(selectedPhone), 5000);
+      pollRef.current = setInterval(() => loadBotMessages(selectedPhone, true), 5000);
     } else if (tab === 'agent' && selectedConvId) {
-      pollRef.current = setInterval(() => loadCwMessages(selectedConvId), 5000);
+      pollRef.current = setInterval(() => loadCwMessages(selectedConvId, true), 5000);
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [tab, selectedPhone, selectedConvId]);
