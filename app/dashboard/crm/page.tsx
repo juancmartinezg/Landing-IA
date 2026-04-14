@@ -3,13 +3,14 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../providers';
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 function KanbanColumn({ id, label, color, bg, count, value, children }: any) {
-  const { setNodeRef, isOver } = useSortable({ id, data: { type: 'column' } });
+  const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div ref={setNodeRef}
-      className={`min-w-[220px] flex-1 border rounded-2xl p-3 transition-all ${color} ${
+      className={`min-w-[180px] sm:min-w-[220px] flex-1 border rounded-2xl p-2 sm:p-3 transition-all ${color} ${
         isOver ? `${bg} border-2 scale-[1.01]` : 'bg-white/[0.02]'
       }`}>
       <div className="flex justify-between items-center mb-3">
@@ -179,7 +180,7 @@ export default function CRMPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">CRM / Leads 👥</h1>
+        <h1 className="text-lg sm:text-2xl font-bold">CRM / Leads 👥</h1>
        <div className="flex gap-2">
           <button onClick={() => setView(view === 'list' ? 'kanban' : 'list')}
             className="bg-white/5 border border-white/10 hover:bg-white/10 px-4 py-2 rounded-xl text-sm font-bold transition-all">
@@ -286,7 +287,18 @@ export default function CRMPage() {
             const { active, over } = event;
             if (!over) return;
             const phone = active.id as string;
-            const newStage = over.id as string;
+            const validStages = ['nuevo', 'contactado', 'interesado', 'negociacion', 'cerrado_ganado', 'cerrado_perdido'];
+            // Si soltó sobre una columna, over.id es el stage
+            // Si soltó sobre otro card, buscar en qué columna está ese card
+            let newStage = over.id as string;
+            if (!validStages.includes(newStage)) {
+              const targetLead = filtered.find(l => l.phoneNumber === newStage);
+              if (targetLead) {
+                newStage = targetLead.lead_stage || 'nuevo';
+              } else {
+                return;
+              }
+            }
             const lead = filtered.find(l => l.phoneNumber === phone);
             if (lead && (lead.lead_stage || 'nuevo') !== newStage) {
               updateStage(phone, newStage);
@@ -305,8 +317,8 @@ export default function CRMPage() {
             const stageLeads = filtered.filter(l => (l.lead_stage || 'nuevo') === stage.id);
             const stageValue = stageLeads.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
             return (
-              <KanbanColumn key={stage.id} id={stage.id} label={stage.label} color={stage.color} bg={stage.bg}
-                count={stageLeads.length} value={stageValue}>
+               <KanbanColumn key={stage.id} id={stage.id} label={stage.label} color={stage.color} bg={stage.bg}
+                count={stageLeads.length} value={stageValue} className="min-w-[180px] sm:min-w-[220px]">
                 {stageLeads.map((lead) => (
                   <KanbanCard key={lead.phoneNumber} lead={lead}
                     onClick={() => { loadDetail(lead.phoneNumber); setView('list'); }} />
@@ -344,8 +356,8 @@ export default function CRMPage() {
                       <p className="text-xs text-gray-500">{lead.phoneNumber}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className={`text-[10px] px-3 py-1 rounded-full ${
+                  <div className="text-right shrink-0">
+                    <span className={`text-[10px] px-2 py-1 rounded-full ${
                       lead.lead_status === 'INTENCION DE COMPRA' ? 'bg-emerald-500/20 text-emerald-400' :
                       lead.lead_status === 'INTERESADO' ? 'bg-indigo-500/20 text-indigo-400' :
                       lead.lead_status === 'DEMO' ? 'bg-purple-500/20 text-purple-400' :
@@ -353,8 +365,8 @@ export default function CRMPage() {
                     }`}>
                       {lead.lead_status || 'Nuevo'}
                     </span>
-                    <p className="text-[10px] text-gray-600 mt-1">{lead.service_of_interest || ''}</p>
-                    <p className="text-[10px] text-gray-600">Visitas: {lead.visit_count || 0}</p>
+                    <p className="text-[10px] text-gray-600 mt-1 hidden sm:block">{lead.service_of_interest || ''}</p>
+                    <p className="text-[10px] text-gray-600 hidden sm:block">Visitas: {lead.visit_count || 0}</p>
                   </div>
                 </div>
               ))}
@@ -362,7 +374,7 @@ export default function CRMPage() {
           )}
         </div>
         {/* Detalle del Lead */}
-        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 sticky top-20">
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 lg:p-6 lg:sticky lg:top-20 max-h-[80vh] overflow-y-auto">
           {selectedLead ? (
             <div>
               <div className="flex items-center gap-3 mb-4">
