@@ -62,7 +62,19 @@ export default function WhatsAppPage() {
       showToast('Facebook SDK no cargado. Recarga la página.');
       return;
     }
-    FB.login(handleSignupResponse, {
+    FB.login((response: any) => {
+      handleSignupResponse(response);
+    }, {
+      config_id: META_CONFIG_ID,
+      response_type: 'code',
+      override_default_response_type: true,
+      extras: {
+        setup: {},
+        featureType: '',
+        sessionInfoVersion: '3',
+      },
+    });
+  };
       config_id: META_CONFIG_ID,
       response_type: 'code',
       override_default_response_type: true,
