@@ -8,6 +8,8 @@ export default function CRMPage() {
   const [filtered, setFiltered] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [aiInsight, setAiInsight] = useState<any>(null);
+  const [loadingAi, setLoadingAi] = useState(false);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   useEffect(() => {
@@ -40,6 +42,14 @@ export default function CRMPage() {
     fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => setSelectedLead(data));
+    setAiInsight(null);
+  };
+  const loadAiInsight = (phone: string) => {
+    setLoadingAi(true);
+    fetch(`${API_URL}/leads/ai-insight?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(res => res.json())
+      .then(data => { setAiInsight(data); setLoadingAi(false); })
+      .catch(() => setLoadingAi(false));
   };
   const statuses = [...new Set(leads.map(l => l.lead_status).filter(Boolean))];
   const exportCSV = () => {
@@ -170,6 +180,92 @@ export default function CRMPage() {
                   </span>
                 </div>
               )}
+              {/* Panel de Inteligencia Artificial */}
+              <div className="pt-4 border-t border-white/5">
+                {!aiInsight && !loadingAi ? (
+                  <button onClick={() => loadAiInsight(selectedLead.lead?.phoneNumber)}
+                    className="w-full bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white py-3 rounded-xl text-sm font-bold transition-all">
+                    🧠 Analizar con IA
+                  </button>
+                ) : loadingAi ? (
+                  <div className="text-center py-4">
+                    <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    <p className="text-xs text-gray-500">Analizando conversación...</p>
+                  </div>
+                ) : aiInsight && (
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-indigo-400">🧠 Análisis IA</h4>
+                    {/* Probabilidad de cierre */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-500">Probabilidad de cierre</span>
+                          <span className={`font-bold ${
+                            aiInsight.close_probability >= 70 ? 'text-emerald-400' :
+                            aiInsight.close_probability >= 40 ? 'text-yellow-400' : 'text-red-400'
+                          }`}>{aiInsight.close_probability}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-1000 ${
+                            aiInsight.close_probability >= 70 ? 'bg-emerald-500' :
+                            aiInsight.close_probability >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`} style={{width: `${aiInsight.close_probability}%`}}></div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Resumen */}
+                    <div>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Resumen</p>
+                      <p className="text-sm text-gray-300">{aiInsight.summary}</p>
+                    </div>
+                    {/* Tags */}
+                    {aiInsight.tags?.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {aiInsight.tags.map((tag: string, i: number) => (
+                          <span key={i} className={`text-[10px] px-2 py-1 rounded-full ${
+                            tag === 'caliente' || tag === 'listo_para_cerrar' ? 'bg-emerald-500/20 text-emerald-400' :
+                            tag === 'frio' || tag === 'inactivo' ? 'bg-red-500/20 text-red-400' :
+                            tag === 'objecion' || tag === 'indeciso' ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-indigo-500/20 text-indigo-400'
+                          }`}>{tag.replace(/_/g, ' ')}</span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Acción sugerida */}
+                    <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-xl p-3">
+                      <p className="text-[10px] text-indigo-400 uppercase tracking-widest mb-1">🎯 Siguiente acción</p>
+                      <p className="text-sm text-white font-medium">{aiInsight.suggested_action}</p>
+                    </div>
+                    {/* Respuesta sugerida */}
+                    {aiInsight.suggested_response && (
+                      <div className="bg-emerald-600/10 border border-emerald-500/20 rounded-xl p-3">
+                        <p className="text-[10px] text-emerald-400 uppercase tracking-widest mb-1">💬 Respuesta sugerida</p>
+                        <p className="text-sm text-gray-300 italic">"{aiInsight.suggested_response}"</p>
+                        <button onClick={() => navigator.clipboard.writeText(aiInsight.suggested_response)}
+                          className="mt-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-bold">
+                          📋 Copiar respuesta
+                        </button>
+                      </div>
+                    )}
+                    {/* Sentimiento */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Sentimiento:</span>
+                      <span className={`text-xs font-bold ${
+                        aiInsight.sentiment === 'positivo' ? 'text-emerald-400' :
+                        aiInsight.sentiment === 'negativo' ? 'text-red-400' : 'text-gray-400'
+                      }`}>
+                        {aiInsight.sentiment === 'positivo' ? '😊 Positivo' :
+                         aiInsight.sentiment === 'negativo' ? '😟 Negativo' : '😐 Neutral'}
+                      </span>
+                    </div>
+                    {/* Botón re-analizar */}
+                    <button onClick={() => loadAiInsight(selectedLead.lead?.phoneNumber)}
+                      className="w-full text-xs text-gray-500 hover:text-indigo-400 py-2 transition-all">
+                      🔄 Re-analizar
+                    </button>
+                  </div>
+                )}
+              </div>              
               {selectedLead.conversation?.length > 0 && (
                 <div className="pt-4 border-t border-white/5">
                   <h4 className="font-bold mb-2">💬 Conversacion</h4>
