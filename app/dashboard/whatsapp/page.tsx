@@ -22,11 +22,10 @@ export default function WhatsAppPage() {
   }, []);
   const isConnected = config?.phone_number_id && config?.waba_id;
   // Callback cuando el usuario completa el signup
-  const handleSignupResponse = useCallback(async (response: any) => {
+const handleSignupResponse = useCallback(async (response: any) => {
     console.log('Embedded Signup response:', JSON.stringify(response));
     setConnecting(true);
     if (response.authResponse) {
-      if (response.authResponse) {
       const accessToken = response.authResponse.accessToken;
       try {
         const res = await fetch(
@@ -36,20 +35,6 @@ export default function WhatsAppPage() {
             headers: { 'client-id': 'JMC' },
           }
         );
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast('✅ ¡WhatsApp conectado exitosamente!');
-          setConfig({
-            ...config,
-            phone_number_id: data.phone_number_id,
-            waba_id: data.waba_id,
-          });
-        } else {
-          showToast('Error: ' + (data.error || 'No se pudo conectar'));
-        }
-      } catch (err) {
-        showToast('Error de conexión con el servidor');
-      }
         const data = await res.json();
         if (res.ok && data.success) {
           showToast('✅ ¡WhatsApp conectado exitosamente!');
