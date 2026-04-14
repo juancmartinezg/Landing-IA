@@ -100,7 +100,11 @@ export default function CRMPage() {
       result = result.filter(l =>
         (l.customer_name || '').toLowerCase().includes(s) ||
         (l.phoneNumber || '').includes(s) ||
-        (l.service_of_interest || '').toLowerCase().includes(s)
+        (l.service_of_interest || '').toLowerCase().includes(s) ||
+        (l.tags || []).some((t: string) => t.toLowerCase().includes(s)) ||
+        (l.notes || []).some((n: any) => (n.text || '').toLowerCase().includes(s)) ||
+        (l.lead_stage || '').toLowerCase().includes(s) ||
+        (l.lead_status || '').toLowerCase().includes(s)
       );
     }
     if (filterStatus !== 'all') {
@@ -191,7 +195,7 @@ export default function CRMPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre, telefono o servicio..."
+          placeholder="Buscar por nombre, teléfono, servicio, tags, notas..."
           className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
         />
         <select
