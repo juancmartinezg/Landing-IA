@@ -380,20 +380,66 @@ export default function CRMPage() {
                   </div>
                 )}
               </div>              
-              {selectedLead.conversation?.length > 0 && (
-                <div className="pt-4 border-t border-white/5">
-                  <h4 className="font-bold mb-2">💬 Conversacion</h4>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {selectedLead.conversation.map((msg: any, i: number) => (
-                      <div key={i} className={`text-xs p-2 rounded-lg ${
-                        msg.role === 'user' ? 'bg-indigo-500/10 text-indigo-300' : 'bg-white/5 text-gray-300'
-                      }`}>
-                        <span className="font-bold">{msg.role === 'user' ? '👤' : '🤖'}</span> {msg.text}
+              {/* Timeline unificada */}
+              <div className="pt-4 border-t border-white/5">
+                <h4 className="font-bold mb-2">📋 Timeline</h4>
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {(() => {
+                    const events: any[] = [];
+                    // Mensajes de conversación
+                    (selectedLead.conversation || []).forEach((msg: any, i: number) => {
+                      events.push({
+                        type: msg.role === 'user' ? 'user_msg' : 'bot_msg',
+                        text: msg.text,
+                        icon: msg.role === 'user' ? '👤' : (msg.text?.startsWith('[Asesor]') ? '🙋' : '🤖'),
+                        color: msg.role === 'user' ? 'bg-indigo-500/10 text-indigo-300' :
+                               msg.text?.startsWith('[Asesor]') ? 'bg-yellow-500/10 text-yellow-300' :
+                               'bg-white/5 text-gray-300',
+                        order: i,
+                      });
+                    });
+                    // Pago
+                    if (selectedLead.payment) {
+                      const p = selectedLead.payment;
+                      events.push({
+                        type: 'payment',
+                        text: `${p.status === 'PAGADO' ? '✅ Pago confirmado' : p.status === 'PENDING' ? '⏳ Pago pendiente' : '❌ Pago ' + p.status}: $${(p.amount || 0).toLocaleString()} ${p.currency || 'COP'} — ${p.service_name || ''}`,
+                        icon: '💳',
+                        color: p.status === 'PAGADO' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-yellow-500/10 text-yellow-300',
+                        order: 9000,
+                      });
+                    }
+                    // Cita agendada
+                    if (selectedLead.payment?.schedule_status === 'AGENDADO') {
+                      events.push({
+                        type: 'appointment',
+                        text: `📅 Cita agendada: ${selectedLead.payment.scheduled_date || ''} a las ${selectedLead.payment.scheduled_hour || ''}:00`,
+                        icon: '📅',
+                        color: 'bg-purple-500/10 text-purple-300',
+                        order: 9500,
+                      });
+                    }
+                    // Estado actual
+                    if (selectedLead.session_state) {
+                      events.push({
+                        type: 'state',
+                        text: `Estado: ${selectedLead.session_state}`,
+                        icon: '🔄',
+                        color: 'bg-gray-500/10 text-gray-400',
+                        order: 9900,
+                      });
+                    }
+                    return events.length > 0 ? events.map((ev, i) => (
+                      <div key={i} className={`text-xs p-2 rounded-lg flex items-start gap-2 ${ev.color}`}>
+                        <span className="shrink-0">{ev.icon}</span>
+                        <span className="break-words">{ev.text}</span>
                       </div>
-                    ))}
-                  </div>
+                    )) : (
+                      <p className="text-xs text-gray-600 text-center py-4">Sin actividad registrada</p>
+                    );
+                  })()}
                 </div>
-              )}
+              </div>
             </div>
           ) : (
             <div className="text-center text-gray-500 py-12">
