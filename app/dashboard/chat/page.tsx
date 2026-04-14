@@ -35,7 +35,11 @@ export default function ChatPage() {
     setLoadingBotMsgs(true);
     fetch(`${API_URL}/conversations?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
-      .then(data => { setBotMessages(data.messages || []); setLoadingBotMsgs(false); })
+      .then(data => {
+        const msgs = data.messages || [];
+        setBotMessages(prev => JSON.stringify(prev) !== JSON.stringify(msgs) ? msgs : prev);
+        setLoadingBotMsgs(false);
+      })
       .catch(() => setLoadingBotMsgs(false));
   };
   // Cargar conversaciones de Chatwoot
@@ -50,7 +54,11 @@ export default function ChatPage() {
     setLoadingCwMsgs(true);
     fetch(`${API_URL}/chatwoot/messages?conversation_id=${convId}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
-      .then(data => { setCwMessages(data.messages || []); setLoadingCwMsgs(false); })
+      .then(data => {
+        const msgs = data.messages || [];
+        setCwMessages(prev => JSON.stringify(prev) !== JSON.stringify(msgs) ? msgs : prev);
+        setLoadingCwMsgs(false);
+      })
       .catch(() => setLoadingCwMsgs(false));
   };
   // Inicial
