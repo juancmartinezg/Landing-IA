@@ -31,10 +31,7 @@ export default function WhatsAppPage() {
         const res = await fetch(`${API_URL}/meta/exchange`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
-          body: JSON.stringify({
-            code,
-            redirect_uri: window.location.origin + '/auth/meta-callback',
-          }),
+          body: JSON.stringify({ code }),
         });
         const data = await res.json();
         if (res.ok && data.success) {
