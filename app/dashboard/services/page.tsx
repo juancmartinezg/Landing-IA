@@ -177,10 +177,41 @@ export default function ServicesPage() {
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">URL de imagen</label>
-              <input value={form.image_url} onChange={(e) => setForm({...form, image_url: e.target.value})}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
-                placeholder="https://..." />
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Imagen del servicio</label>
+              <div className="flex gap-3 items-start">
+                <div className="flex-1">
+                  <input value={form.image_url} onChange={(e) => setForm({...form, image_url: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+                    placeholder="URL de imagen o sube una..." />
+                </div>
+                <label className="bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white px-4 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all shrink-0">
+                  📷 Subir
+                  <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const res = await fetch(`${API_URL}/upload-url?file_name=${encodeURIComponent(file.name)}&folder=services`, {
+                        headers: { 'client-id': user?.companyId || '' }
+                      });
+                      const data = await res.json();
+                      if (data.upload_url) {
+                        await fetch(data.upload_url, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': data.content_type },
+                          body: file,
+                        });
+                        setForm({...form, image_url: data.public_url});
+                        showToast('✓ Imagen subida');
+                      }
+                    } catch (err) {
+                      showToast('Error subiendo imagen');
+                    }
+                  }} />
+                </label>
+              </div>
+              {form.image_url && (
+                <img src={form.image_url} alt="Preview" className="mt-3 h-24 rounded-xl object-cover" />
+              )}
             </div>
           </div>
           <div className="flex gap-3 mt-4">
