@@ -1,10 +1,12 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../providers';
 import Script from 'next/script';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const META_APP_ID = '27398458396409385';
 const META_CONFIG_ID = '694128837119269';
 export default function WhatsAppPage() {
+  const { user } = useAuth();
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -15,9 +17,9 @@ export default function WhatsAppPage() {
     setTimeout(() => setToast(null), 4000);
   };
   useEffect(() => {
-    fetch(`${API_URL}/config`, { headers: { 'client-id': 'JMC' } })
+    fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' }
       .then(res => res.json())
-      .then(data => { setConfig(data); setLoading(false); })
+      .then(data => { setConfig(data); setLoading(faimport { useState, useEffect, useCallback } from 'react';lse); })
       .catch(() => setLoading(false));
   }, []);
   const isConnected = config?.phone_number_id && config?.waba_id;
@@ -32,7 +34,7 @@ const handleSignupResponse = useCallback(async (response: any) => {
           `${API_URL}/meta/exchange?access_token=${encodeURIComponent(accessToken)}`,
           {
             method: 'POST',
-            headers: { 'client-id': 'JMC' },
+            headers: { 'client-id': user?.companyId || '' },
           }
         );
         const data = await res.json();
@@ -79,7 +81,7 @@ const handleSignupResponse = useCallback(async (response: any) => {
     try {
       await fetch(`${API_URL}/config`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'client-id': 'JMC' },
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
         body: JSON.stringify({
           phone_number_id: 'DISCONNECTED',
           waba_id: 'DISCONNECTED',
