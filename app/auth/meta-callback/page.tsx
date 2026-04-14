@@ -1,8 +1,9 @@
 'use client';
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-export default function MetaCallbackPage() {
+function MetaCallbackContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Conectando tu WhatsApp...');
@@ -84,5 +85,16 @@ export default function MetaCallbackPage() {
         )}
       </div>
     </div>
+  );
+}
+export default function MetaCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-[#25D366] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <MetaCallbackContent />
+    </Suspense>
   );
 }
