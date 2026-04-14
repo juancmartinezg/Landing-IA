@@ -37,7 +37,7 @@ export default function ChatPage() {
       .then(res => res.json())
       .then(data => {
         const msgs = data.messages || [];
-        setBotMessages(prev => JSON.stringify(prev) !== JSON.stringify(msgs) ? msgs : prev);
+        setBotMessages(prev => prev.length !== msgs.length ? msgs : prev);
         setLoadingBotMsgs(false);
       })
       .catch(() => setLoadingBotMsgs(false));
@@ -56,7 +56,7 @@ export default function ChatPage() {
       .then(res => res.json())
       .then(data => {
         const msgs = data.messages || [];
-        setCwMessages(prev => JSON.stringify(prev) !== JSON.stringify(msgs) ? msgs : prev);
+        setCwMessages(prev => prev.length !== msgs.length ? msgs : prev);
         setLoadingCwMsgs(false);
       })
       .catch(() => setLoadingCwMsgs(false));
@@ -75,9 +75,9 @@ export default function ChatPage() {
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
     if (tab === 'bot' && selectedPhone) {
-      pollRef.current = setInterval(() => loadBotMessages(selectedPhone), 3000);
+      pollRef.current = setInterval(() => loadBotMessages(selectedPhone), 5000);
     } else if (tab === 'agent' && selectedConvId) {
-      pollRef.current = setInterval(() => loadCwMessages(selectedConvId), 3000);
+      pollRef.current = setInterval(() => loadCwMessages(selectedConvId), 5000);
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [tab, selectedPhone, selectedConvId]);
