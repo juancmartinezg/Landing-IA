@@ -470,12 +470,44 @@ export default function SettingsPage() {
             <h3 className="font-bold">Festivos</h3>
             <span className="text-xs text-gray-500">{schedForm.holidays.length} días</span>
           </div>
+          <div className="flex gap-2 mb-3">
+            <select id="holidayCountry" defaultValue="CO"
+              className="bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white">
+              <option value="CO" className="bg-[#1a1f2e] text-white">🇨🇴 Colombia</option>
+              <option value="MX" className="bg-[#1a1f2e] text-white">🇲🇽 México</option>
+              <option value="AR" className="bg-[#1a1f2e] text-white">🇦🇷 Argentina</option>
+              <option value="CL" className="bg-[#1a1f2e] text-white">🇨🇱 Chile</option>
+              <option value="PE" className="bg-[#1a1f2e] text-white">🇵🇪 Perú</option>
+              <option value="EC" className="bg-[#1a1f2e] text-white">🇪🇨 Ecuador</option>
+              <option value="BR" className="bg-[#1a1f2e] text-white">🇧🇷 Brasil</option>
+              <option value="US" className="bg-[#1a1f2e] text-white">🇺🇸 Estados Unidos</option>
+              <option value="ES" className="bg-[#1a1f2e] text-white">🇪🇸 España</option>
+            </select>
+            <button onClick={async () => {
+              const country = (document.getElementById('holidayCountry') as HTMLSelectElement)?.value || 'CO';
+              const year = new Date().getFullYear().toString();
+              try {
+                const res = await fetch(`${API_URL}/holidays?country=${country}&year=${year}`);
+                const data = await res.json();
+                if (data.holidays?.length) {
+                  const merged = [...new Set([...schedForm.holidays, ...data.holidays])].sort();
+                  setSchedForm(prev => ({ ...prev, holidays: merged }));
+                  showToast(`✓ ${data.count} festivos de ${data.country_name} cargados`);
+                } else {
+                  showToast('No se encontraron festivos');
+                }
+              } catch { showToast('Error cargando festivos'); }
+            }}
+              className="bg-indigo-600 hover:bg-indigo-500 px-4 py-3 rounded-xl text-xs font-bold transition-all whitespace-nowrap">
+              🌎 Cargar festivos
+            </button>
+          </div>
           <div className="flex gap-2 mb-4">
             <input type="date" value={newHoliday} onChange={(e) => setNewHoliday(e.target.value)}
               className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white" />
             <button onClick={addHoliday}
-              className="bg-indigo-600 hover:bg-indigo-500 px-4 py-3 rounded-xl text-xs font-bold transition-all">
-              + Agregar
+              className="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-3 rounded-xl text-xs font-bold transition-all">
+              + Manual
             </button>
           </div>
           {schedForm.holidays.length === 0 ? (
