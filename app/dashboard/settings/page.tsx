@@ -40,12 +40,17 @@ export default function SettingsPage() {
     btn_book: '',
     brand_logo_url: '',
   });
-  const [schedForm, setSchedForm] = useState({
+ const [schedForm, setSchedForm] = useState({
     timezone: 'America/Bogota',
     business_hours_start: 8,
     business_hours_end: 18,
     closed_days: [] as number[],
     holidays: [] as string[],
+  });
+  const [humanHours, setHumanHours] = useState({
+    start: 8,
+    end: 18,
+    days: [1, 2, 3, 4, 5] as number[],
   });
   const showToast = (msg: string) => {
     setToast(msg);
@@ -71,7 +76,13 @@ export default function SettingsPage() {
           closed_days: sched.closed_days || [],
           holidays: sched.holidays || [],
         });
-        setPromptText(data.prompt || '');
+       setPromptText(data.prompt || '');
+        const hh = data.human_support_hours || {};
+        setHumanHours({
+          start: hh.start ?? 8,
+          end: hh.end ?? 18,
+          days: hh.days ?? [1, 2, 3, 4, 5],
+        });
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -141,6 +152,35 @@ export default function SettingsPage() {
       showToast('Error guardando prompt');
     }
     setSaving(false);
+  };
+  const handleSaveHumanHours = async () => {
+    setSaving(true);
+    try {
+      await fetch(`${API_URL}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({
+          human_support_hours: {
+            start: humanHours.start,
+            end: humanHours.end,
+            days: humanHours.days,
+          },
+        }),
+      });
+      setConfig({ ...config, human_support_hours: humanHours });
+      showToast('✓ Horario del asesor guardado');
+    } catch (err) {
+      showToast('Error guardando horario del asesor');
+    }
+    setSaving(false);
+  };
+  const toggleHumanDay = (dayId: number) => {
+    setHumanHours(prev => ({
+      ...prev,
+      days: prev.days.includes(dayId)
+        ? prev.days.filter(d => d !== dayId)
+        : [...prev.days, dayId].sort(),
+    }));
   };
   const toggleClosedDay = (dayId: number) => {
     setSchedForm(prev => ({
@@ -379,6 +419,52 @@ export default function SettingsPage() {
           </div>
         </div>
         {/* Festivos */}
+        {/* Horario del Asesor Humano */}
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold">Horario del Asesor 🙋‍♂️</h3>
+            <button onClick={handleSaveHumanHours} disabled={saving}
+              className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
+              {saving ? '...' : 'Guardar'}
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-500 mb-4">Fuera de este horario, el bot NO transferirá a un asesor humano y seguirá atendiendo con IA.</p>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Hora inicio</label>
+              <select value={humanHours.start} onChange={(e) => setHumanHours({...humanHours, start: parseInt(e.target.value)})}
+                className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white">
+                {Array.from({length: 24}, (_, i) => (
+                  <option key={i} value={i} className="bg-[#1a1f2e] text-white">{i}:00</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Hora fin</label>
+              <select value={humanHours.end} onChange={(e) => setHumanHours({...humanHours, end: parseInt(e.target.value)})}
+                className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white">
+                {Array.from({length: 24}, (_, i) => (
+                  <option key={i} value={i} className="bg-[#1a1f2e] text-white">{i}:00</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 uppercase tracking-widest mb-2">Días con asesor disponible</label>
+            <div className="flex flex-wrap gap-2">
+              {ALL_DAYS.map(day => (
+                <button key={day.id} onClick={() => toggleHumanDay(day.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    humanHours.days.includes(day.id)
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                  }`}>
+                  {day.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold">Festivos</h3>
