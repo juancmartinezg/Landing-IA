@@ -677,32 +677,64 @@ export default function CRMPage() {
                 <div className="flex flex-wrap gap-2">
                   <a href={`https://wa.me/${selectedLead.lead?.phoneNumber}`} target="_blank"
                     className="text-[10px] px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold transition-all">
-                    💬 Enviar WhatsApp
+                    💬 WhatsApp
                   </a>
                   <button onClick={() => {
-                    const slug = selectedLead.lead?.service_of_interest?.toLowerCase().replace(/\s+/g, '-') || '';
-                    if (slug) {
-                      fetch(`${API_URL}/conversations/send`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
-                        body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, content: `Hola! Te envío el enlace para completar tu reserva 🎯` }),
-                      });
-                    }
+                    fetch(`${API_URL}/conversations/send`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                      body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, content: `Hola! Te envío el enlace para completar tu reserva 🎯` }),
+                    });
                   }}
                     className="text-[10px] px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white font-bold transition-all">
-                    💳 Enviar link pago
+                    💳 Link pago
                   </button>
                   <button onClick={() => {
                     if (selectedLead.lead?.phoneNumber) {
                       updateStage(selectedLead.lead.phoneNumber, 'contactado');
-                      addNote(selectedLead.lead.phoneNumber);
                       setNewNote('Contactado por el asesor');
+                      addNote(selectedLead.lead.phoneNumber);
                     }
                   }}
                     className="text-[10px] px-3 py-1.5 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600 hover:text-white font-bold transition-all">
-                    📞 Marcar contactado
+                    📞 Contactado
                   </button>
                 </div>
+              </div>
+              {/* Mensajes rápidos */}
+              <div className="mb-4 pt-4 border-t border-white/5">
+                <details className="group">
+                  <summary className="flex items-center justify-between cursor-pointer list-none">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">⚡ Mensajes rápidos</p>
+                    <span className="text-gray-600 text-[10px] group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="mt-2 space-y-1.5">
+                    {[
+                      { icon: '👋', label: 'Saludo', msg: `¡Hola! ¿Cómo estás? Te escribimos para darte información sobre nuestros servicios. ¿En qué podemos ayudarte? 😊` },
+                      { icon: '💰', label: 'Precio', msg: `El valor de ${selectedLead.lead?.service_of_interest || 'nuestro servicio'} es muy accesible. ¿Te gustaría conocer los detalles y opciones de pago? 💳` },
+                      { icon: '📅', label: 'Agendar', msg: `¡Perfecto! ¿Te gustaría agendar tu cita? Tenemos disponibilidad esta semana. Solo necesito confirmar fecha y hora 📅` },
+                      { icon: '🔥', label: 'Urgencia', msg: `¡Hola! Solo quería recordarte que los cupos son limitados y se están llenando rápido. Si quieres asegurar tu lugar, te puedo enviar el enlace de pago ahora mismo 🎯` },
+                      { icon: '🙏', label: 'Seguimiento', msg: `¡Hola! ¿Pudiste revisar la información que te envié? Quedo atento a cualquier duda que tengas. ¡Estoy aquí para ayudarte! 🙋‍♂️` },
+                      { icon: '⭐', label: 'Reseña', msg: `¡Hola! Esperamos que hayas tenido una excelente experiencia. ¿Nos podrías regalar una reseña? Tu opinión nos ayuda mucho ⭐` },
+                    ].map((tpl, i) => (
+                      <button key={i} onClick={() => {
+                        fetch(`${API_URL}/conversations/send`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                          body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, content: tpl.msg }),
+                        }).then(() => loadDetail(selectedLead.lead?.phoneNumber));
+                      }}
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 transition-all">
+                        <span className="text-sm">{tpl.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-white">{tpl.label}</p>
+                          <p className="text-[9px] text-gray-500 truncate">{tpl.msg}</p>
+                        </div>
+                        <span className="text-[9px] text-gray-600 shrink-0">📤</span>
+                      </button>
+                    ))}
+                  </div>
+                </details>
               </div>
               {/* Notas */}
               <div className="mb-4 pt-4 border-t border-white/5">
