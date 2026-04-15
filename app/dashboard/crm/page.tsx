@@ -133,7 +133,29 @@ export default function CRMPage() {
     setLoadingAi(true);
     fetch(`${API_URL}/leads/ai-insight?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
-      .then(data => { setAiInsight(data); setLoadingAi(false); })
+      .then(data => {
+        setAiInsight(data);
+        setLoadingAi(false);
+        // Auto-guardar score desde IA
+        if (data.close_probability) {
+          fetch(`${API_URL}/leads/score`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+            body: JSON.stringify({ phone, score: data.close_probability }),
+          });
+        }
+        // Auto-guardar tags desde IA
+        if (data.tags?.length > 0) {
+          fetch(`${API_URL}/leads/tags`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+            body: JSON.stringify({ phone, action: 'add', tags: data.tags }),
+          }).then(() => {
+            fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
+              .then(res => res.json()).then(d => setLeads(d.leads || []));
+          });
+        }
+      })
       .catch(() => setLoadingAi(false));
   };
   const allTags = [...new Set(leads.flatMap(l => l.tags || []))];
@@ -397,8 +419,21 @@ export default function CRMPage() {
                     }`}>
                       {lead.lead_status || 'Nuevo'}
                     </span>
-                    <p className="text-[10px] text-gray-600 mt-1 hidden sm:block">{lead.service_of_interest || ''}</p>
-                    <p className="text-[10px] text-gray-600 hidden sm:block">Visitas: {lead.visit_count || 0}</p>
+                    {lead.last_updated && (
+                      <p className={`text-[9px] mt-1 ${
+                        (Date.now()/1000 - Number(lead.last_updated)) > 172800 ? 'text-red-400' :
+                        (Date.now()/1000 - Number(lead.last_updated)) > 86400 ? 'text-yellow-400' : 'text-gray-500'
+                      }`}>
+                        {(() => {
+                          const diff = Math.floor((Date.now()/1000 - Number(lead.last_updated)) / 3600);
+                          if (diff < 1) return '⚡ Ahora';
+                          if (diff < 24) return `🕐 ${diff}h`;
+                          if (diff < 48) return '🕐 Ayer';
+                          return `⚠️ ${Math.floor(diff/24)}d`;
+                        })()}
+                      </p>
+                    )}
+                    <p className="text-[10px] text-gray-600 mt-0.5 hidden sm:block">{lead.service_of_interest || ''}</p>
                   </div>
                 </div>
               ))}
@@ -596,10 +631,22 @@ export default function CRMPage() {
                       <div className="bg-emerald-600/10 border border-emerald-500/20 rounded-xl p-3">
                         <p className="text-[10px] text-emerald-400 uppercase tracking-widest mb-1">💬 Respuesta sugerida</p>
                         <p className="text-sm text-gray-300 italic">"{aiInsight.suggested_response}"</p>
-                        <button onClick={() => navigator.clipboard.writeText(aiInsight.suggested_response)}
-                          className="mt-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-bold">
-                          📋 Copiar respuesta
-                        </button>
+                        <div className="flex gap-2 mt-2">
+                          <button onClick={() => navigator.clipboard.writeText(aiInsight.suggested_response)}
+                            className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold">
+                            📋 Copiar
+                          </button>
+                          <button onClick={() => {
+                            fetch(`${API_URL}/conversations/send`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                              body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, content: aiInsight.suggested_response }),
+                            }).then(() => { loadDetail(selectedLead.lead?.phoneNumber); });
+                          }}
+                            className="text-[10px] text-white bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded-lg font-bold transition-all">
+                            📤 Enviar por WhatsApp
+                          </button>
+                        </div>
                       </div>
                     )}
                     {/* Sentimiento */}
