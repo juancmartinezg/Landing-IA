@@ -89,15 +89,21 @@ export default function CRMPage() {
   const [view, setView] = useState<'list' | 'kanban'>('list');
   const [showDetail, setShowDetail] = useState(false);
   const [crmFields, setCrmFields] = useState<string[]>([]);
-  const [shippingProvider, setShippingProvider] = useState('');
+  const [activeCarriers, setActiveCarriers] = useState<string[]>([]);
+  const [servicesList, setServicesList] = useState<any[]>([]);
+  const [filterProduct, setFilterProduct] = useState('all');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   useEffect(() => {
     fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => {
         setCrmFields(data.crm_fields || []);
-        setShippingProvider((data.shipping || {}).provider || '');
+        setActiveCarriers((data.shipping || {}).providers || []);
       })
+      .catch(() => {});
+    fetch(`${API_URL}/services`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(res => res.json())
+      .then(data => setServicesList(data.services || []))
       .catch(() => {});
     fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
@@ -129,8 +135,11 @@ export default function CRMPage() {
     if (filterTag !== 'all') {
       result = result.filter(l => (l.tags || []).includes(filterTag));
     }
+    if (filterProduct !== 'all') {
+      result = result.filter(l => (l.purchase_info || {}).product_name === filterProduct);
+    }
     setFiltered(result);
-  }, [search, filterStatus, filterTag, leads]);
+  }, [search, filterStatus, filterTag, filterProduct, leads]);
   const loadDetail = (phone: string) => {
     fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
@@ -258,6 +267,18 @@ export default function CRMPage() {
               <option key={t} value={t} className="bg-[#1a1f2e] text-white">{t.replace(/_/g, ' ')}</option>
             ))}
           </select>
+          {crmFields.includes('product_name') && (
+            <select
+              value={filterProduct}
+              onChange={(e) => setFilterProduct(e.target.value)}
+              className="flex-1 sm:flex-none bg-[#0B0F1A] border border-white/10 rounded-xl px-2 py-2 text-xs outline-none focus:border-indigo-500 text-white"
+            >
+              <option value="all" className="bg-[#1a1f2e] text-white">Producto</option>
+              {[...new Set(leads.map(l => (l.purchase_info || {}).product_name).filter(Boolean))].map(p => (
+                <option key={p} value={p} className="bg-[#1a1f2e] text-white">{p}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
       {/* Alertas inteligentes */}
@@ -592,10 +613,10 @@ export default function CRMPage() {
                   </summary>
                   <div className="mt-3 space-y-2">
                     {[
-                      { key: 'product_name', label: 'Producto', icon: '🏷️', type: 'text' },
+                      { key: 'product_name', label: 'Producto', icon: '🏷️', type: servicesList.length > 0 ? 'catalog' : 'text' },
                       { key: 'purchase_date', label: 'Fecha compra', icon: '📅', type: 'date' },
                       { key: 'shipping_address', label: 'Dirección', icon: '📍', type: 'text' },
-                      { key: 'carrier', label: 'Transportadora', icon: '🚚', type: 'select', options: ['', 'Servientrega', 'Coordinadora', 'Envia', 'Inter Rapidísimo', '99 Minutos', 'DHL', 'FedEx', 'Estafeta', 'Andreani', 'Chilexpress', 'Otra'] },
+                      { key: 'carrier', label: 'Transportadora', icon: '🚚', type: 'select', options: ['', ...(activeCarriers.length > 0 ? activeCarriers.map(c => { const found = [['servientrega','Servientrega'],['coordinadora','Coordinadora'],['envia','Envia'],['interrapidisimo','Inter Rapidísimo'],['99minutos','99 Minutos'],['dhl','DHL'],['fedex','FedEx'],['estafeta','Estafeta'],['paquetexpress','Paquetexpress'],['redpack','Redpack'],['andreani','Andreani'],['chilexpress','Chilexpress']].find(([id]) => id === c); return found ? found[1] : c; }) : ['Servientrega', 'Coordinadora', 'Envia', 'DHL', 'FedEx', 'Otra'])] },
                       { key: 'tracking_number', label: 'Guía', icon: '📋', type: 'text' },
                       { key: 'shipping_status', label: 'Estado', icon: '📊', type: 'select', options: ['', 'preparando', 'despachado', 'en_camino', 'entregado', 'devuelto'] },
                       { key: 'renewal_date', label: 'Renovación', icon: '🔄', type: 'date' },
@@ -612,7 +633,13 @@ export default function CRMPage() {
                         <div key={f.key} className="flex items-center gap-2">
                           <span className="text-xs w-4 shrink-0">{f.icon}</span>
                           <span className="text-[9px] text-gray-500 w-16 shrink-0">{f.label}</span>
-                          {f.type === 'select' ? (
+                          {f.type === 'catalog' ? (
+                            <select defaultValue={val} onChange={(e) => save(e.target.value)}
+                              className="flex-1 bg-[#0B0F1A] border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white outline-none">
+                              <option value="" className="bg-[#1a1f2e] text-white">—</option>
+                              {servicesList.map(s => <option key={s.slug || s.name} value={s.name} className="bg-[#1a1f2e] text-white">{s.name}</option>)}
+                            </select>
+                          ) : f.type === 'select' ? (
                             <select defaultValue={val} onChange={(e) => save(e.target.value)}
                               className="flex-1 bg-[#0B0F1A] border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white outline-none">
                               {f.options?.map(o => <option key={o} value={o} className="bg-[#1a1f2e] text-white">{o ? o.replace(/_/g, ' ') : '—'}</option>)}
@@ -636,6 +663,8 @@ export default function CRMPage() {
                         dhl: `https://www.dhl.com/co-es/home/rastreo.html?tracking-id=${tracking}`,
                         fedex: `https://www.fedex.com/fedextrack/?trknbr=${tracking}`,
                         estafeta: `https://rastreo3.estafeta.com/Tracking/${tracking}`,
+                        paquetexpress: `https://www.paquetexpress.com.mx/rastreo/${tracking}`,
+                        redpack: `https://www.redpack.com.mx/rastreo/?guia=${tracking}`,
                         andreani: `https://www.andreani.com/#!/informacionEnvio/${tracking}`,
                         chilexpress: `https://www.chilexpress.cl/estado-de-envio/${tracking}`,
                       };

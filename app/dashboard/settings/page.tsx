@@ -37,7 +37,9 @@ const SHIPPING_PROVIDERS = [
   { id: '99minutos', name: '99 Minutos', country: '🇲🇽🇨🇴' },
   { id: 'dhl', name: 'DHL', country: '🌎 Global' },
   { id: 'fedex', name: 'FedEx', country: '🌎 Global' },
-  { id: 'estafeta', name: 'Estafeta', country: '🇲🇽 MX' },
+   id: 'estafeta', name: 'Estafeta', country: '🇲🇽 MX' },
+  { id: 'paquetexpress', name: 'Paquetexpress', country: '🇲🇽 MX' },
+  { id: 'redpack', name: 'Redpack', country: '🇲🇽 MX' },
   { id: 'andreani', name: 'Andreani', country: '🇦🇷 AR' },
   { id: 'chilexpress', name: 'Chilexpress', country: '🇨🇱 CL' },
 ];
@@ -51,7 +53,7 @@ export default function SettingsPage() {
   const [newHoliday, setNewHoliday] = useState('');
   const [crmFields, setCrmFields] = useState<string[]>([]);
   const [businessType, setBusinessType] = useState('servicios');
-  const [shippingProvider, setShippingProvider] = useState('');
+  const [shippingProviders, setShippingProviders] = useState<string[]>([]);
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptText, setPromptText] = useState('');
   const [wizardStep, setWizardStep] = useState(1);
@@ -112,7 +114,7 @@ export default function SettingsPage() {
        setPromptText(data.prompt || '');
         setCrmFields(data.crm_fields || []);
         setBusinessType(data.business_type || 'servicios');
-        setShippingProvider((data.shipping || {}).provider || '');
+        setShippingProviders((data.shipping || {}).providers || []);
         const hh = data.human_support_hours || {};
         setHumanHours({
           start: hh.start ?? 8,
@@ -211,14 +213,17 @@ export default function SettingsPage() {
     setSaving(false);
   };
   const hasShippingFields = crmFields.some(f => ['carrier', 'tracking_number', 'shipping_status'].includes(f));
+  const toggleShippingProvider = (id: string) => {
+    setShippingProviders(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
+  };
   const handleSaveCrmFields = async () => {
     setSaving(true);
     try {
       const payload: any = { crm_fields: crmFields, business_type: businessType };
-      if (hasShippingFields && shippingProvider) {
-        payload.shipping = { provider: shippingProvider, active: true };
+      if (hasShippingFields && shippingProviders.length > 0) {
+        payload.shipping = { providers: shippingProviders, active: true };
       } else {
-        payload.shipping = { provider: '', active: false };
+        payload.shipping = { providers: [], active: false };
       }
       await fetch(`${API_URL}/config`, {
         method: 'PUT',
@@ -806,16 +811,16 @@ export default function SettingsPage() {
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold">Transportadoras 🚚</h3>
-              <span className={`text-xs font-bold ${shippingProvider ? 'text-emerald-400' : 'text-yellow-400'}`}>
-                {shippingProvider ? '✓ Configurada' : '⚠ Sin configurar'}
+              <span className={`text-xs font-bold ${shippingProviders.length > 0 ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                {shippingProviders.length > 0 ? `✓ ${shippingProviders.length} activa${shippingProviders.length > 1 ? 's' : ''}` : '⚠ Sin configurar'}
               </span>
             </div>
-            <p className="text-[10px] text-gray-500 mb-3">Selecciona tu transportadora para rastreo automático de guías.</p>
+            <p className="text-[10px] text-gray-500 mb-3">Marca las transportadoras que usas. Solo estas aparecerán en el CRM.</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
               {SHIPPING_PROVIDERS.map(sp => (
-                <button key={sp.id} onClick={() => setShippingProvider(shippingProvider === sp.id ? '' : sp.id)}
+                <button key={sp.id} onClick={() => toggleShippingProvider(sp.id)}
                   className={`p-3 rounded-xl text-center transition-all border ${
-                    shippingProvider === sp.id
+                    shippingProviders.includes(sp.id)
                       ? 'border-emerald-500 bg-emerald-600/10'
                       : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
                   }`}>
