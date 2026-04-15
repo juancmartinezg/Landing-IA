@@ -668,7 +668,7 @@ export default function CRMPage() {
                         andreani: `https://www.andreani.com/#!/informacionEnvio/${tracking}`,
                         chilexpress: `https://www.chilexpress.cl/estado-de-envio/${tracking}`,
                       };
-                      const providerKey = shippingProvider || carrier;
+                      const providerKey = (activeCarriers.length === 1 ? activeCarriers[0] : '') || carrier;
                       const trackUrl = urls[providerKey] || `https://www.google.com/search?q=rastreo+${carrier}+${tracking}`;
                       return (
                         <a href={trackUrl} target="_blank"
