@@ -626,6 +626,7 @@ export default function CRMPage() {
                     })}
                     {crmFields.includes('tracking_number') && selectedLead.lead?.purchase_info?.tracking_number && (() => {
                       const carrier = (selectedLead.lead.purchase_info.carrier || '').toLowerCase();
+                      const tracking = selectedLead.lead.purchase_info.tracking_number;
                       const urls: Record<string, string> = {
                         servientrega: `https://www.servientrega.com/wps/portal/rastreo-envio/${tracking}`,
                         coordinadora: `https://www.coordinadora.com/rastreo-de-guia/?guia=${tracking}`,
