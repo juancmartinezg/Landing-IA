@@ -23,7 +23,8 @@ function KanbanColumn({ id, label, color, bg, count, value, children }: any) {
     </div>
   );
 }
-function KanbanCard({ lead, onClick }: any) {
+function KanbanCard({ lead, onClick, onMove }: any) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lead.phoneNumber,
     data: { type: 'card', stage: lead.lead_stage || 'nuevo' },
@@ -33,36 +34,39 @@ function KanbanCard({ lead, onClick }: any) {
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+  const stages = [
+    { id: 'nuevo', label: '🆕 Nuevo' },
+    { id: 'interesado', label: '🔥 Interesado' },
+    { id: 'negociacion', label: '🤝 Negociación' },
+    { id: 'cerrado_ganado', label: '✅ Cerrado' },
+    { id: 'contactado', label: '📞 Contactado' },
+    { id: 'cerrado_perdido', label: '❌ Perdido' },
+  ].filter(s => s.id !== (lead.lead_stage || 'nuevo'));
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}
-      className={`bg-white/[0.03] border border-white/5 rounded-xl p-3 cursor-grab active:cursor-grabbing hover:bg-white/[0.06] transition-all ${
-        isDragging ? 'shadow-lg shadow-indigo-500/20 border-indigo-500/50' : ''
-      }`}
-      onClick={onClick}>
-      <div className="flex items-center gap-2 mb-1">
-        <div className="w-7 h-7 bg-indigo-600/20 rounded-full flex items-center justify-center text-[10px] font-bold text-indigo-400">
+    <div ref={setNodeRef} style={style} {...attributes}
+      className={`bg-white/[0.03] border border-white/5 rounded-xl p-2.5 hover:bg-white/[0.06] transition-all relative ${
+        isDragging ? 'shadow-lg shadow-indigo-500/20 border-indigo-500/50 cursor-grabbing' : 'cursor-pointer'
+      }`}>
+      <div className="flex items-center gap-2" onClick={onClick}>
+        <div {...listeners} className="hidden sm:block cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 text-xs px-0.5">⠿</div>
+        <div className="w-6 h-6 bg-indigo-600/20 rounded-full flex items-center justify-center text-[9px] font-bold text-indigo-400 shrink-0">
           {(lead.customer_name || 'U').charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate">{lead.customer_name || 'Sin nombre'}</p>
-          <p className="text-[9px] text-gray-600">{lead.phoneNumber}</p>
+          <p className="text-[11px] font-medium truncate">{lead.customer_name || 'Sin nombre'}</p>
+          <p className="text-[9px] text-gray-600 truncate">{lead.service_of_interest || lead.phoneNumber}</p>
         </div>
+        <button onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+          className="text-gray-500 hover:text-white text-sm shrink-0 px-1">⋮</button>
       </div>
-      {lead.service_of_interest && <p className="text-[9px] text-gray-500 truncate">{lead.service_of_interest}</p>}
-      {(lead.tags || []).length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-1">
-          {(lead.tags || []).slice(0, 2).map((tag: string, i: number) => (
-            <span key={i} className="text-[8px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400">
-              {tag.replace(/_/g, ' ')}
-            </span>
+      {menuOpen && (
+        <div className="absolute right-2 top-full mt-1 bg-[#1a1f2e] border border-white/10 rounded-lg shadow-xl z-50 py-1 min-w-[140px]">
+          {stages.map(s => (
+            <button key={s.id} onClick={(e) => { e.stopPropagation(); onMove(lead.phoneNumber, s.id); setMenuOpen(false); }}
+              className="w-full text-left px-3 py-1.5 text-[10px] hover:bg-white/10 text-gray-300 transition-all">
+              {s.label}
+            </button>
           ))}
-        </div>
-      )}
-      {(lead.lead_score || 0) > 0 && (
-        <div className="mt-1 w-full h-1 bg-white/5 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full ${
-            lead.lead_score >= 70 ? 'bg-emerald-500' : lead.lead_score >= 40 ? 'bg-yellow-500' : 'bg-gray-500'
-          }`} style={{width: `${lead.lead_score}%`}}></div>
         </div>
       )}
     </div>
@@ -83,6 +87,7 @@ export default function CRMPage() {
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [view, setView] = useState<'list' | 'kanban'>('list');
+  const [showDetail, setShowDetail] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   useEffect(() => {
     fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
@@ -120,9 +125,10 @@ export default function CRMPage() {
   const loadDetail = (phone: string) => {
     fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
-      .then(data => setSelectedLead(data));
+      .then(data => { setSelectedLead(data); setShowDetail(true); });
     setAiInsight(null);
   };
+  const closeDetail = () => { setShowDetail(false); };
   const loadAiInsight = (phone: string) => {
     setLoadingAi(true);
     fetch(`${API_URL}/leads/ai-insight?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
@@ -335,11 +341,9 @@ export default function CRMPage() {
         <div className="flex flex-col sm:flex-row gap-3 sm:overflow-x-auto pb-4 sm:-mx-0 sm:px-0">
           {[
             { id: 'nuevo', label: '🆕 Nuevo', color: 'border-gray-500/30', bg: 'bg-gray-500/5' },
-            { id: 'contactado', label: '📞 Contactado', color: 'border-blue-500/30', bg: 'bg-blue-500/5' },
             { id: 'interesado', label: '🔥 Interesado', color: 'border-yellow-500/30', bg: 'bg-yellow-500/5' },
             { id: 'negociacion', label: '🤝 Negociación', color: 'border-purple-500/30', bg: 'bg-purple-500/5' },
-            { id: 'cerrado_ganado', label: '✅ Ganado', color: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
-            { id: 'cerrado_perdido', label: '❌ Perdido', color: 'border-red-500/30', bg: 'bg-red-500/5' },
+            { id: 'cerrado_ganado', label: '✅ Cerrado', color: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
           ].map(stage => {
             const stageLeads = filtered.filter(l => (l.lead_stage || 'nuevo') === stage.id);
             const stageValue = stageLeads.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
@@ -348,7 +352,8 @@ export default function CRMPage() {
                 count={stageLeads.length} value={stageValue} className="min-w-[180px] sm:min-w-[220px]">
                 {stageLeads.map((lead) => (
                   <KanbanCard key={lead.phoneNumber} lead={lead}
-                    onClick={() => { loadDetail(lead.phoneNumber); setView('list'); }} />
+                    onClick={() => loadDetail(lead.phoneNumber)}
+                    onMove={(phone: string, stage: string) => updateStage(phone, stage)} />
                 ))}
               </KanbanColumn>
             );
@@ -356,9 +361,9 @@ export default function CRMPage() {
         </div>
         </DndContext>
       ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="relative">
         {/* Lista de Leads */}
-        <div className="lg:col-span-2">
+        <div>
           <div className="text-xs text-gray-500 mb-2">{filtered.length} leads encontrados</div>
           {loading ? (
             <div className="text-center py-12 text-gray-500">Cargando leads...</div>
@@ -400,8 +405,17 @@ export default function CRMPage() {
             </div>
           )}
         </div>
-        {/* Detalle del Lead */}
-        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 lg:p-6 lg:sticky lg:top-20 max-h-[80vh] overflow-y-auto">
+        {/* Detalle del Lead — Slide-over desktop / Modal móvil */}
+        {showDetail && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={closeDetail} />}
+        <div className={`fixed z-50 bg-[#0B0F1A] border-l border-white/10 transition-transform duration-300 overflow-y-auto
+          bottom-0 left-0 right-0 h-[85vh] rounded-t-2xl lg:rounded-none lg:top-0 lg:left-auto lg:right-0 lg:w-[450px] lg:h-full
+          ${showDetail ? 'translate-y-0 lg:translate-x-0' : 'translate-y-full lg:translate-x-full'}
+        `}>
+          <div className="sticky top-0 bg-[#0B0F1A] border-b border-white/5 px-4 py-3 flex justify-between items-center z-10">
+            <span className="text-xs font-bold text-gray-400">Detalle del Lead</span>
+            <button onClick={closeDetail} className="text-gray-500 hover:text-white text-lg">✕</button>
+          </div>
+          <div className="p-4">
           {selectedLead ? (
             <div>
               <div className="flex items-center gap-3 mb-4">
@@ -737,6 +751,7 @@ export default function CRMPage() {
               <p className="text-sm">Selecciona un lead para ver el detalle</p>
             </div>
           )}
+          </div>
         </div>
       </div>
       )}
