@@ -405,9 +405,12 @@ export default function CRMPage() {
                     <div className="w-10 h-10 bg-indigo-600/20 rounded-full flex items-center justify-center text-sm font-bold text-indigo-400">
                       {(lead.customer_name || 'U').charAt(0)}
                     </div>
-                    <div>
-                      <p className="font-medium">{lead.customer_name || 'Sin nombre'}</p>
-                      <p className="text-xs text-gray-500">{lead.phoneNumber}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{lead.customer_name || 'Sin nombre'}</p>
+                      <p className="text-[10px] text-gray-500">{lead.phoneNumber}</p>
+                      {lead.last_user_msg && (
+                        <p className="text-[10px] text-gray-600 truncate mt-0.5">💬 {lead.last_user_msg}</p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
