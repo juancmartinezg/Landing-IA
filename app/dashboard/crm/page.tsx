@@ -223,7 +223,6 @@ export default function CRMPage() {
           </select>
         </div>
       </div>
-      </div>
       {/* Alertas inteligentes */}
       {(() => {
         const now = Date.now() / 1000;
