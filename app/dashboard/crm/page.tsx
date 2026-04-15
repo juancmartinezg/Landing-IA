@@ -825,12 +825,19 @@ export default function CRMPage() {
                       { icon: '🙏', label: 'Seguimiento', msg: `¡Hola! ¿Pudiste revisar la información que te envié? Quedo atento a cualquier duda que tengas. ¡Estoy aquí para ayudarte! 🙋‍♂️` },
                       { icon: '⭐', label: 'Reseña', msg: `¡Hola! Esperamos que hayas tenido una excelente experiencia. ¿Nos podrías regalar una reseña? Tu opinión nos ayuda mucho ⭐` },
                     ].map((tpl, i) => (
-                      <button key={i} onClick={() => {
+                      <button key={i} onClick={(e) => {
+                        const btn = e.currentTarget;
+                        const icon = btn.querySelector('.send-icon') as HTMLElement;
+                        if (icon) icon.textContent = '⏳';
                         fetch(`${API_URL}/conversations/send`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
                           body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, content: tpl.msg }),
-                        }).then(() => loadDetail(selectedLead.lead?.phoneNumber));
+                        }).then((res) => {
+                          if (icon) icon.textContent = res.ok ? '✅' : '❌';
+                          setTimeout(() => { if (icon) icon.textContent = '📤'; }, 2000);
+                          loadDetail(selectedLead.lead?.phoneNumber);
+                        }).catch(() => { if (icon) icon.textContent = '❌'; setTimeout(() => { if (icon) icon.textContent = '📤'; }, 2000); });
                       }}
                         className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 transition-all">
                         <span className="text-sm">{tpl.icon}</span>
@@ -838,7 +845,7 @@ export default function CRMPage() {
                           <p className="text-[10px] font-bold text-white">{tpl.label}</p>
                           <p className="text-[9px] text-gray-500 truncate">{tpl.msg}</p>
                         </div>
-                        <span className="text-[9px] text-gray-600 shrink-0">📤</span>
+                        <span className="send-icon text-[9px] text-gray-600 shrink-0">📤</span>
                       </button>
                     ))}
                   </div>
