@@ -394,7 +394,7 @@ export default function CRMPage() {
       ) : (
       <div className="relative">
         {/* Lista de Leads */}
-        <div className={`transition-all ${showDetail ? 'lg:pr-[460px]' : ''}`}
+        <div className={`transition-all ${showDetail ? 'lg:pr-[460px]' : ''}`}>
           <div className="text-xs text-gray-500 mb-2">{filtered.length} leads encontrados</div>
           {loading ? (
             <div className="text-center py-12 text-gray-500">Cargando leads...</div>
@@ -582,7 +582,8 @@ export default function CRMPage() {
                   </span>
                 </div>
               )}
-              {/* Info de compra / envío */}
+              {/* Info de compra / envío — filtrado por crm_fields */}
+              {crmFields.length > 0 && (
               <div className="mb-4 pt-4 border-t border-white/5">
                 <details className="group">
                   <summary className="flex items-center justify-between cursor-pointer list-none">
@@ -594,12 +595,12 @@ export default function CRMPage() {
                       { key: 'product_name', label: 'Producto', icon: '🏷️', type: 'text' },
                       { key: 'purchase_date', label: 'Fecha compra', icon: '📅', type: 'date' },
                       { key: 'shipping_address', label: 'Dirección', icon: '📍', type: 'text' },
-                      { key: 'carrier', label: 'Transportadora', icon: '🚚', type: 'select', options: ['', 'Servientrega', 'Coordinadora', 'Envia', 'DHL', 'FedEx', 'Otra'] },
+                      { key: 'carrier', label: 'Transportadora', icon: '🚚', type: 'select', options: ['', 'Servientrega', 'Coordinadora', 'Envia', 'Inter Rapidísimo', '99 Minutos', 'DHL', 'FedEx', 'Estafeta', 'Andreani', 'Chilexpress', 'Otra'] },
                       { key: 'tracking_number', label: 'Guía', icon: '📋', type: 'text' },
                       { key: 'shipping_status', label: 'Estado', icon: '📊', type: 'select', options: ['', 'preparando', 'despachado', 'en_camino', 'entregado', 'devuelto'] },
                       { key: 'renewal_date', label: 'Renovación', icon: '🔄', type: 'date' },
                       { key: 'renewal_frequency', label: 'Frecuencia', icon: '⏰', type: 'select', options: ['', 'mensual', 'trimestral', 'semestral', 'anual'] },
-                    ].map((f) => {
+                    ].filter(f => crmFields.includes(f.key)).map((f) => {
                       const val = (selectedLead.lead?.purchase_info || {})[f.key] || '';
                       const save = (v: string) => {
                         if (v !== val) fetch(`${API_URL}/leads/purchase-info`, {
@@ -623,15 +624,33 @@ export default function CRMPage() {
                         </div>
                       );
                     })}
-                    {selectedLead.lead?.purchase_info?.tracking_number && (
-                      <a href={`https://www.google.com/search?q=rastreo+${selectedLead.lead.purchase_info.carrier || ''}+${selectedLead.lead.purchase_info.tracking_number}`}
-                        target="_blank" className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white text-[10px] font-bold transition-all">
-                        🔍 Rastrear guía {selectedLead.lead.purchase_info.tracking_number}
-                      </a>
-                    )}
+                    {crmFields.includes('tracking_number') && selectedLead.lead?.purchase_info?.tracking_number && (() => {
+                      const carrier = (selectedLead.lead.purchase_info.carrier || '').toLowerCase();
+                      const urls: Record<string, string> = {
+                        servientrega: `https://www.servientrega.com/wps/portal/rastreo-envio/${tracking}`,
+                        coordinadora: `https://www.coordinadora.com/rastreo-de-guia/?guia=${tracking}`,
+                        envia: `https://www.envia.co/rastreo?guia=${tracking}`,
+                        'inter rapidísimo': `https://www.interrapidisimo.com/rastreo/${tracking}`,
+                        '99 minutos': `https://tracking.99minutos.com/${tracking}`,
+                        dhl: `https://www.dhl.com/co-es/home/rastreo.html?tracking-id=${tracking}`,
+                        fedex: `https://www.fedex.com/fedextrack/?trknbr=${tracking}`,
+                        estafeta: `https://rastreo3.estafeta.com/Tracking/${tracking}`,
+                        andreani: `https://www.andreani.com/#!/informacionEnvio/${tracking}`,
+                        chilexpress: `https://www.chilexpress.cl/estado-de-envio/${tracking}`,
+                      };
+                      const providerKey = shippingProvider || carrier;
+                      const trackUrl = urls[providerKey] || `https://www.google.com/search?q=rastreo+${carrier}+${tracking}`;
+                      return (
+                        <a href={trackUrl} target="_blank"
+                          className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white text-[10px] font-bold transition-all">
+                          🔍 Rastrear guía {tracking}
+                        </a>
+                      );
+                    })()}
                   </div>
                 </details>
               </div>
+              )}
               {/* Panel de Inteligencia Artificial */}
               <div className="pt-4 border-t border-white/5">
                 {!aiInsight && !loadingAi ? (
