@@ -235,51 +235,76 @@ export default function CRMPage() {
           const tags = l.tags || [];
           const score = l.lead_score || 0;
           const visits = l.visit_count || 0;
-          // Alerta: no responde hace 48h con intención de compra
           if (hoursSince > 48 && (status.includes('intencion') || status.includes('interesado') || score >= 60)) {
             alerts.push({ phone: l.phoneNumber, name: l.customer_name || 'Sin nombre',
-              text: `No responde hace ${Math.floor(hoursSince)}h y tenía intención de compra`,
+              text: `No responde hace ${Math.floor(hoursSince)}h con intención de compra`,
               color: 'bg-red-500/10 border-red-500/20 text-red-400', icon: '🔴' });
           }
-          // Alerta: preguntó precio varias veces (visitas >= 3)
           else if (visits >= 3 && !status.includes('cerrado') && !status.includes('pagado')) {
             alerts.push({ phone: l.phoneNumber, name: l.customer_name || 'Sin nombre',
-              text: `${visits} visitas — posiblemente listo para cerrar`,
+              text: `${visits} visitas — listo para cerrar`,
               color: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400', icon: '🟡' });
           }
-          // Alerta: lead caliente sin contactar
           if (tags.includes('caliente') && (l.lead_stage || 'nuevo') === 'nuevo') {
             alerts.push({ phone: l.phoneNumber, name: l.customer_name || 'Sin nombre',
               text: `Lead caliente sin contactar`,
               color: 'bg-orange-500/10 border-orange-500/20 text-orange-400', icon: '🟠' });
           }
-          // Alerta: score alto sin seguimiento
           if (score >= 70 && !['cerrado_ganado', 'negociacion'].includes(l.lead_stage || '')) {
             alerts.push({ phone: l.phoneNumber, name: l.customer_name || 'Sin nombre',
-              text: `Score ${score}/100 — requiere seguimiento inmediato`,
+              text: `Score ${score}/100 — seguimiento inmediato`,
               color: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', icon: '🟢' });
           }
         });
-        return alerts.length > 0 ? (
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-bold">🔔 Alertas</span>
-              <span className="text-[10px] text-gray-500">{alerts.length}</span>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {alerts.slice(0, 5).map((a, i) => (
-                <div key={i} onClick={() => { loadDetail(a.phone); setView('list'); }}
-                  className={`min-w-[200px] sm:min-w-[250px] border rounded-xl p-2 sm:p-3 cursor-pointer hover:scale-[1.02] transition-all ${a.color}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span>{a.icon}</span>
-                    <span className="text-xs font-bold truncate">{a.name}</span>
+        if (alerts.length === 0) return null;
+        const [alertsOpen, setAlertsOpen] = [false, () => {}];
+        return (
+          <div className="mb-4">
+            {/* Desktop: tarjetas horizontales */}
+            <div className="hidden sm:block">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-bold">🔔 Alertas</span>
+                <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">{alerts.length}</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {alerts.slice(0, 5).map((a, i) => (
+                  <div key={i} onClick={() => { loadDetail(a.phone); setView('list'); }}
+                    className={`min-w-[220px] border rounded-xl p-2.5 cursor-pointer hover:scale-[1.02] transition-all ${a.color}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm">{a.icon}</span>
+                      <span className="text-[11px] font-bold truncate">{a.name}</span>
+                    </div>
+                    <p className="text-[10px]">{a.text}</p>
                   </div>
-                  <p className="text-[10px]">{a.text}</p>
+                ))}
+              </div>
+            </div>
+            {/* Móvil: banner compacto con lista desplegable */}
+            <div className="sm:hidden">
+              <details className="group">
+                <summary className="flex items-center justify-between bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 cursor-pointer list-none">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">🔔</span>
+                    <span className="text-xs font-bold text-red-400">{alerts.length} alertas pendientes</span>
+                  </div>
+                  <span className="text-gray-500 text-xs group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="mt-2 space-y-1.5">
+                  {alerts.slice(0, 5).map((a, i) => (
+                    <div key={i} onClick={() => { loadDetail(a.phone); setView('list'); }}
+                      className={`border rounded-lg p-2 cursor-pointer transition-all ${a.color}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs">{a.icon}</span>
+                        <span className="text-[11px] font-bold truncate flex-1">{a.name}</span>
+                        <span className="text-[9px] shrink-0">{a.text}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </details>
             </div>
           </div>
-        ) : null;
+        );
       })()}
      {view === 'kanban' ? (
         /* ==================== VISTA KANBAN CON DRAG & DROP ==================== */
