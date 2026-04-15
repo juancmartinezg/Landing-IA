@@ -844,6 +844,81 @@ export default function CRMPage() {
                   </div>
                 </details>
               </div>
+             {/* Recordatorios */}
+              <div className="mb-4 pt-4 border-t border-white/5">
+                <details className="group" open>
+                  <summary className="flex items-center justify-between cursor-pointer list-none mb-2">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">⏰ Recordatorios</p>
+                    <span className="text-gray-600 text-[10px] group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="space-y-2">
+                    {/* Formulario nuevo recordatorio */}
+                    <div className="flex gap-1">
+                      <input id="rem-text" placeholder="Ej: Llamar para seguimiento..."
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:border-indigo-500 text-white" />
+                      <input id="rem-date" type="datetime-local"
+                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] outline-none focus:border-indigo-500 text-white" />
+                      <button onClick={() => {
+                        const text = (document.getElementById('rem-text') as HTMLInputElement)?.value?.trim();
+                        const dateVal = (document.getElementById('rem-date') as HTMLInputElement)?.value;
+                        if (!text || !dateVal) return;
+                        const remind_at = Math.floor(new Date(dateVal).getTime() / 1000);
+                        fetch(`${API_URL}/leads/reminder`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                          body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, text, remind_at, type: 'follow_up' }),
+                        }).then(() => {
+                          (document.getElementById('rem-text') as HTMLInputElement).value = '';
+                          (document.getElementById('rem-date') as HTMLInputElement).value = '';
+                          loadDetail(selectedLead.lead?.phoneNumber);
+                        });
+                      }}
+                        className="text-[10px] bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white px-2 py-1.5 rounded-lg font-bold transition-all">⏰</button>
+                    </div>
+                    {/* Lista de recordatorios */}
+                    {(selectedLead.lead?.reminders || []).map((r: any, i: number) => {
+                      const isOverdue = !r.completed && r.remind_at < Date.now() / 1000;
+                      const date = new Date(r.remind_at * 1000);
+                      return (
+                        <div key={i} className={`text-[10px] p-2 rounded-lg border flex items-start gap-2 ${
+                          r.completed ? 'bg-white/[0.01] border-white/5 opacity-50' :
+                          isOverdue ? 'bg-red-500/10 border-red-500/20' :
+                          'bg-yellow-500/5 border-yellow-500/10'
+                        }`}>
+                          <span className="mt-0.5">{r.completed ? '✅' : isOverdue ? '🔴' : '🟡'}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className={`${r.completed ? 'line-through text-gray-600' : 'text-gray-300'}`}>{r.text}</p>
+                            <p className="text-gray-500 mt-0.5">
+                              {date.toLocaleDateString()} {date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                            </p>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            {!r.completed && (
+                              <button onClick={() => {
+                                fetch(`${API_URL}/leads/reminder`, {
+                                  method: 'DELETE',
+                                  headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                                  body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, reminder_id: r.id, action: 'complete' }),
+                                }).then(() => loadDetail(selectedLead.lead?.phoneNumber));
+                              }} className="text-emerald-400 hover:text-emerald-300 font-bold">✓</button>
+                            )}
+                            <button onClick={() => {
+                              fetch(`${API_URL}/leads/reminder`, {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                                body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, reminder_id: r.id, action: 'delete' }),
+                              }).then(() => loadDetail(selectedLead.lead?.phoneNumber));
+                            }} className="text-red-400 hover:text-red-300 font-bold">×</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {!(selectedLead.lead?.reminders || []).length && (
+                      <p className="text-[10px] text-gray-600 text-center py-2">Sin recordatorios</p>
+                    )}
+                  </div>
+                </details>
+              </div>
               {/* Notas */}
               <div className="mb-4 pt-4 border-t border-white/5">
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">📝 Notas</p>

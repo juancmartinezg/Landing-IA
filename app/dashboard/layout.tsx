@@ -26,6 +26,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [brandName, setBrandName] = useState('');
   const [brandLogo, setBrandLogo] = useState('');
+  const [reminders, setReminders] = useState<any[]>([]);
+  const [showReminders, setShowReminders] = useState(false);
   useEffect(() => {
     if (!loading && !user) {
       const stored = localStorage.getItem('cb_user');
@@ -41,7 +43,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setBrandLogo(data.brand_logo_url || '');
         })
         .catch(() => {});
+      fetch(`${API_URL}/leads/reminders`, { headers: { 'client-id': user.companyId } })
+        .then(res => res.json())
+        .then(data => setReminders(data.reminders || []))
+        .catch(() => {});
     }
+    const interval = setInterval(() => {
+      if (user?.companyId) {
+        fetch(`${API_URL}/leads/reminders`, { headers: { 'client-id': user.companyId } })
+          .then(res => res.json())
+          .then(data => setReminders(data.reminders || []))
+          .catch(() => {});
+      }
+    }, 60000);
+    return () => clearInterval(interval);
   }, [user, loading, router]);
   if (loading) {
     return (
@@ -146,8 +161,65 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-400 text-2xl mr-4">
             ☰
           </button>
-          <div className="flex-1"></div>
+         <div className="flex-1"></div>
           <div className="flex items-center gap-3">
+            {/* Campanita de recordatorios */}
+            <div className="relative">
+              <button onClick={() => setShowReminders(!showReminders)}
+                className="relative text-gray-400 hover:text-white text-xl transition-all">
+                🔔
+                {reminders.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                    {reminders.length > 9 ? '9+' : reminders.length}
+                  </span>
+                )}
+              </button>
+              {showReminders && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowReminders(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-[#1a1f2e] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-white/5 flex justify-between items-center">
+                      <span className="text-xs font-bold">⏰ Recordatorios</span>
+                      <span className="text-[10px] text-gray-500">{reminders.length} pendientes</span>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {reminders.length === 0 ? (
+                        <p className="text-xs text-gray-600 text-center py-8">Sin recordatorios pendientes 🎉</p>
+                      ) : reminders.slice(0, 10).map((r, i) => {
+                        const isOverdue = r.overdue;
+                        const date = new Date(r.remind_at * 1000);
+                        const dateStr = date.toLocaleDateString();
+                        const timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                        return (
+                          <div key={i} onClick={() => { setShowReminders(false); router.push(`/dashboard/crm`); }}
+                            className={`px-4 py-3 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-all ${
+                              isOverdue ? 'bg-red-500/5' : ''
+                            }`}>
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm mt-0.5">{isOverdue ? '🔴' : '🟡'}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] font-medium truncate">{r.customer_name || 'Sin nombre'}</p>
+                                <p className="text-[10px] text-gray-400 truncate">{r.text}</p>
+                                <p className={`text-[9px] mt-0.5 ${isOverdue ? 'text-red-400' : 'text-gray-500'}`}>
+                                  {isOverdue ? '⚠️ Vencido' : '📅'} {dateStr} {timeStr}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {reminders.length > 0 && (
+                      <div className="px-4 py-2 border-t border-white/5">
+                        <a href="/dashboard/crm" className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold">
+                          Ver todos en CRM →
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
             {brandLogo && (
               <img src={brandLogo} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white/5" />
             )}
