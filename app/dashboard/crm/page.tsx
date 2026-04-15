@@ -88,8 +88,17 @@ export default function CRMPage() {
   const [savingNote, setSavingNote] = useState(false);
   const [view, setView] = useState<'list' | 'kanban'>('list');
   const [showDetail, setShowDetail] = useState(false);
+  const [crmFields, setCrmFields] = useState<string[]>([]);
+  const [shippingProvider, setShippingProvider] = useState('');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   useEffect(() => {
+    fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(res => res.json())
+      .then(data => {
+        setCrmFields(data.crm_fields || []);
+        setShippingProvider((data.shipping || {}).provider || '');
+      })
+      .catch(() => {});
     fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => {
@@ -294,7 +303,7 @@ export default function CRMPage() {
                 <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">{alerts.length}</span>
               </div>
               <div className="flex gap-2 overflow-x-auto pb-2">
-                {alerts.slice(0, 5).map((a, i) => (
+                {alerts.slice(0, 4).map((a, i) => (
                   <div key={i} onClick={() => { loadDetail(a.phone); setView('list'); }}
                     className={`min-w-[220px] border rounded-xl p-2.5 cursor-pointer hover:scale-[1.02] transition-all ${a.color}`}>
                     <div className="flex items-center gap-2 mb-1">
@@ -385,7 +394,7 @@ export default function CRMPage() {
       ) : (
       <div className="relative">
         {/* Lista de Leads */}
-        <div>
+        <div className={`transition-all ${showDetail ? 'lg:pr-[460px]' : ''}`}
           <div className="text-xs text-gray-500 mb-2">{filtered.length} leads encontrados</div>
           {loading ? (
             <div className="text-center py-12 text-gray-500">Cargando leads...</div>
