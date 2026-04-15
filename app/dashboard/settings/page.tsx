@@ -37,7 +37,7 @@ const SHIPPING_PROVIDERS = [
   { id: '99minutos', name: '99 Minutos', country: '🇲🇽🇨🇴' },
   { id: 'dhl', name: 'DHL', country: '🌎 Global' },
   { id: 'fedex', name: 'FedEx', country: '🌎 Global' },
-   id: 'estafeta', name: 'Estafeta', country: '🇲🇽 MX' },
+   { id: 'estafeta', name: 'Estafeta', country: '🇲🇽 MX' },
   { id: 'paquetexpress', name: 'Paquetexpress', country: '🇲🇽 MX' },
   { id: 'redpack', name: 'Redpack', country: '🇲🇽 MX' },
   { id: 'andreani', name: 'Andreani', country: '🇦🇷 AR' },
