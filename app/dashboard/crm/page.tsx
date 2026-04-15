@@ -10,7 +10,7 @@ function KanbanColumn({ id, label, color, bg, count, value, children }: any) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div ref={setNodeRef}
-      className={`min-w-[180px] sm:min-w-[220px] flex-1 border rounded-2xl p-2 sm:p-3 transition-all ${color} ${
+      className={`w-full sm:min-w-[220px] sm:flex-1 border rounded-2xl p-2 sm:p-3 transition-all ${color} ${
         isOver ? `${bg} border-2 scale-[1.01]` : 'bg-white/[0.02]'
       }`}>
       <div className="flex justify-between items-center mb-3">
@@ -332,7 +332,7 @@ export default function CRMPage() {
             }
           }}
         >
-        <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex flex-col sm:flex-row gap-3 sm:overflow-x-auto pb-4 sm:-mx-0 sm:px-0">
           {[
             { id: 'nuevo', label: '🆕 Nuevo', color: 'border-gray-500/30', bg: 'bg-gray-500/5' },
             { id: 'contactado', label: '📞 Contactado', color: 'border-blue-500/30', bg: 'bg-blue-500/5' },
