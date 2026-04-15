@@ -699,6 +699,43 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+         {/* Tipo de Negocio */}
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold">Tipo de Negocio 🏢</h3>
+            <button onClick={async () => {
+              await fetch(`${API_URL}/config`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                body: JSON.stringify({ business_type: config?.business_type || 'servicios' }),
+              });
+              showToast('✓ Tipo de negocio guardado');
+            }} className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+              Guardar
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-500 mb-3">Esto determina qué campos se muestran en el CRM (envíos, guías, renovaciones, etc.)</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { id: 'servicios', label: '🎯 Servicios / Cursos', desc: 'Citas, agendamiento' },
+              { id: 'productos', label: '🛒 Tienda / Productos', desc: 'Envíos, guías, tracking' },
+              { id: 'seguros', label: '🛡️ Seguros / Pólizas', desc: 'Vencimientos, renovaciones' },
+              { id: 'restaurante', label: '🍔 Restaurante / Delivery', desc: 'Pedidos, entregas' },
+              { id: 'salud', label: '🏥 Salud / Belleza', desc: 'Citas, tratamientos' },
+              { id: 'personalizado', label: '⚙️ Personalizado', desc: 'Todos los campos' },
+            ].map(t => (
+              <button key={t.id} onClick={() => setConfig({...config, business_type: t.id})}
+                className={`p-3 rounded-xl text-left transition-all border ${
+                  (config?.business_type || 'servicios') === t.id
+                    ? 'border-indigo-500 bg-indigo-600/10'
+                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                }`}>
+                <p className="text-xs font-bold">{t.label}</p>
+                <p className="text-[9px] text-gray-500">{t.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
         {/* Pasarela de Pagos */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
           <h3 className="font-bold mb-4">Pasarela de Pagos</h3>

@@ -573,6 +573,56 @@ export default function CRMPage() {
                   </span>
                 </div>
               )}
+              {/* Info de compra / envío */}
+              <div className="mb-4 pt-4 border-t border-white/5">
+                <details className="group">
+                  <summary className="flex items-center justify-between cursor-pointer list-none">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">📦 Compra / Envío</p>
+                    <span className="text-gray-600 text-[10px] group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="mt-3 space-y-2">
+                    {[
+                      { key: 'product_name', label: 'Producto', icon: '🏷️', type: 'text' },
+                      { key: 'purchase_date', label: 'Fecha compra', icon: '📅', type: 'date' },
+                      { key: 'shipping_address', label: 'Dirección', icon: '📍', type: 'text' },
+                      { key: 'carrier', label: 'Transportadora', icon: '🚚', type: 'select', options: ['', 'Servientrega', 'Coordinadora', 'Envia', 'DHL', 'FedEx', 'Otra'] },
+                      { key: 'tracking_number', label: 'Guía', icon: '📋', type: 'text' },
+                      { key: 'shipping_status', label: 'Estado', icon: '📊', type: 'select', options: ['', 'preparando', 'despachado', 'en_camino', 'entregado', 'devuelto'] },
+                      { key: 'renewal_date', label: 'Renovación', icon: '🔄', type: 'date' },
+                      { key: 'renewal_frequency', label: 'Frecuencia', icon: '⏰', type: 'select', options: ['', 'mensual', 'trimestral', 'semestral', 'anual'] },
+                    ].map((f) => {
+                      const val = (selectedLead.lead?.purchase_info || {})[f.key] || '';
+                      const save = (v: string) => {
+                        if (v !== val) fetch(`${API_URL}/leads/purchase-info`, {
+                          method: 'PUT', headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                          body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, [f.key]: v }),
+                        });
+                      };
+                      return (
+                        <div key={f.key} className="flex items-center gap-2">
+                          <span className="text-xs w-4 shrink-0">{f.icon}</span>
+                          <span className="text-[9px] text-gray-500 w-16 shrink-0">{f.label}</span>
+                          {f.type === 'select' ? (
+                            <select defaultValue={val} onChange={(e) => save(e.target.value)}
+                              className="flex-1 bg-[#0B0F1A] border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white outline-none">
+                              {f.options?.map(o => <option key={o} value={o} className="bg-[#1a1f2e] text-white">{o ? o.replace(/_/g, ' ') : '—'}</option>)}
+                            </select>
+                          ) : (
+                            <input type={f.type} defaultValue={val} onBlur={(e) => save(e.target.value)} placeholder={f.label}
+                              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white outline-none" />
+                          )}
+                        </div>
+                      );
+                    })}
+                    {selectedLead.lead?.purchase_info?.tracking_number && (
+                      <a href={`https://www.google.com/search?q=rastreo+${selectedLead.lead.purchase_info.carrier || ''}+${selectedLead.lead.purchase_info.tracking_number}`}
+                        target="_blank" className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white text-[10px] font-bold transition-all">
+                        🔍 Rastrear guía {selectedLead.lead.purchase_info.tracking_number}
+                      </a>
+                    )}
+                  </div>
+                </details>
+              </div>
               {/* Panel de Inteligencia Artificial */}
               <div className="pt-4 border-t border-white/5">
                 {!aiInsight && !loadingAi ? (
