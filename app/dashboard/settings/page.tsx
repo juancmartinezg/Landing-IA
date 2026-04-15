@@ -11,6 +11,36 @@ const ALL_DAYS = [
   { id: 5, label: 'Sábado' },
   { id: 6, label: 'Domingo' },
 ];
+const CRM_FIELD_OPTIONS = [
+  { id: 'product_name', label: 'Producto / Servicio', icon: '🏷️' },
+  { id: 'purchase_date', label: 'Fecha de compra', icon: '📅' },
+  { id: 'shipping_address', label: 'Dirección de envío', icon: '📍' },
+  { id: 'carrier', label: 'Transportadora', icon: '🚚' },
+  { id: 'tracking_number', label: 'Número de guía', icon: '📋' },
+  { id: 'shipping_status', label: 'Estado del envío', icon: '📊' },
+  { id: 'renewal_date', label: 'Fecha de renovación', icon: '🔄' },
+  { id: 'renewal_frequency', label: 'Frecuencia', icon: '⏰' },
+];
+const BUSINESS_PRESETS: Record<string, { label: string; fields: string[] }> = {
+  servicios: { label: '🎯 Servicios', fields: ['product_name', 'purchase_date'] },
+  productos: { label: '🛒 Tienda', fields: ['product_name', 'purchase_date', 'shipping_address', 'carrier', 'tracking_number', 'shipping_status'] },
+  seguros: { label: '🛡️ Seguros', fields: ['product_name', 'purchase_date', 'renewal_date', 'renewal_frequency'] },
+  restaurante: { label: '🍔 Delivery', fields: ['product_name', 'shipping_address', 'shipping_status'] },
+  salud: { label: '🏥 Salud', fields: ['product_name', 'purchase_date', 'renewal_date', 'renewal_frequency'] },
+  todos: { label: '⚙️ Todos', fields: CRM_FIELD_OPTIONS.map(f => f.id) },
+};
+const SHIPPING_PROVIDERS = [
+  { id: 'servientrega', name: 'Servientrega', country: '🇨🇴 CO' },
+  { id: 'coordinadora', name: 'Coordinadora', country: '🇨🇴 CO' },
+  { id: 'envia', name: 'Envía', country: '🇨🇴 CO' },
+  { id: 'interrapidisimo', name: 'Inter Rapidísimo', country: '🇨🇴 CO' },
+  { id: '99minutos', name: '99 Minutos', country: '🇲🇽🇨🇴' },
+  { id: 'dhl', name: 'DHL', country: '🌎 Global' },
+  { id: 'fedex', name: 'FedEx', country: '🌎 Global' },
+  { id: 'estafeta', name: 'Estafeta', country: '🇲🇽 MX' },
+  { id: 'andreani', name: 'Andreani', country: '🇦🇷 AR' },
+  { id: 'chilexpress', name: 'Chilexpress', country: '🇨🇱 CL' },
+];
 export default function SettingsPage() {
   const { user } = useAuth();
   const [config, setConfig] = useState<any>(null);
@@ -19,6 +49,9 @@ export default function SettingsPage() {
   const [editing, setEditing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [newHoliday, setNewHoliday] = useState('');
+  const [crmFields, setCrmFields] = useState<string[]>([]);
+  const [businessType, setBusinessType] = useState('servicios');
+  const [shippingProvider, setShippingProvider] = useState('');
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptText, setPromptText] = useState('');
   const [wizardStep, setWizardStep] = useState(1);
@@ -77,6 +110,9 @@ export default function SettingsPage() {
           holidays: sched.holidays || [],
         });
        setPromptText(data.prompt || '');
+        setCrmFields(data.crm_fields || []);
+        setBusinessType(data.business_type || 'servicios');
+        setShippingProvider((data.shipping || {}).provider || '');
         const hh = data.human_support_hours || {};
         setHumanHours({
           start: hh.start ?? 8,
@@ -173,6 +209,35 @@ export default function SettingsPage() {
       showToast('Error guardando horario del asesor');
     }
     setSaving(false);
+  };
+  const hasShippingFields = crmFields.some(f => ['carrier', 'tracking_number', 'shipping_status'].includes(f));
+  const handleSaveCrmFields = async () => {
+    setSaving(true);
+    try {
+      const payload: any = { crm_fields: crmFields, business_type: businessType };
+      if (hasShippingFields && shippingProvider) {
+        payload.shipping = { provider: shippingProvider, active: true };
+      } else {
+        payload.shipping = { provider: '', active: false };
+      }
+      await fetch(`${API_URL}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify(payload),
+      });
+      setConfig({ ...config, crm_fields: crmFields, business_type: businessType, shipping: payload.shipping });
+      showToast('✓ Campos del CRM guardados');
+    } catch (err) {
+      showToast('Error guardando campos');
+    }
+    setSaving(false);
+  };
+  const toggleCrmField = (fieldId: string) => {
+    setCrmFields(prev => prev.includes(fieldId) ? prev.filter(f => f !== fieldId) : [...prev, fieldId]);
+  };
+  const applyPreset = (presetId: string) => {
+    setBusinessType(presetId);
+    setCrmFields(BUSINESS_PRESETS[presetId]?.fields || []);
   };
   const toggleHumanDay = (dayId: number) => {
     setHumanHours(prev => ({
@@ -699,43 +764,69 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-         {/* Tipo de Negocio */}
-        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
+         {/* Campos del CRM */}
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold">Tipo de Negocio 🏢</h3>
-            <button onClick={async () => {
-              await fetch(`${API_URL}/config`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
-                body: JSON.stringify({ business_type: config?.business_type || 'servicios' }),
-              });
-              showToast('✓ Tipo de negocio guardado');
-            }} className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
-              Guardar
+            <h3 className="font-bold">Campos del CRM 📋</h3>
+            <button onClick={handleSaveCrmFields} disabled={saving}
+              className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
+              {saving ? '...' : 'Guardar campos'}
             </button>
           </div>
-          <p className="text-[10px] text-gray-500 mb-3">Esto determina qué campos se muestran en el CRM (envíos, guías, renovaciones, etc.)</p>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { id: 'servicios', label: '🎯 Servicios / Cursos', desc: 'Citas, agendamiento' },
-              { id: 'productos', label: '🛒 Tienda / Productos', desc: 'Envíos, guías, tracking' },
-              { id: 'seguros', label: '🛡️ Seguros / Pólizas', desc: 'Vencimientos, renovaciones' },
-              { id: 'restaurante', label: '🍔 Restaurante / Delivery', desc: 'Pedidos, entregas' },
-              { id: 'salud', label: '🏥 Salud / Belleza', desc: 'Citas, tratamientos' },
-              { id: 'personalizado', label: '⚙️ Personalizado', desc: 'Todos los campos' },
-            ].map(t => (
-              <button key={t.id} onClick={() => setConfig({...config, business_type: t.id})}
-                className={`p-3 rounded-xl text-left transition-all border ${
-                  (config?.business_type || 'servicios') === t.id
-                    ? 'border-indigo-500 bg-indigo-600/10'
-                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+          <p className="text-[10px] text-gray-500 mb-3">Elige qué información quieres rastrear de tus clientes. Usa un preset o personaliza.</p>
+          {/* Presets rápidos */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {Object.entries(BUSINESS_PRESETS).map(([id, preset]) => (
+              <button key={id} onClick={() => applyPreset(id)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                  businessType === id ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
                 }`}>
-                <p className="text-xs font-bold">{t.label}</p>
-                <p className="text-[9px] text-gray-500">{t.desc}</p>
+                {preset.label}
               </button>
             ))}
           </div>
+          {/* Checkboxes individuales */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            {CRM_FIELD_OPTIONS.map(field => (
+              <button key={field.id} onClick={() => toggleCrmField(field.id)}
+                className={`flex items-center gap-2 p-2.5 rounded-xl text-left transition-all border ${
+                  crmFields.includes(field.id)
+                    ? 'border-indigo-500 bg-indigo-600/10'
+                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                }`}>
+                <span className="text-sm">{field.icon}</span>
+                <span className="text-[10px] font-medium">{field.label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-600">{crmFields.length} campos activos</p>
         </div>
+        {/* Transportadoras — solo si tiene campos de envío activos */}
+        {hasShippingFields && (
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold">Transportadoras 🚚</h3>
+              <span className={`text-xs font-bold ${shippingProvider ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                {shippingProvider ? '✓ Configurada' : '⚠ Sin configurar'}
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-500 mb-3">Selecciona tu transportadora para rastreo automático de guías.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {SHIPPING_PROVIDERS.map(sp => (
+                <button key={sp.id} onClick={() => setShippingProvider(shippingProvider === sp.id ? '' : sp.id)}
+                  className={`p-3 rounded-xl text-center transition-all border ${
+                    shippingProvider === sp.id
+                      ? 'border-emerald-500 bg-emerald-600/10'
+                      : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                  }`}>
+                  <p className="text-xs font-bold">{sp.name}</p>
+                  <p className="text-[9px] text-gray-500">{sp.country}</p>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-600 mt-3">Se guarda con el botón "Guardar campos" de arriba.</p>
+          </div>
+        )}
         {/* Pasarela de Pagos */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
           <h3 className="font-bold mb-4">Pasarela de Pagos</h3>
