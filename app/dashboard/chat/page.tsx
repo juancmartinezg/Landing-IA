@@ -349,8 +349,8 @@ export default function ChatPage() {
                         <p className="text-sm font-medium truncate">{conv.name || 'Sin nombre'}</p>
                         <span className="text-[10px] text-gray-600 ml-2">{formatTime(conv.last_message_at)}</span>
                       </div>
-                      <p className="text-[11px] text-gray-500 truncate">{conv.last_message || conv.phone}</p>
-                      <span className="text-[9px] text-indigo-400">{conv.agent || 'Sin asignar'}</span>
+                      <p className="text-[11px] text-gray-500 truncate max-w-[200px] md:max-w-none">{conv.last_message || conv.phone}</p>
+                      <span className="text-[9px] text-indigo-400 truncate">{conv.agent || 'Sin asignar'}</span>
                     </div>
                   </div>
                 </div>
@@ -375,38 +375,38 @@ export default function ChatPage() {
           </div>
         ) : (
           <>
-           {/* Header */}
-            <div className="h-16 px-4 md:px-6 border-b border-white/5 flex items-center justify-between bg-[#080B14]">
-              <div className="flex items-center gap-3">
-                <button onClick={goBackToList} className="md:hidden text-gray-400 hover:text-white text-xl mr-1">←</button>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+            {/* Header */}
+            <div className="h-14 md:h-16 px-3 md:px-6 border-b border-white/5 flex items-center justify-between bg-[#080B14]">
+              <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                <button onClick={goBackToList} className="md:hidden text-gray-400 hover:text-white text-2xl shrink-0">←</button>
+                <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
                   tab === 'bot' ? 'bg-emerald-600/20 text-emerald-400' : 'bg-indigo-600/20 text-indigo-400'
                 }`}>
                   {(selectedName || 'U').charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <p className="font-bold text-sm">{selectedName || 'Sin nombre'}</p>
-                  <p className="text-[11px] text-gray-500">{selectedDetail}</p>
+                <div className="min-w-0">
+                  <p className="font-bold text-sm truncate">{selectedName || 'Sin nombre'}</p>
+                  <p className="text-[10px] md:text-[11px] text-gray-500 truncate">{selectedDetail}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 md:gap-2 shrink-0">
                 {tab === 'bot' && selectedPhone && (
                   takenOver ? (
                     <button onClick={() => handleRelease(selectedPhone)}
-                      className="text-[10px] px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 font-bold transition-all">
-                      🤖 Devolver al bot
+                      className="text-[9px] md:text-[10px] px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 font-bold transition-all">
+                      🤖 <span className="hidden sm:inline">Devolver al </span>bot
                     </button>
                   ) : (
                     <button onClick={() => handleTakeover(selectedPhone)}
-                      className="text-[10px] px-3 py-1.5 rounded-full bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/40 font-bold transition-all">
-                      🙋 Tomar control
+                      className="text-[9px] md:text-[10px] px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/40 font-bold transition-all">
+                      🙋 <span className="hidden sm:inline">Tomar </span>control
                     </button>
                   )
                 )}
-                <span className={`text-[10px] px-3 py-1 rounded-full ${
+                <span className={`text-[9px] md:text-[10px] px-2 md:px-3 py-1 rounded-full hidden sm:inline-flex ${
                   tab === 'bot' ? (takenOver ? 'bg-yellow-500/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-400') : 'bg-indigo-500/20 text-indigo-400'
                 }`}>
-                  {tab === 'bot' ? (takenOver ? '🙋 Asesor activo' : '🤖 Bot') : '🙋 Asesor'}
+                  {tab === 'bot' ? (takenOver ? '🙋 Asesor' : '🤖 Bot') : '🙋 Asesor'}
                 </span>
               </div>
             </div>
