@@ -24,6 +24,8 @@ export default function ChatPage() {
   const [takenOver, setTakenOver] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   // Cargar conversaciones del bot
   const loadBotConvs = () => {
     fetch(`${API_URL}/conversations/active`, { headers: { 'client-id': user?.companyId || '' } })
@@ -94,12 +96,67 @@ export default function ChatPage() {
     setTakenOver(conv?.flow_state === 'PAUSED_FOR_HUMAN');
     setNewMessage('');
     loadBotMessages(phone);
+    setMobileView('chat');
   };
   const selectCwConv = (convId: string) => {
     setSelectedConvId(convId);
     setSelectedPhone(null);
     setCwMessages([]);
     loadCwMessages(convId);
+    setMobileView('chat');
+  };
+  const goBackToList = () => {
+    setMobileView('list');
+  };
+  const formatMsgTime = (ts: any) => {
+    if (!ts) return '';
+    const d = new Date(typeof ts === 'number' ? (ts > 1e12 ? ts : ts * 1000) : ts);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  const getDateLabel = (ts: any) => {
+    if (!ts) return '';
+    const d = new Date(typeof ts === 'number' ? (ts > 1e12 ? ts : ts * 1000) : ts);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today.getTime() - 86400000);
+    const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (msgDate.getTime() === today.getTime()) return 'Hoy';
+    if (msgDate.getTime() === yesterday.getTime()) return 'Ayer';
+    return d.toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+  const getAvatarColor = (id: string) => {
+    const colors = ['bg-emerald-600', 'bg-indigo-600', 'bg-purple-600', 'bg-pink-600', 'bg-amber-600', 'bg-cyan-600', 'bg-rose-600', 'bg-teal-600'];
+    let hash = 0;
+    for (let i = 0; i < (id || '').length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    return colors[Math.abs(hash) % colors.length];
+  };
+  const handleSendFile = async (file: File) => {
+    if (!file || tab !== 'agent' || !selectedConvId) return;
+    setSending(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(',')[1];
+        await fetch(`${API_URL}/chatwoot/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+          body: JSON.stringify({
+            conversation_id: selectedConvId,
+            content: newMessage.trim() || '',
+            file_base64: base64,
+            file_name: file.name,
+            file_type: file.type,
+          }),
+        });
+        setNewMessage('');
+        loadCwMessages(selectedConvId);
+        setSending(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Error enviando archivo:', err);
+      setSending(false);
+    }
   };
   // Enviar mensaje por Chatwoot
   const handleSendCw = async () => {
@@ -200,8 +257,8 @@ export default function ChatPage() {
     : (cwConvs.find(c => String(c.id) === selectedConvId)?.phone || '');
   return (
     <div className="flex h-[calc(100vh-7rem)] -m-6">
-      {/* Sidebar */}
-      <div className="w-80 border-r border-white/5 bg-[#080B14] flex flex-col">
+      {/* Sidebar — oculto en móvil cuando hay chat abierto */}
+      <div className={`w-full md:w-80 border-r border-white/5 bg-[#080B14] flex flex-col ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b border-white/5">
           <h2 className="font-bold text-lg mb-3">Conversaciones 💬</h2>
           <input
@@ -302,9 +359,14 @@ export default function ChatPage() {
           )}
         </div>
       </div>
-      {/* Panel de chat */}
-      <div className="flex-1 flex flex-col bg-[#0B0F1A]">
-        {!hasSelection ? (
+       {/* Header */}
+            <div className="h-16 px-6 border-b border-white/5 flex items-center justify-between bg-[#080B14]">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                  tab === 'bot' ? 'bg-emerald-600/20 text-emerald-400' : 'bg-indigo-600/20 text-indigo-400'
+                }`}>
+                  {(selectedName || 'U').charAt(0).toUpperCase()}
+                </div>
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <p className="text-5xl mb-4">💬</p>
@@ -318,9 +380,10 @@ export default function ChatPage() {
           </div>
         ) : (
           <>
-            {/* Header */}
-            <div className="h-16 px-6 border-b border-white/5 flex items-center justify-between bg-[#080B14]">
+           {/* Header */}
+            <div className="h-16 px-4 md:px-6 border-b border-white/5 flex items-center justify-between bg-[#080B14]">
               <div className="flex items-center gap-3">
+                <button onClick={goBackToList} className="md:hidden text-gray-400 hover:text-white text-xl mr-1">←</button>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
                   tab === 'bot' ? 'bg-emerald-600/20 text-emerald-400' : 'bg-indigo-600/20 text-indigo-400'
                 }`}>
@@ -356,25 +419,53 @@ export default function ChatPage() {
             <div className="flex-1 overflow-y-auto px-6 py-4"
                  style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(99,102,241,0.03) 0%, transparent 50%)' }}>
               {activeMessages.length > 0 ? (
-                <div className="max-w-3xl mx-auto space-y-3">
-                  {activeMessages.map((msg: any, i: number) => (
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[75%] px-4 py-2.5 text-sm leading-relaxed ${
-                        msg.role === 'user'
-                          ? 'bg-indigo-600/20 text-indigo-100 rounded-2xl rounded-tr-md'
-                          : msg.private
-                            ? 'bg-yellow-500/10 text-yellow-200 rounded-2xl rounded-tl-md border border-yellow-500/20'
-                            : 'bg-white/[0.06] text-gray-300 rounded-2xl rounded-tl-md'
-                      }`}>
-                        <p className="whitespace-pre-wrap">{msg.text || msg.content || ''}</p>
-                        <p className={`text-[9px] mt-1 ${
-                          msg.role === 'user' ? 'text-indigo-400/50' : 'text-gray-600'
-                        }`}>
-                          {msg.role === 'user' ? '👤 Cliente' : tab === 'bot' ? '🤖 Bot' : '🙋 Asesor'}
-                        </p>
+                <div className="max-w-3xl mx-auto space-y-1">
+                  {activeMessages.map((msg: any, i: number) => {
+                    const msgTs = msg.ts || msg.created_at;
+                    const prevTs = i > 0 ? (activeMessages[i-1].ts || activeMessages[i-1].created_at) : null;
+                    const currentLabel = getDateLabel(msgTs);
+                    const prevLabel = getDateLabel(prevTs);
+                    const showDateSep = currentLabel && currentLabel !== prevLabel;
+                    const timeStr = formatMsgTime(msgTs);
+                    const isUser = msg.role === 'user';
+                    const isHuman = (msg.text || msg.content || '').startsWith('[Asesor');
+                    return (
+                      <div key={i}>
+                        {showDateSep && (
+                          <div className="flex justify-center my-4">
+                            <span className="bg-[#1a1f2e] text-[10px] text-gray-500 px-4 py-1.5 rounded-full font-medium shadow-sm">
+                              {currentLabel}
+                            </span>
+                          </div>
+                        )}
+                        <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
+                          <div className={`max-w-[80%] md:max-w-[65%] px-3 py-2 text-[13px] md:text-sm leading-relaxed relative ${
+                            isUser
+                              ? 'bg-[#005c4b] text-white rounded-xl rounded-tr-sm'
+                              : msg.private
+                                ? 'bg-yellow-500/10 text-yellow-200 rounded-xl rounded-tl-sm border border-yellow-500/20'
+                                : isHuman
+                                  ? 'bg-[#1a2236] text-blue-100 rounded-xl rounded-tl-sm border border-blue-500/20'
+                                  : 'bg-[#1a1f2e] text-gray-200 rounded-xl rounded-tl-sm'
+                          }`}>
+                            {!isUser && (
+                              <p className={`text-[10px] font-bold mb-0.5 ${
+                                isHuman ? 'text-blue-400' : msg.private ? 'text-yellow-400' : 'text-emerald-400'
+                              }`}>
+                                {isHuman ? '🙋 Asesor' : msg.private ? '🔒 Nota privada' : '🤖 Bot'}
+                              </p>
+                            )}
+                            <p className="whitespace-pre-wrap pr-12">{msg.text || msg.content || ''}</p>
+                            <span className={`absolute bottom-1.5 right-3 text-[9px] ${
+                              isUser ? 'text-white/40' : 'text-gray-600'
+                            }`}>
+                              {timeStr}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div ref={chatEndRef} />
                 </div>
               ) : (
@@ -402,6 +493,12 @@ export default function ChatPage() {
                       rows={1}
                     />
                   </div>
+                  <button onClick={() => fileInputRef.current?.click()}
+                    className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-all shrink-0">
+                    <span className="text-gray-400 text-lg">📎</span>
+                  </button>
+                  <input ref={fileInputRef} type="file" accept="image/*,.pdf,.doc,.docx,.zip" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSendFile(f); e.target.value = ''; }} />
                   <button
                     onClick={handleSendCw}
                     disabled={!newMessage.trim() || sending}
