@@ -54,6 +54,7 @@ export default function SettingsPage() {
   const [crmFields, setCrmFields] = useState<string[]>([]);
   const [businessType, setBusinessType] = useState('servicios');
   const [shippingProviders, setShippingProviders] = useState<string[]>([]);
+  const [postPaymentFlow, setPostPaymentFlow] = useState('scheduling');
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptText, setPromptText] = useState('');
   const [wizardStep, setWizardStep] = useState(1);
@@ -115,6 +116,7 @@ export default function SettingsPage() {
         setCrmFields(data.crm_fields || []);
         setBusinessType(data.business_type || 'servicios');
         setShippingProviders((data.shipping || {}).providers || []);
+        setPostPaymentFlow(data.post_payment_flow || 'scheduling');
         const hh = data.human_support_hours || {};
         setHumanHours({
           start: hh.start ?? 8,
@@ -832,6 +834,45 @@ export default function SettingsPage() {
             <p className="text-[10px] text-gray-600 mt-3">Se guarda con el botón "Guardar campos" de arriba.</p>
           </div>
         )}
+        {/* Después del Pago */}
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold">Después del Pago ✅</h3>
+            <button onClick={async () => {
+              setSaving(true);
+              await fetch(`${API_URL}/config`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                body: JSON.stringify({ post_payment_flow: postPaymentFlow }),
+              });
+              setConfig({ ...config, post_payment_flow: postPaymentFlow });
+              showToast('✓ Flujo post-pago guardado');
+              setSaving(false);
+            }} disabled={saving}
+              className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
+              {saving ? '...' : 'Guardar'}
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-500 mb-3">¿Qué pasa cuando un cliente completa el pago?</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { id: 'scheduling', label: '📅 Agendar cita', desc: 'Ideal para servicios, salud, cursos' },
+              { id: 'shipping', label: '📦 Pedir envío', desc: 'Dirección + transportadora' },
+              { id: 'download', label: '⬇️ Enviar descarga', desc: 'Productos digitales, ebooks' },
+              { id: 'thanks_only', label: '🙏 Solo agradecimiento', desc: 'Sin acción adicional' },
+            ].map(opt => (
+              <button key={opt.id} onClick={() => setPostPaymentFlow(opt.id)}
+                className={`p-3 rounded-xl text-left transition-all border ${
+                  postPaymentFlow === opt.id
+                    ? 'border-emerald-500 bg-emerald-600/10'
+                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                }`}>
+                <p className="text-xs font-bold">{opt.label}</p>
+                <p className="text-[9px] text-gray-500">{opt.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
         {/* Pasarela de Pagos */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
           <h3 className="font-bold mb-4">Pasarela de Pagos</h3>
