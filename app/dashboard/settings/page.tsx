@@ -62,9 +62,11 @@ export default function SettingsPage() {
     what_you_sell: '',
     location: '',
     prices: '',
+    website_url: '',
     tone: 'amigable',
     emojis: 'pocos',
     language: 'español',
+    sales_style: 'consultivo',
     requirements: '',
     faq: '',
     discount_policy: '',
@@ -285,23 +287,29 @@ export default function SettingsPage() {
       pocos: 'Usa emojis con moderación, solo para resaltar puntos importantes.',
       ninguno: 'No uses emojis en tus respuestas.',
     };
+    const salesMap: Record<string, string> = {
+      directo: `ESTILO DE VENTA DIRECTO:\n- Cuando el cliente pregunte por un servicio o producto, muestra las opciones disponibles de inmediato.\n- Incluye precios y beneficios principales en tu respuesta.\n- Cierra siempre invitando a comprar o reservar.`,
+      consultivo: `ESTILO DE VENTA CONSULTIVO (embudo conversacional):\n- PASO 1: Cuando un cliente nuevo pregunte por un servicio/producto, NO muestres opciones de inmediato. Primero haz UNA pregunta de conexión adaptada al contexto (ej: "¿Es para ti o para alguien más?", "¿Qué te llamó la atención?", "¿Ya tienes experiencia?").\n- PASO 2: Después de su respuesta, pide el nombre de forma natural: "¡Qué bien! ¿Con quién tengo el gusto?" Si lo ignora, NO insistas.\n- PASO 3: Una vez tienes contexto (y ojalá el nombre), muestra las opciones con intent "catalog". Usa el nombre si lo tienes.\n- PASO 4: Cuando elija un servicio, resalta el beneficio principal antes del precio. Pregunta si quiere reservar.\n- PASO 5: Si confirma, usa intent "payment". Mensaje tipo: "[Nombre], tu pre-reserva está lista. Te envío el link de pago seguro."`,
+      informativo: `ESTILO INFORMATIVO:\n- Responde las preguntas del cliente de forma clara y completa.\n- No presiones para comprar. Solo informa.\n- Si el cliente muestra interés en comprar, ofrece las opciones disponibles.`,
+    };
     const brandName = form.brand_name || 'nuestro negocio';
     let prompt = `Eres el asistente virtual de ${brandName}.\n\n`;
     prompt += `SOBRE EL NEGOCIO:\n${wizard.what_you_sell}\n\n`;
     if (wizard.location) prompt += `UBICACIÓN: ${wizard.location}\n\n`;
+    if (wizard.website_url) prompt += `SITIO WEB: ${wizard.website_url}\nSi el cliente pregunta por la página web, comparte esta URL.\n\n`;
     if (wizard.prices) prompt += `PRECIOS:\n${wizard.prices}\n\n`;
     prompt += `ESTILO DE COMUNICACIÓN:\n`;
     prompt += `- ${toneMap[wizard.tone] || toneMap.amigable}\n`;
     prompt += `- ${emojiMap[wizard.emojis] || emojiMap.pocos}\n`;
     prompt += `- Idioma: ${wizard.language}\n`;
-    prompt += `- Responde de forma breve y directa (máximo 3-4 líneas).\n`;
-    prompt += `- Siempre cierra invitando al cliente a tomar acción.\n\n`;
+    prompt += `- Responde de forma breve y directa (máximo 3-4 líneas).\n\n`;
+    prompt += `${salesMap[wizard.sales_style] || salesMap.consultivo}\n\n`;
     if (wizard.requirements) prompt += `REQUISITOS / CONDICIONES:\n${wizard.requirements}\n\n`;
     if (wizard.faq) prompt += `PREGUNTAS FRECUENTES:\n${wizard.faq}\n\n`;
     if (wizard.discount_policy) prompt += `POLÍTICA DE DESCUENTOS:\n${wizard.discount_policy}\n\n`;
     prompt += `REGLAS IMPORTANTES:\n`;
-    prompt += `- Si el cliente pregunta algo que no sabes, ofrece conectarlo con un asesor humano.\n`;
-    prompt += `- Nunca inventes información sobre precios o servicios que no estén listados arriba.\n`;
+    prompt += `- Nunca inventes información sobre precios o servicios que no estén en el catálogo.\n`;
+    prompt += `- Si preguntan algo del contexto general (cómo llegar, qué llevar, clima), usa tu conocimiento para responder.\n`;
     prompt += `- Si el cliente muestra intención de compra, guíalo al proceso de pago o reserva.\n`;
     setPromptText(prompt.trim());
   };
@@ -646,6 +654,12 @@ export default function SettingsPage() {
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white h-20 resize-none"
                       placeholder="Ej: Seminario $280.000, Curso Escolta $1.300.000..." />
                   </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Sitio web (opcional)</label>
+                    <input value={wizard.website_url} onChange={(e) => setWizard({...wizard, website_url: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+                      placeholder="https://www.tunegocio.com" />
+                  </div>
                   <button onClick={() => setWizardStep(2)} disabled={!wizard.what_you_sell}
                     className="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50">
                     Siguiente →
@@ -693,6 +707,24 @@ export default function SettingsPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 uppercase tracking-widest mb-2">Estilo de venta</label>
+                    <div className="flex gap-2">
+                      {['directo', 'consultivo', 'informativo'].map(s => (
+                        <button key={s} onClick={() => setWizard({...wizard, sales_style: s})}
+                          className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all capitalize ${
+                            wizard.sales_style === s ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                          }`}>
+                          {s === 'directo' ? '🎯 Directo' : s === 'consultivo' ? '🤝 Consultivo' : '📋 Informativo'}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-gray-600 mt-1">
+                      {wizard.sales_style === 'directo' ? 'Muestra opciones y precios de inmediato' :
+                       wizard.sales_style === 'consultivo' ? 'Hace preguntas antes de mostrar opciones (recomendado)' :
+                       'Solo informa, no presiona para comprar'}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setWizardStep(1)}

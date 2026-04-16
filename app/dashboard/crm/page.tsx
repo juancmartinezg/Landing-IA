@@ -82,6 +82,8 @@ export default function CRMPage() {
   const [loadingAi, setLoadingAi] = useState(false);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [page, setPage] = useState(1);
+  const LEADS_PER_PAGE = 25;
   const [filterTag, setFilterTag] = useState('all');
   const [newTag, setNewTag] = useState('');
   const [newNote, setNewNote] = useState('');
@@ -139,6 +141,7 @@ export default function CRMPage() {
       result = result.filter(l => (l.purchase_info || {}).product_name === filterProduct);
     }
     setFiltered(result);
+    setPage(1);
   }, [search, filterStatus, filterTag, filterProduct, leads]);
   const loadDetail = (phone: string) => {
     fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
@@ -416,7 +419,12 @@ export default function CRMPage() {
       <div className="relative">
         {/* Lista de Leads */}
         <div className={`transition-all ${showDetail ? 'lg:pr-[460px]' : ''}`}>
-          <div className="text-xs text-gray-500 mb-2">{filtered.length} leads encontrados</div>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs text-gray-500">{filtered.length} leads encontrados</span>
+            {filtered.length > LEADS_PER_PAGE && (
+              <span className="text-xs text-gray-500">Página {page} de {Math.ceil(filtered.length / LEADS_PER_PAGE)}</span>
+            )}
+          </div>
           {loading ? (
             <div className="space-y-2">
               {[1,2,3,4,5,6].map(i => (
@@ -439,28 +447,28 @@ export default function CRMPage() {
             <div className="text-center py-12 text-gray-500">No hay leads con esos filtros</div>
           ) : (
             <div className="space-y-2 max-h-[600px] overflow-y-auto">
-              {filtered.map((lead, i) => (
+              {filtered.slice((page - 1) * LEADS_PER_PAGE, page * LEADS_PER_PAGE).map((lead, i) => (
                 <div
                   key={i}
                   onClick={() => loadDetail(lead.phoneNumber)}
-                  className={`bg-white/[0.03] border rounded-xl p-4 cursor-pointer transition-all flex items-center justify-between ${
+                  className={`bg-white/[0.03] border rounded-xl p-3 md:p-4 cursor-pointer transition-all flex items-center justify-between gap-2 ${
                     selectedLead?.lead?.phoneNumber === lead.phoneNumber ? 'border-indigo-500 bg-indigo-600/5' : 'border-white/5 hover:bg-white/[0.05]'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-600/20 rounded-full flex items-center justify-center text-sm font-bold text-indigo-400">
+                  <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-600/20 rounded-full flex items-center justify-center text-xs md:text-sm font-bold text-indigo-400 shrink-0">
                       {(lead.customer_name || 'U').charAt(0)}
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{lead.customer_name || 'Sin nombre'}</p>
-                      <p className="text-[10px] text-gray-500">{lead.phoneNumber}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate text-sm">{lead.customer_name || 'Sin nombre'}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{lead.phoneNumber}</p>
                       {lead.last_user_msg && (
-                        <p className="text-[10px] text-gray-600 truncate mt-0.5">💬 {lead.last_user_msg}</p>
+                        <p className="text-[10px] text-gray-600 truncate mt-0.5 hidden sm:block">💬 {lead.last_user_msg}</p>
                       )}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className={`text-[10px] px-2 py-1 rounded-full ${
+                    <span className={`text-[9px] md:text-[10px] px-1.5 md:px-2 py-0.5 md:py-1 rounded-full whitespace-nowrap ${
                       lead.lead_status === 'INTENCION DE COMPRA' ? 'bg-emerald-500/20 text-emerald-400' :
                       lead.lead_status === 'INTERESADO' ? 'bg-indigo-500/20 text-indigo-400' :
                       lead.lead_status === 'DEMO' ? 'bg-purple-500/20 text-purple-400' :
@@ -469,7 +477,7 @@ export default function CRMPage() {
                       {lead.lead_status || 'Nuevo'}
                     </span>
                     {lead.last_updated && (
-                      <p className={`text-[9px] mt-1 ${
+                      <p className={`text-[9px] mt-1 whitespace-nowrap ${
                         (Date.now()/1000 - Number(lead.last_updated)) > 172800 ? 'text-red-400' :
                         (Date.now()/1000 - Number(lead.last_updated)) > 86400 ? 'text-yellow-400' : 'text-gray-500'
                       }`}>
@@ -488,6 +496,22 @@ export default function CRMPage() {
               ))}
             </div>
           )}
+          {filtered.length > LEADS_PER_PAGE && (
+              <div className="flex justify-center items-center gap-3 mt-4">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-all">
+                  ← Anterior
+                </button>
+                <span className="text-xs text-gray-500">
+                  {page} / {Math.ceil(filtered.length / LEADS_PER_PAGE)}
+                </span>
+                <button onClick={() => setPage(p => Math.min(Math.ceil(filtered.length / LEADS_PER_PAGE), p + 1))}
+                  disabled={page >= Math.ceil(filtered.length / LEADS_PER_PAGE)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-all">
+                  Siguiente →
+                </button>
+              </div>
+            )}
         </div>
         {/* Detalle del Lead — Slide-over desktop / Modal móvil */}
         {showDetail && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={closeDetail} />}
