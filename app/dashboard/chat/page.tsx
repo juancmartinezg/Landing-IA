@@ -259,7 +259,7 @@ export default function ChatPage() {
        <div className="flex -m-6 overflow-hidden fixed top-[5.5rem] left-1 right-1 bottom-4 md:relative md:top-auto md:left-auto md:right-auto md:bottom-auto md:m-[-1.5rem] md:h-[calc(100vh-7rem)] bg-[#0B0F1A] z-10 md:rounded-none">
       {/* Sidebar — oculto en móvil cuando hay chat abierto */}
       <div className={`w-full md:w-80 border-r border-white/5 bg-[#080B14] flex flex-col ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
-        <div className="p-4 border-b border-white/5">
+         <div className="px-5 py-4 border-b border-white/5">
           <h2 className="font-bold text-lg mb-3">Conversaciones 💬</h2>
           <input
             type="text"
@@ -299,11 +299,11 @@ export default function ChatPage() {
                 const st = stateLabel(conv.flow_state);
                 return (
                    <div key={i} onClick={() => selectBotConv(conv.phone)}
-                    className={`px-3 md:px-4 py-3 cursor-pointer transition-all border-b border-white/[0.03] hover:bg-white/[0.03] ${
+                    className={`px-4 md:px-4 py-3 cursor-pointer transition-all border-b border-white/[0.03] hover:bg-white/[0.03] ${
                       selectedPhone === conv.phone ? 'bg-indigo-600/10 border-l-2 border-l-emerald-500' : ''
                     }`}>
-                    <div className="flex items-center gap-2 md:gap-3">
-                      <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-600/20 rounded-full flex items-center justify-center text-xs md:text-sm font-bold text-emerald-400 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 md:w-10 md:h-10 bg-emerald-600/20 rounded-full flex items-center justify-center text-xs md:text-sm font-bold text-emerald-400 shrink-0">
                         {(conv.name || 'U').charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -330,10 +330,10 @@ export default function ChatPage() {
             ) : (
               filteredCw.map((conv, i) => (
                 <div key={i} onClick={() => selectCwConv(String(conv.id))}
-                  className={`px-3 md:px-4 py-3 cursor-pointer transition-all border-b border-white/[0.03] hover:bg-white/[0.03] ${
+                  className={`px-4 md:px-4 py-3 cursor-pointer transition-all border-b border-white/[0.03] hover:bg-white/[0.03] ${
                     selectedConvId === String(conv.id) ? 'bg-indigo-600/10 border-l-2 border-l-indigo-500' : ''
                   }`}>
-                  <div className="flex items-center gap-2 md:gap-3">
+                  <div className="flex items-center gap-3">
                     <div className="relative">
                       <div className="w-10 h-10 bg-indigo-600/20 rounded-full flex items-center justify-center text-sm font-bold text-indigo-400">
                         {(conv.name || 'U').charAt(0).toUpperCase()}
@@ -376,9 +376,9 @@ export default function ChatPage() {
         ) : (
           <>
             {/* Header */}
-            <div className="h-14 md:h-16 px-3 md:px-6 border-b border-white/5 flex items-center justify-between bg-[#080B14]">
+           <div className="h-14 md:h-16 px-4 md:px-6 border-b border-white/5 flex items-center justify-between bg-[#080B14]">
               <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                <button onClick={goBackToList} className="md:hidden text-gray-400 hover:text-white text-2xl shrink-0">←</button>
+                <button onClick={goBackToList} className="md:hidden text-gray-400 hover:text-white text-2xl shrink-0 pl-1">←</button>
                 <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
                   tab === 'bot' ? 'bg-emerald-600/20 text-emerald-400' : 'bg-indigo-600/20 text-indigo-400'
                 }`}>
