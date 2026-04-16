@@ -255,8 +255,8 @@ export default function ChatPage() {
   const selectedDetail = tab === 'bot'
     ? (botConvs.find(c => c.phone === selectedPhone)?.phone || '')
     : (cwConvs.find(c => String(c.id) === selectedConvId)?.phone || '');
-   return (
-       <div className="flex -m-6 overflow-hidden fixed top-[5.5rem] left-1 right-1 bottom-4 md:relative md:top-auto md:left-auto md:right-auto md:bottom-auto md:m-[-1.5rem] md:h-[calc(100vh-7rem)] bg-[#0B0F1A] z-10 rounded-xl md:rounded-none">
+   return (       
+       <div className="flex -m-6 overflow-hidden fixed top-[5.5rem] left-1 right-1 bottom-4 md:relative md:top-auto md:left-auto md:right-auto md:bottom-auto md:m-[-1.5rem] md:h-[calc(100vh-7rem)] bg-[#0B0F1A] z-10 md:rounded-none"></div>
       {/* Sidebar — oculto en móvil cuando hay chat abierto */}
       <div className={`w-full md:w-80 border-r border-white/5 bg-[#080B14] flex flex-col ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b border-white/5">
@@ -298,12 +298,12 @@ export default function ChatPage() {
               filteredBot.map((conv, i) => {
                 const st = stateLabel(conv.flow_state);
                 return (
-                  <div key={i} onClick={() => selectBotConv(conv.phone)}
-                    className={`px-4 py-3 cursor-pointer transition-all border-b border-white/[0.03] hover:bg-white/[0.03] ${
+                   <div key={i} onClick={() => selectBotConv(conv.phone)}
+                    className={`px-3 md:px-4 py-3 cursor-pointer transition-all border-b border-white/[0.03] hover:bg-white/[0.03] ${
                       selectedPhone === conv.phone ? 'bg-indigo-600/10 border-l-2 border-l-emerald-500' : ''
                     }`}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-emerald-600/20 rounded-full flex items-center justify-center text-sm font-bold text-emerald-400">
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-600/20 rounded-full flex items-center justify-center text-xs md:text-sm font-bold text-emerald-400 shrink-0">
                         {(conv.name || 'U').charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -330,10 +330,10 @@ export default function ChatPage() {
             ) : (
               filteredCw.map((conv, i) => (
                 <div key={i} onClick={() => selectCwConv(String(conv.id))}
-                  className={`px-4 py-3 cursor-pointer transition-all border-b border-white/[0.03] hover:bg-white/[0.03] ${
+                  className={`px-3 md:px-4 py-3 cursor-pointer transition-all border-b border-white/[0.03] hover:bg-white/[0.03] ${
                     selectedConvId === String(conv.id) ? 'bg-indigo-600/10 border-l-2 border-l-indigo-500' : ''
                   }`}>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 md:gap-3">
                     <div className="relative">
                       <div className="w-10 h-10 bg-indigo-600/20 rounded-full flex items-center justify-center text-sm font-bold text-indigo-400">
                         {(conv.name || 'U').charAt(0).toUpperCase()}
