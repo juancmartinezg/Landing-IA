@@ -418,7 +418,23 @@ export default function CRMPage() {
         <div className={`transition-all ${showDetail ? 'lg:pr-[460px]' : ''}`}>
           <div className="text-xs text-gray-500 mb-2">{filtered.length} leads encontrados</div>
           {loading ? (
-            <div className="text-center py-12 text-gray-500">Cargando leads...</div>
+            <div className="space-y-2">
+              {[1,2,3,4,5,6].map(i => (
+                <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-4 flex items-center justify-between animate-pulse">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/5 rounded-full" />
+                    <div className="space-y-2">
+                      <div className="h-3 bg-white/5 rounded w-32" />
+                      <div className="h-2 bg-white/5 rounded w-24" />
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-right">
+                    <div className="h-3 bg-white/5 rounded w-16 ml-auto" />
+                    <div className="h-2 bg-white/5 rounded w-12 ml-auto" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-12 text-gray-500">No hay leads con esos filtros</div>
           ) : (

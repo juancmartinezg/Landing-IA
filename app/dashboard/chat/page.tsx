@@ -291,7 +291,18 @@ export default function ChatPage() {
         <div className="flex-1 overflow-y-auto">
           {tab === 'bot' ? (
             loadingBot ? (
-              <div className="text-center py-8 text-gray-500 text-sm">Cargando...</div>
+              <div className="space-y-1 p-3">
+                {[1,2,3,4,5].map(i => (
+                  <div key={i} className="flex items-center gap-3 px-3 py-3 animate-pulse">
+                    <div className="w-10 h-10 bg-white/5 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 bg-white/5 rounded w-2/3" />
+                      <div className="h-2 bg-white/5 rounded w-full" />
+                      <div className="h-2 bg-white/5 rounded w-1/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : filteredBot.length === 0 ? (
               <div className="text-center py-8 text-gray-500 text-sm">No hay conversaciones activas</div>
             ) : (
@@ -324,7 +335,18 @@ export default function ChatPage() {
             )
           ) : (
             loadingCw ? (
-              <div className="text-center py-8 text-gray-500 text-sm">Cargando...</div>
+              <div className="space-y-1 p-3">
+                {[1,2,3,4,5].map(i => (
+                  <div key={i} className="flex items-center gap-3 px-3 py-3 animate-pulse">
+                    <div className="w-10 h-10 bg-white/5 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 bg-white/5 rounded w-2/3" />
+                      <div className="h-2 bg-white/5 rounded w-full" />
+                      <div className="h-2 bg-white/5 rounded w-1/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : filteredCw.length === 0 ? (
               <div className="text-center py-8 text-gray-500 text-sm">No hay conversaciones con asesor</div>
             ) : (
