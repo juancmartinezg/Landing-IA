@@ -6,6 +6,7 @@ const emptyForm = {
   name: '', description: '', category: 'servicio',
   regular_price: '', deposit_required: '', currency: 'COP',
   image_url: '', duration_hours: '1', service_type: 'personalizado',
+  post_payment_flow: '', download_url: '',
 };
 export default function ServicesPage() {
   const { user } = useAuth();
@@ -45,6 +46,8 @@ export default function ServicesPage() {
       image_url: svc.image_url || '',
       duration_hours: String(svc.scheduling?.duration_hours || '1'),
       service_type: svc.scheduling?.service_type || 'personalizado',
+      post_payment_flow: svc.post_payment_flow || '',
+      download_url: svc.download_url || '',
     });
     setShowForm(true);
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -57,11 +60,13 @@ export default function ServicesPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         name: form.name,
         description: form.description,
         category: form.category,
         image_url: form.image_url,
+        post_payment_flow: form.post_payment_flow || undefined,
+        download_url: form.post_payment_flow === 'download' ? form.download_url : undefined,
         pricing: {
           regular_price: parseInt(form.regular_price) || 0,
           deposit_required: parseInt(form.deposit_required) || 0,
@@ -176,6 +181,56 @@ export default function ServicesPage() {
                 <option value="regular" className="bg-[#1a1f2e] text-white">Regular / Grupal</option>
               </select>
             </div>
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Después del pago</label>
+              <select value={form.post_payment_flow} onChange={(e) => setForm({...form, post_payment_flow: e.target.value})}
+                className="bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white w-full">
+                <option value="" className="bg-[#1a1f2e] text-white">— Usar default global —</option>
+                <option value="scheduling" className="bg-[#1a1f2e] text-white">📅 Agendar cita</option>
+                <option value="shipping" className="bg-[#1a1f2e] text-white">📦 Pedir dirección de envío</option>
+                <option value="download" className="bg-[#1a1f2e] text-white">⬇️ Enviar descarga</option>
+                <option value="thanks_only" className="bg-[#1a1f2e] text-white">🙏 Solo agradecimiento</option>
+              </select>
+            </div>
+            {form.post_payment_flow === 'download' && (
+              <div className="md:col-span-2">
+                <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">URL de descarga</label>
+                <div className="flex gap-3 items-start">
+                  <div className="flex-1">
+                    <input value={form.download_url} onChange={(e) => setForm({...form, download_url: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+                      placeholder="https://drive.google.com/... o sube un archivo" />
+                  </div>
+                  <label className="bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white px-4 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all shrink-0">
+                    📁 Subir
+                    <input type="file" accept=".pdf,.zip,.rar,.epub,.mp3,.mp4" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const res = await fetch(`${API_URL}/upload-url?file_name=${encodeURIComponent(file.name)}&folder=downloads`, {
+                          headers: { 'client-id': user?.companyId || '' }
+                        });
+                        const data = await res.json();
+                        if (data.upload_url) {
+                          await fetch(data.upload_url, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': data.content_type },
+                            body: file,
+                          });
+                          setForm({...form, download_url: data.public_url});
+                          showToast('✓ Archivo subido');
+                        }
+                      } catch (err) {
+                        showToast('Error subiendo archivo');
+                      }
+                    }} />
+                  </label>
+                </div>
+                {form.download_url && (
+                  <p className="text-[10px] text-emerald-400 mt-2 truncate">✓ {form.download_url}</p>
+                )}
+              </div>
+            )}
             <div className="md:col-span-2">
               <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Imagen del servicio</label>
               <div className="flex gap-3 items-start">
