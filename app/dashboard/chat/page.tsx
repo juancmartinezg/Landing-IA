@@ -256,7 +256,7 @@ export default function ChatPage() {
     ? (botConvs.find(c => c.phone === selectedPhone)?.phone || '')
     : (cwConvs.find(c => String(c.id) === selectedConvId)?.phone || '');
    return (       
-       <div className="flex -m-6 overflow-hidden fixed top-[5.5rem] left-1 right-1 bottom-4 md:relative md:top-auto md:left-auto md:right-auto md:bottom-auto md:m-[-1.5rem] md:h-[calc(100vh-7rem)] bg-[#0B0F1A] z-10 md:rounded-none">
+       <div className="flex overflow-hidden fixed top-[5.5rem] left-0 right-0 bottom-4 md:relative md:top-auto md:left-auto md:right-auto md:bottom-auto md:-m-6 md:h-[calc(100vh-7rem)] bg-[#0B0F1A] z-10">
       {/* Sidebar — oculto en móvil cuando hay chat abierto */}
       <div className={`w-full md:w-80 border-r border-white/5 bg-[#080B14] flex flex-col ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
          <div className="px-5 py-4 border-b border-white/5">
@@ -307,9 +307,9 @@ export default function ChatPage() {
                         {(conv.name || 'U').charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm font-medium truncate">{conv.name || 'Sin nombre'}</p>
-                          <span className="text-[10px] text-gray-600 ml-2">{formatTime(conv.last_interaction)}</span>
+                        <div className="flex justify-between items-center gap-2">
+                          <p className="text-sm font-medium truncate flex-1 min-w-0">{conv.name || 'Sin nombre'}</p>
+                          <span className="text-[10px] text-gray-600 shrink-0 whitespace-nowrap">{formatTime(conv.last_interaction)}</span>
                         </div>
                         <p className="text-[11px] text-gray-500 truncate">{conv.last_user_msg || conv.phone}</p>
                         <div className="flex items-center gap-2 mt-1">
@@ -345,9 +345,9 @@ export default function ChatPage() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm font-medium truncate">{conv.name || 'Sin nombre'}</p>
-                        <span className="text-[10px] text-gray-600 ml-2">{formatTime(conv.last_message_at)}</span>
+                      <div className="flex justify-between items-center gap-2">
+                        <p className="text-sm font-medium truncate flex-1 min-w-0">{conv.name || 'Sin nombre'}</p>
+                        <span className="text-[10px] text-gray-600 shrink-0 whitespace-nowrap">{formatTime(conv.last_message_at)}</span>
                       </div>
                       <p className="text-[11px] text-gray-500 truncate max-w-[200px] md:max-w-none">{conv.last_message || conv.phone}</p>
                       <span className="text-[9px] text-indigo-400 truncate">{conv.agent || 'Sin asignar'}</span>
