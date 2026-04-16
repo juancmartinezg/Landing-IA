@@ -255,8 +255,8 @@ export default function ChatPage() {
   const selectedDetail = tab === 'bot'
     ? (botConvs.find(c => c.phone === selectedPhone)?.phone || '')
     : (cwConvs.find(c => String(c.id) === selectedConvId)?.phone || '');
-  return (
-    <div className="flex h-[calc(100vh-7rem)] -m-6 overflow-hidden">
+   return (
+    <div className="flex h-[calc(100vh-7rem)] -m-6 overflow-hidden fixed inset-0 md:relative md:inset-auto mt-16 md:mt-0 bg-[#0B0F1A] z-10">
       {/* Sidebar — oculto en móvil cuando hay chat abierto */}
       <div className={`w-full md:w-80 border-r border-white/5 bg-[#080B14] flex flex-col ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b border-white/5">
