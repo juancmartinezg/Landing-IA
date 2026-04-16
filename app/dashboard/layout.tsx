@@ -8,7 +8,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Metricas', icon: '📊' },
   { href: '/dashboard/crm', label: 'CRM / Leads', icon: '👥' },
   { href: '/dashboard/chat', label: 'Conversaciones', icon: '💬' },
-  { href: '/dashboard/services', label: 'Servicios', icon: '🛍️' },
+  { href: '/dashboard/services', label: 'Catálogo', icon: '🛍️' },
   { href: '/dashboard/appointments', label: 'Citas', icon: '📅' },
   { href: '/dashboard/payments', label: 'Pagos', icon: '💳' },
   { href: '/dashboard/analytics', label: 'Reportes', icon: '📈' },
