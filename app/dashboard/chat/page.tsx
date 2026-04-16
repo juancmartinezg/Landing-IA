@@ -359,14 +359,9 @@ export default function ChatPage() {
           )}
         </div>
       </div>
-       {/* Header */}
-            <div className="h-16 px-6 border-b border-white/5 flex items-center justify-between bg-[#080B14]">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                  tab === 'bot' ? 'bg-emerald-600/20 text-emerald-400' : 'bg-indigo-600/20 text-indigo-400'
-                }`}>
-                  {(selectedName || 'U').charAt(0).toUpperCase()}
-                </div>
+      {/* Panel de chat — fullscreen en móvil */}
+      <div className={`flex-1 flex flex-col bg-[#0B0F1A] ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
+        {!hasSelection ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <p className="text-5xl mb-4">💬</p>
