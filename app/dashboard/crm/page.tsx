@@ -861,6 +861,24 @@ export default function CRMPage() {
                   <span className="text-gray-500">Interes</span>
                   <span className="font-medium">{selectedLead.lead?.service_of_interest}</span>
                 </div>
+                {selectedLead.lead?.email && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Email</span>
+                    <span className="font-medium text-indigo-400">{selectedLead.lead.email}</span>
+                  </div>
+                )}
+                {selectedLead.lead?.city && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Ciudad</span>
+                    <span className="font-medium">{selectedLead.lead.city}</span>
+                  </div>
+                )}
+                {selectedLead.lead?.zip_code && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Código postal</span>
+                    <span className="font-medium">{selectedLead.lead.zip_code}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">Visitas</span>
                   <span className="font-medium">{selectedLead.lead?.visit_count}</span>
@@ -869,6 +887,12 @@ export default function CRMPage() {
                   <span className="text-gray-500">Sesion</span>
                   <span className="font-medium">{selectedLead.session_state || '-'}</span>
                 </div>
+                {selectedLead.lead?.import_source && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Origen</span>
+                    <span className="font-medium text-xs">{selectedLead.lead.import_source === 'csv_import' ? '📤 Importado' : selectedLead.lead.import_source}</span>
+                  </div>
+                )}
               </div>
               
               {/* Score + Stage + Tags manuales */}
