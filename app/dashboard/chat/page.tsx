@@ -300,7 +300,7 @@ export default function ChatPage() {
         </div>
         {/* Tabs */}
         <div className="flex border-b border-white/5">
-          button onClick={() => setTab('bot')}
+          <button onClick={() => setTab('bot')}
             className={`flex-1 py-3 text-xs font-bold transition-all ${
               tab === 'bot' ? 'text-emerald-400 border-b-2 border-emerald-400' : 'text-gray-500'
             }`}>
