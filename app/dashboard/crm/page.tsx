@@ -1103,6 +1103,22 @@ export default function CRMPage() {
                     className="text-[10px] px-3 py-1.5 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600 hover:text-white font-bold transition-all">
                     📞 Contactado
                   </button>
+                  <button onClick={async () => {
+                    if (!confirm('¿Eliminar este lead? Esta acción no se puede deshacer.')) return;
+                    try {
+                      await fetch(`${API_URL}/leads/delete?phone=${selectedLead.lead?.phoneNumber}`, {
+                        method: 'DELETE',
+                        headers: { 'client-id': user?.companyId || '' },
+                      });
+                      setShowDetail(false);
+                      setSelectedLead(null);
+                      fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
+                        .then(r => r.json()).then(d => { setLeads(d.leads || []); });
+                    } catch {}
+                  }}
+                    className="text-[10px] px-3 py-1.5 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white font-bold transition-all">
+                    🗑️ Eliminar
+                  </button>
                 </div>
               </div>
               {/* Mensajes rápidos */}
