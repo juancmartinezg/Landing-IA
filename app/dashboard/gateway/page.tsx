@@ -26,16 +26,21 @@ export default function GatewayPage() {
       { key: 'wompi_events_key', label: 'Llave de Eventos' },
     ],
     openpay: [
-      { key: 'openpay_merchant_id', label: 'Merchant ID' },
-      { key: 'openpay_private_key', label: 'Llave Privada' },
+      { key: 'merchant_id', label: 'Merchant ID' },
+      { key: 'private_key', label: 'Llave Privada' },
     ],
     mercadopago: [
       { key: 'mercadopago_access_token', label: 'Access Token' },
       { key: 'mercadopago_public_key', label: 'Public Key' },
     ],
-    paypal: [
+   paypal: [
       { key: 'paypal_client_id', label: 'Client ID' },
       { key: 'paypal_client_secret', label: 'Client Secret' },
+    ],
+    payu: [
+      { key: 'payu_api_key', label: 'API Key' },
+      { key: 'payu_merchant_id', label: 'Merchant ID' },
+      { key: 'payu_account_id', label: 'Account ID' },
     ],
   };
   const handleActivate = async (gwId: string) => {

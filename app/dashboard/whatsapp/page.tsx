@@ -223,8 +223,8 @@ const handleSignupResponse = useCallback(async (response: any) => {
                 <p className="text-sm text-gray-400">Sí, puedes vincular tu número actual o activar una línea nueva.</p>
               </div>
               <div>
-                <p className="text-sm font-bold text-indigo-400 mb-1">¿Pierdo mis contactos?</p>
-                <p className="text-sm text-gray-400">No, tus contactos y conversaciones anteriores se mantienen.</p>
+                <p className="text-sm font-bold text-indigo-400 mb-1">¿Necesito un número nuevo?</p>
+                <p className="text-sm text-gray-400">Recomendamos usar una línea dedicada para el bot. Si usas tu número personal, se convertirá en WhatsApp Business API y perderás el acceso desde la app normal de WhatsApp.</p>
               </div>
               <div>
                 <p className="text-sm font-bold text-indigo-400 mb-1">¿Puedo desconectarlo después?</p>
