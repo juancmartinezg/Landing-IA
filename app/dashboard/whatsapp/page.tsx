@@ -22,7 +22,8 @@ export default function WhatsAppPage() {
       .then(data => { setConfig(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
-  const isConnected = config?.phone_number_id && config?.waba_id;
+    const isConnected = config?.phone_number_id && config?.waba_id && config.phone_number_id !== 'pending' && config.waba_id !== 'pending' && config.phone_number_id !== 'DISCONNECTED' && config.waba_id !== 'DISCONNECTED';
+
   // Callback cuando el usuario completa el signup
 const handleSignupResponse = useCallback(async (response: any) => {
     console.log('Embedded Signup response:', JSON.stringify(response));
