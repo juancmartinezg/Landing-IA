@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { useAuth } from '../../providers';
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
@@ -238,45 +239,42 @@ export default function CRMPage() {
   const handleCsvFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      let text = e.target?.result as string;
-      // Limpiar BOM y caracteres invisibles
-      text = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-      const lines = text.split('\n').filter(l => l.trim());
-      if (lines.length < 2) return;
-       // Detectar separador: el que más aparece en la primera línea
-      const firstLine = lines[0];
-      const tabCount = (firstLine.match(/\t/g) || []).length;
-      const commaCount = (firstLine.match(/,/g) || []).length;
-      const semicolonCount = (firstLine.match(/;/g) || []).length;
-      const separator = tabCount >= commaCount && tabCount >= semicolonCount ? '\t' : commaCount >= semicolonCount ? ',' : ';';
-      const headers = firstLine.split(separator).map(h => h.trim().replace(/"/g, ''));
-      setCsvColumns(headers);
-      // Auto-mapear columnas conocidas
-      const autoMap: Record<string, string> = {};
-      headers.forEach(h => {
-        const lower = h.toLowerCase();
-        if (lower.includes('telefono') || lower.includes('phone') || lower.includes('celular') || lower.includes('whatsapp') || lower.includes('tel')) autoMap[h] = 'phone';
-        else if (lower.includes('nombre') || lower.includes('name') || lower === 'cliente') autoMap[h] = 'name';
-        else if (lower.includes('email') || lower.includes('correo') || lower.includes('mail')) autoMap[h] = 'email';
-        else if (lower.includes('producto') || lower.includes('product') || lower.includes('servicio') || lower.includes('service')) autoMap[h] = 'product';
-        else if (lower.includes('ciudad') || lower.includes('city')) autoMap[h] = 'city';
-        else if (lower.includes('postal') || lower.includes('zip') || lower.includes('codigo')) autoMap[h] = 'zip_code';
-        else if (lower.includes('nota') || lower.includes('note') || lower.includes('comentario')) autoMap[h] = 'notes';
-        else if (lower.includes('tag') || lower.includes('etiqueta')) autoMap[h] = 'tags';
-      });
-      setColumnMap(autoMap);
-      const rows: any[] = [];
-      for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
-
-        const row: Record<string, string> = {};
-        headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
-        rows.push(row);
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+        if (jsonData.length < 2) return;
+        const headers = jsonData[0].map((h: any) => String(h || '').trim());
+        setCsvColumns(headers);
+        const autoMap: Record<string, string> = {};
+        headers.forEach(h => {
+          const lower = h.toLowerCase();
+          if (lower.includes('telefono') || lower.includes('phone') || lower.includes('celular') || lower.includes('whatsapp') || lower.includes('tel')) autoMap[h] = 'phone';
+          else if (lower.includes('nombre') || lower.includes('name') || lower === 'cliente') autoMap[h] = 'name';
+          else if (lower.includes('email') || lower.includes('correo') || lower.includes('mail')) autoMap[h] = 'email';
+          else if (lower.includes('producto') || lower.includes('product') || lower.includes('servicio') || lower.includes('service')) autoMap[h] = 'product';
+          else if (lower.includes('ciudad') || lower.includes('city')) autoMap[h] = 'city';
+          else if (lower.includes('postal') || lower.includes('zip') || lower.includes('codigo')) autoMap[h] = 'zip_code';
+          else if (lower.includes('nota') || lower.includes('note') || lower.includes('comentario')) autoMap[h] = 'notes';
+          else if (lower.includes('tag') || lower.includes('etiqueta')) autoMap[h] = 'tags';
+        });
+        setColumnMap(autoMap);
+        const rows: any[] = [];
+        for (let i = 1; i < jsonData.length; i++) {
+          const values = jsonData[i];
+          if (!values || values.length === 0) continue;
+          const row: Record<string, string> = {};
+          headers.forEach((h, idx) => { row[h] = String(values[idx] || '').trim(); });
+          rows.push(row);
+        }
+        setCsvData(rows);
+        setImportResult(null);
+      } catch (err) {
+        console.error('Error parseando archivo:', err);
       }
-      setCsvData(rows);
-      setImportResult(null);
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
   const handleImport = async () => {
     if (!csvData.length) return;
@@ -470,7 +468,7 @@ export default function CRMPage() {
               <p className="text-[10px] text-gray-600 mb-4">Solo el teléfono es obligatorio. Columnas opcionales: nombre, email, producto, ciudad, código postal, notas, tags</p>
               <label className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-xl cursor-pointer transition-all">
                 📁 Seleccionar archivo
-                <input type="file" accept=".csv,.txt,.tsv" className="hidden" onChange={(e) => {
+                <input type="file" accept=".csv,.xlsx,.xls,.txt,.tsv" className="hidden" onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) handleCsvFile(f);
                   e.target.value = '';
