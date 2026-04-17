@@ -76,13 +76,11 @@ export default function ChatPage() {
   // Auto-refresh mensajes
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
-    if (tab === 'bot' && selectedPhone) {
-      pollRef.current = setInterval(() => loadBotMessages(selectedPhone, true), 5000);
-    } else if (tab === 'agent' && selectedConvId) {
-      pollRef.current = setInterval(() => loadCwMessages(selectedConvId, true), 5000);
+    if (selectedPhone) {
+      pollRef.current = setInterval(() => loadBotMessages(selectedPhone, true), 4000);
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [tab, selectedPhone, selectedConvId]);
+  }, [selectedPhone]);
   // Scroll al ultimo mensaje
   useEffect(() => {
     if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
