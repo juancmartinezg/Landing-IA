@@ -9,12 +9,15 @@ export default function GatewayPage() {
   const [configuring, setConfiguring] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [keys, setKeys] = useState<any>({});
-  useEffect(() => {
+  const [toast, setToast] = useState<string | null>(null);
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const loadGateway = () => {
     fetch(`${API_URL}/gateway`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => { setGateway(data); setLoading(false); })
       .catch(() => setLoading(false));
-  }, []);
+  };
+  useEffect(() => { loadGateway(); }, []);
   const keyFields: any = {
     bold: [
       { key: 'bold_identity_key', label: 'Identity Key' },
@@ -33,7 +36,7 @@ export default function GatewayPage() {
       { key: 'mercadopago_access_token', label: 'Access Token' },
       { key: 'mercadopago_public_key', label: 'Public Key' },
     ],
-   paypal: [
+   ppaypal: [
       { key: 'paypal_client_id', label: 'Client ID' },
       { key: 'paypal_client_secret', label: 'Client Secret' },
     ],
@@ -42,6 +45,34 @@ export default function GatewayPage() {
       { key: 'payu_merchant_id', label: 'Merchant ID' },
       { key: 'payu_account_id', label: 'Account ID' },
     ],
+  };
+  const handleSaveKeys = async (gwId: string) => {
+    setSaving(true);
+    try {
+      await fetch(`${API_URL}/gateway`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ gateway_name: gwId, gateway_keys: keys, set_as: '' }),
+      });
+      showToast('✓ Llaves guardadas');
+      setConfiguring(null);
+      setKeys({});
+      loadGateway();
+    } catch (err) { showToast('Error guardando'); }
+    setSaving(false);
+  };
+  const handleSetAs = async (gwId: string, role: string) => {
+    setSaving(true);
+    try {
+      await fetch(`${API_URL}/gateway`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ gateway_name: gwId, set_as: role }),
+      });
+      showToast(`✓ ${gwId} como ${role}`);
+      loadGateway();
+    } catch (err) { showToast('Error'); }
+    setSaving(false);
   };
   const handleActivate = async (gwId: string) => {
     setSaving(true);
@@ -63,13 +94,19 @@ export default function GatewayPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Pasarela de Pagos 🏦</h1>
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 bg-[#1a1f2e] border border-white/10 rounded-xl px-5 py-3 text-sm font-medium shadow-xl">{toast}</div>
+      )}
       <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 mb-6">
-        <h3 className="font-bold mb-2">Pasarela Actual</h3>
-        <div className="flex items-center gap-4">
-          <p className="text-lg text-indigo-400 font-bold capitalize">{gateway?.gateway_name || 'No configurada'}</p>
-          <span className={`text-xs px-3 py-1 rounded-full ${gateway?.gateway_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
-            {gateway?.gateway_active ? 'Activa' : 'Pendiente'}
-          </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Principal</p>
+            <p className="text-lg text-indigo-400 font-bold capitalize">{gateway?.gateway_name || 'No configurada'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Respaldo</p>
+            <p className="text-lg text-yellow-400 font-bold capitalize">{gateway?.gateway_fallback || 'No configurada'}</p>
+          </div>
         </div>
       </div>
       <h3 className="font-bold mb-4">Pasarelas Disponibles</h3>
@@ -85,9 +122,7 @@ export default function GatewayPage() {
                 <span key={c} className="text-[10px] px-2 py-1 bg-white/5 rounded-full text-gray-400">{c}</span>
               ))}
             </div>
-            {gateway?.gateway_name === gw.id ? (
-              <p className="text-xs text-emerald-400 font-bold">✓ Activa</p>
-            ) : configuring === gw.id ? (
+            {configuring === gw.id ? (
               <div className="space-y-3">
                 {(keyFields[gw.id] || []).map((field: any) => (
                   <div key={field.key}>
@@ -106,17 +141,33 @@ export default function GatewayPage() {
                     className="flex-1 py-2 rounded-lg text-xs font-bold border border-white/10 hover:bg-white/5 transition-all">
                     Cancelar
                   </button>
-                  <button onClick={() => handleActivate(gw.id)} disabled={saving}
+                  <button onClick={() => handleSaveKeys(gw.id)} disabled={saving}
                     className="flex-1 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 transition-all disabled:opacity-50">
-                    {saving ? 'Guardando...' : 'Activar'}
+                    {saving ? 'Guardando...' : 'Guardar llaves'}
                   </button>
                 </div>
               </div>
             ) : (
-              <button onClick={() => setConfiguring(gw.id)}
-                className="w-full py-2 rounded-xl text-xs font-bold bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all">
-                Configurar
-              </button>
+              <div className="space-y-2">
+                <button onClick={() => setConfiguring(gw.id)}
+                  className="w-full py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 transition-all">
+                  🔑 {gateway?.gateway_keys?.[((keyFields[gw.id] || [])[0] || {}).key] ? 'Modificar llaves' : 'Configurar llaves'}
+                </button>
+                {gateway?.gateway_keys?.[((keyFields[gw.id] || [])[0] || {}).key] && gateway?.gateway_name !== gw.id && (
+                  <button onClick={() => handleSetAs(gw.id, 'principal')} disabled={saving}
+                    className="w-full py-2 rounded-xl text-xs font-bold bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all">
+                    ⭐ Usar como principal
+                  </button>
+                )}
+                {gateway?.gateway_keys?.[((keyFields[gw.id] || [])[0] || {}).key] && gateway?.gateway_fallback !== gw.id && gateway?.gateway_name !== gw.id && (
+                  <button onClick={() => handleSetAs(gw.id, 'fallback')} disabled={saving}
+                    className="w-full py-2 rounded-xl text-xs font-bold bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500 hover:text-black transition-all">
+                    🔄 Usar como respaldo
+                  </button>
+                )}
+                {gateway?.gateway_name === gw.id && <p className="text-xs text-indigo-400 font-bold text-center">⭐ Principal</p>}
+                {gateway?.gateway_fallback === gw.id && <p className="text-xs text-yellow-400 font-bold text-center">🔄 Respaldo</p>}
+              </div>
             )}
           </div>
         ))}
