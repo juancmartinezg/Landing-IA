@@ -40,7 +40,13 @@ export default function ChatPage() {
       .then(res => res.json())
       .then(data => {
         const msgs = data.messages || [];
-        setBotMessages(prev => prev.length !== msgs.length ? msgs : prev);
+        setBotMessages(prev => {
+          const prevLast = prev[prev.length - 1];
+          const newLast = msgs[msgs.length - 1];
+          if (prev.length !== msgs.length) return msgs;
+          if (prevLast?.text !== newLast?.text || prevLast?.ts !== newLast?.ts) return msgs;
+          return prev;
+        });
         setLoadingBotMsgs(false);
       })
       .catch(() => setLoadingBotMsgs(false));
