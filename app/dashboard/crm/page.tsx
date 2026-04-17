@@ -97,6 +97,8 @@ export default function CRMPage() {
   const [filterProduct, setFilterProduct] = useState('all');
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
+  const [editingLead, setEditingLead] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', email: '', city: '', zip_code: '' });
   const [newLead, setNewLead] = useState({ phone: '', name: '', email: '', product: '', city: '', zip_code: '', notes: '' });
   const [savingLead, setSavingLead] = useState(false);
   const [csvData, setCsvData] = useState<any[]>([]);
@@ -786,11 +788,70 @@ export default function CRMPage() {
                 <div className="w-12 h-12 bg-indigo-600/20 rounded-full flex items-center justify-center text-lg font-bold text-indigo-400">
                   {(selectedLead.lead?.customer_name || 'U').charAt(0)}
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-bold">{selectedLead.lead?.customer_name || 'Sin nombre'}</h3>
                   <p className="text-xs text-gray-500">{selectedLead.lead?.phoneNumber}</p>
                 </div>
+                <button onClick={() => {
+                  setEditingLead(!editingLead);
+                  setEditForm({
+                    name: selectedLead.lead?.customer_name || '',
+                    email: selectedLead.lead?.email || '',
+                    city: selectedLead.lead?.city || '',
+                    zip_code: selectedLead.lead?.zip_code || '',
+                  });
+                }} className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold">
+                  {editingLead ? '✕ Cancelar' : '✏️ Editar'}
+                </button>
               </div>
+              {editingLead && (
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 mb-4 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[9px] text-gray-500 mb-0.5">Nombre</label>
+                      <input value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] text-gray-500 mb-0.5">Email</label>
+                      <input value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] text-gray-500 mb-0.5">Ciudad</label>
+                      <input value={editForm.city} onChange={(e) => setEditForm({...editForm, city: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] text-gray-500 mb-0.5">Código postal</label>
+                      <input value={editForm.zip_code} onChange={(e) => setEditForm({...editForm, zip_code: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white outline-none" />
+                    </div>
+                  </div>
+                  <button onClick={async () => {
+                    try {
+                      await fetch(`${API_URL}/leads/import`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                        body: JSON.stringify({ leads: [{
+                          phone: selectedLead.lead?.phoneNumber,
+                          name: editForm.name,
+                          email: editForm.email,
+                          city: editForm.city,
+                          zip_code: editForm.zip_code,
+                        }] }),
+                      });
+                      setEditingLead(false);
+                      loadDetail(selectedLead.lead?.phoneNumber);
+                      fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
+                        .then(r => r.json()).then(d => { setLeads(d.leads || []); });
+                    } catch {}
+                  }}
+                    className="w-full py-1.5 rounded-lg text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 transition-all">
+                    ✓ Guardar cambios
+                  </button>
+                </div>
+              )}
               <div className="space-y-3 text-sm mb-4">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Estado</span>
