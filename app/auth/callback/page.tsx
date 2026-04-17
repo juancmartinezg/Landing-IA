@@ -56,7 +56,7 @@ function CallbackHandler() {
             refresh_token: data.refresh_token,
           }));
           if (!companyId) {
-            router.push('/onboarding');
+            router.push('/auth/welcome');
           } else {
             router.push('/dashboard');
           }
