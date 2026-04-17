@@ -69,9 +69,8 @@ export default function ChatPage() {
     loadBotConvs();
     loadCwConvs();
     const interval = setInterval(() => {
-      if (tab === 'bot') loadBotConvs();
-      else loadCwConvs();
-    }, 5000);
+      loadBotConvs();
+    }, 4000);
     return () => clearInterval(interval);
   }, [tab]);
   // Auto-refresh mensajes
@@ -267,11 +266,8 @@ export default function ChatPage() {
     const s = search.toLowerCase();
     return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
   });
-  const filteredCw = cwConvs.filter(c => {
-    // Solo mostrar conversaciones con mensajes no leídos o de las últimas 24h
-    const hasUnread = (c.unread_count || 0) > 0;
-    const isRecent = c.last_message_at && (Date.now() - new Date(typeof c.last_message_at === 'number' ? c.last_message_at * 1000 : c.last_message_at).getTime()) < 86400000;
-    if (!hasUnread && !isRecent) return false;
+  const filteredCw = botConvs.filter(c => {
+    if (c.flow_state !== 'PAUSED_FOR_HUMAN') return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
