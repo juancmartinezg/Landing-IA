@@ -45,12 +45,12 @@ export default function ChatPage() {
       })
       .catch(() => setLoadingBotMsgs(false));
   };
-  // Cargar conversaciones de Chatwoot
+  // Cargar conversaciones que necesitan asesor (PAUSED_FOR_HUMAN)
   const loadCwConvs = () => {
-    fetch(`${API_URL}/chatwoot`, { headers: { 'client-id': user?.companyId || '' } })
-      .then(res => res.json())
-      .then(data => { setCwConvs(data.conversations || []); setLoadingCw(false); })
-      .catch(() => setLoadingCw(false));
+    // Filtrar del tab Bot las que están en PAUSED_FOR_HUMAN
+    const paused = botConvs.filter(c => c.flow_state === 'PAUSED_FOR_HUMAN');
+    setCwConvs(paused);
+    setLoadingCw(false);
   };
   // Cargar mensajes de Chatwoot
   const loadCwMessages = (convId: string, isPolling = false) => {
@@ -99,10 +99,12 @@ export default function ChatPage() {
     setMobileView('chat');
   };
   const selectCwConv = (convId: string) => {
-    setSelectedConvId(convId);
-    setSelectedPhone(null);
-    setCwMessages([]);
-    loadCwMessages(convId);
+    // convId aquí es el phone de la conversación pausada
+    setSelectedPhone(convId);
+    setSelectedConvId(null);
+    setBotMessages([]);
+    setTakenOver(true);
+    loadBotMessages(convId);
     setMobileView('chat');
   };
   const goBackToList = () => {
@@ -380,7 +382,7 @@ export default function ChatPage() {
               <div className="text-center py-8 text-gray-500 text-sm">No hay conversaciones con asesor</div>
             ) : (
               filteredCw.map((conv, i) => (
-                <div key={i} onClick={() => selectCwConv(String(conv.id))}
+                <div key={i} onClick={() => selectCwConv(conv.phone)}
                   className={`px-4 md:px-4 py-3 cursor-pointer transition-all border-b border-white/[0.03] hover:bg-white/[0.03] ${
                     selectedConvId === String(conv.id) ? 'bg-indigo-600/10 border-l-2 border-l-indigo-500' : ''
                   }`}>
