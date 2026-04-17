@@ -1165,14 +1165,20 @@ export default function CRMPage() {
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Acciones rápidas</p>
                 <div className="flex flex-wrap gap-2">
                    <button onClick={() => {
-                    window.location.href = '/dashboard/chat';
-                    setTimeout(() => {
-                      const phone = selectedLead.lead?.phoneNumber;
-                      if (phone) localStorage.setItem('cb_open_chat', phone);
-                    }, 100);
+                    const phone = selectedLead.lead?.phoneNumber;
+                    const msg = prompt('Escribe tu mensaje:', '¡Hola! Te escribimos desde nuestro equipo 😊');
+                    if (!msg || !phone) return;
+                    fetch(`${API_URL}/conversations/send`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                      body: JSON.stringify({ phone, content: msg }),
+                    }).then(r => {
+                      if (r.ok) alert('✅ Mensaje enviado por WhatsApp');
+                      else alert('❌ Error enviando. ¿WhatsApp está configurado?');
+                    }).catch(() => alert('Error de conexión'));
                   }}
                     className="text-[10px] px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold transition-all">
-                    💬 Chatear
+                    💬 Enviar WhatsApp
                   </button>
                   <button onClick={() => {
                     const service = selectedLead.lead?.service_of_interest || '';
