@@ -238,10 +238,18 @@ export default function CRMPage() {
   const handleCsvFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target?.result as string;
+      let text = e.target?.result as string;
+      // Limpiar BOM y caracteres invisibles
+      text = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       const lines = text.split('\n').filter(l => l.trim());
       if (lines.length < 2) return;
-      const headers = lines[0].split(/[,;\t]/).map(h => h.trim().replace(/"/g, ''));
+       // Detectar separador: el que más aparece en la primera línea
+      const firstLine = lines[0];
+      const tabCount = (firstLine.match(/\t/g) || []).length;
+      const commaCount = (firstLine.match(/,/g) || []).length;
+      const semicolonCount = (firstLine.match(/;/g) || []).length;
+      const separator = tabCount >= commaCount && tabCount >= semicolonCount ? '\t' : commaCount >= semicolonCount ? ',' : ';';
+      const headers = firstLine.split(separator).map(h => h.trim().replace(/"/g, ''));
       setCsvColumns(headers);
       // Auto-mapear columnas conocidas
       const autoMap: Record<string, string> = {};
@@ -259,7 +267,8 @@ export default function CRMPage() {
       setColumnMap(autoMap);
       const rows: any[] = [];
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(/[,;\t]/).map(v => v.trim().replace(/"/g, ''));
+                const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
+
         const row: Record<string, string> = {};
         headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
         rows.push(row);
