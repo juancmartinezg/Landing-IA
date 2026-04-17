@@ -1164,16 +1164,39 @@ export default function CRMPage() {
               <div className="mb-4 pt-4 border-t border-white/5">
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Acciones rápidas</p>
                 <div className="flex flex-wrap gap-2">
-                  <a href={`https://wa.me/${selectedLead.lead?.phoneNumber}`} target="_blank"
+                   <button onClick={() => {
+                    window.location.href = '/dashboard/chat';
+                    setTimeout(() => {
+                      const phone = selectedLead.lead?.phoneNumber;
+                      if (phone) localStorage.setItem('cb_open_chat', phone);
+                    }, 100);
+                  }}
                     className="text-[10px] px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold transition-all">
-                    💬 WhatsApp
-                  </a>
+                    💬 Chatear
+                  </button>
                   <button onClick={() => {
-                    fetch(`${API_URL}/conversations/send`, {
+                    const service = selectedLead.lead?.service_of_interest || '';
+                    const defaultAmount = prompt('💳 Monto a cobrar (puedes editarlo para descuentos):', '0');
+                    if (!defaultAmount || defaultAmount === '0') return;
+                    const description = prompt('Descripción del pago:', service || 'Pago');
+                    if (!description) return;
+                    const phone = selectedLead.lead?.phoneNumber;
+                    fetch(`${API_URL}/payments/generate-link`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
-                      body: JSON.stringify({ phone: selectedLead.lead?.phoneNumber, content: `Hola! Te envío el enlace para completar tu reserva 🎯` }),
-                    });
+                      body: JSON.stringify({ phone, amount: parseInt(defaultAmount), description }),
+                    }).then(r => r.json()).then(data => {
+                      if (data.url) {
+                        fetch(`${API_URL}/conversations/send`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                          body: JSON.stringify({ phone, content: `🛒 *${description}*\n\n💰 Monto: $${parseInt(defaultAmount).toLocaleString()}\n\n👉 ${data.url}\n\n🔒 Pago 100% seguro` }),
+                        });
+                        alert('✅ Link de pago enviado por WhatsApp');
+                      } else {
+                        alert('❌ Error: ' + (data.error || 'No se pudo generar el link'));
+                      }
+                    }).catch(() => alert('Error de conexión'));
                   }}
                     className="text-[10px] px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600 hover:text-white font-bold transition-all">
                     💳 Link pago
