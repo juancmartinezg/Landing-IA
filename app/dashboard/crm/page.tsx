@@ -1165,20 +1165,27 @@ export default function CRMPage() {
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Acciones rápidas</p>
                 <div className="flex flex-wrap gap-2">
                    <button onClick={() => {
-                    const phone = selectedLead.lead?.phoneNumber;
-                    const msg = prompt('Escribe tu mensaje:', '¡Hola! Te escribimos desde nuestro equipo 😊');
-                    if (!msg || !phone) return;
-                    fetch(`${API_URL}/conversations/send`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
-                      body: JSON.stringify({ phone, content: msg }),
-                    }).then(r => {
-                      if (r.ok) alert('✅ Mensaje enviado por WhatsApp');
-                      else alert('❌ Error enviando. ¿WhatsApp está configurado?');
-                    }).catch(() => alert('Error de conexión'));
+                    let phone = selectedLead.lead?.phoneNumber || '';
+                    phone = phone.replace(/[^0-9]/g, '');
+                    if (phone.length <= 10) phone = '57' + phone;
+                    if (selectedLead.session_state) {
+                      const msg = prompt('Escribe tu mensaje (se envía desde el bot):', '¡Hola! Te escribimos desde nuestro equipo 😊');
+                      if (!msg) return;
+                      fetch(`${API_URL}/conversations/send`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                        body: JSON.stringify({ phone, content: msg }),
+                      }).then(r => {
+                        if (r.ok) alert('✅ Mensaje enviado desde el bot');
+                        else alert('❌ Error enviando');
+                      }).catch(() => alert('Error de conexión'));
+                    } else {
+                      const msg = encodeURIComponent('¡Hola! Te escribimos desde nuestro equipo 😊');
+                      window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+                    }
                   }}
                     className="text-[10px] px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white font-bold transition-all">
-                    💬 Enviar WhatsApp
+                    💬 {selectedLead.session_state ? 'Enviar WhatsApp' : 'Abrir WhatsApp'}
                   </button>
                   <button onClick={() => {
                     const service = selectedLead.lead?.service_of_interest || '';
@@ -1186,7 +1193,9 @@ export default function CRMPage() {
                     if (!defaultAmount || defaultAmount === '0') return;
                     const description = prompt('Descripción del pago:', service || 'Pago');
                     if (!description) return;
-                    const phone = selectedLead.lead?.phoneNumber;
+                    let phone = selectedLead.lead?.phoneNumber || '';
+                    phone = phone.replace(/[^0-9]/g, '');
+                    if (phone.length <= 10) phone = '57' + phone;
                     fetch(`${API_URL}/payments/generate-link`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
