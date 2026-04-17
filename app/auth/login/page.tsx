@@ -60,10 +60,7 @@ export default function LoginPage() {
           </button>
           <div className="mt-6 text-center">
             <p className="text-gray-500 text-sm">
-              No tienes cuenta?{' '}
-              <button onClick={loginWithEmail} className="text-indigo-400 hover:text-indigo-300 font-bold">
-                Registrate gratis
-              </button>
+              ¿No tienes cuenta? Regístrate con Google o email y se crea automáticamente.
             </p>
           </div>
         </div>
