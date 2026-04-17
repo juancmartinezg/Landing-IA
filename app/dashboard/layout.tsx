@@ -33,6 +33,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const stored = localStorage.getItem('cb_user');
       if (!stored) {
         router.push('/auth/login');
+      } else {
+        try {
+          const parsed = JSON.parse(stored);
+          if (!parsed.companyId) {
+            router.push('/auth/welcome');
+          }
+        } catch {}
       }
     }
     if (user?.companyId) {

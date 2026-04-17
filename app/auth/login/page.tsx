@@ -12,7 +12,16 @@ export default function LoginPage() {
     
     const stored = localStorage.getItem('cb_user');
     if (stored) {
-      router.replace('/dashboard');
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.companyId) {
+          router.replace('/dashboard');
+        } else {
+          router.replace('/auth/welcome');
+        }
+      } catch {
+        router.replace('/dashboard');
+      }
     }
   }, [checked, router]);
   if (!checked || loading) {
