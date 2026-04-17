@@ -100,6 +100,7 @@ export default function CRMPage() {
   const [editingLead, setEditingLead] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', email: '', city: '', zip_code: '' });
   const [newLead, setNewLead] = useState({ phone: '', name: '', email: '', product: '', city: '', zip_code: '', notes: '' });
+  const [customFields, setCustomFields] = useState<{name: string, value: string}[]>([]);
   const [savingLead, setSavingLead] = useState(false);
   const [csvData, setCsvData] = useState<any[]>([]);
   const [csvColumns, setCsvColumns] = useState<string[]>([]);
@@ -314,6 +315,10 @@ export default function CRMPage() {
       if (newLead.city) lead.city = newLead.city;
       if (newLead.zip_code) lead.zip_code = newLead.zip_code;
       if (newLead.notes) lead.notes = newLead.notes;
+      if (customFields.length > 0) {
+        lead.custom_fields = {};
+        customFields.forEach(cf => { if (cf.name && cf.value) lead.custom_fields[cf.name] = cf.value; });
+      }
       const res = await fetch(`${API_URL}/leads/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
@@ -322,6 +327,7 @@ export default function CRMPage() {
       if (res.ok) {
         setShowAddLead(false);
         setNewLead({ phone: '', name: '', email: '', product: '', city: '', zip_code: '', notes: '' });
+        setCustomFields([]);
         fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
           .then(r => r.json()).then(d => { setLeads(d.leads || []); });
       }
@@ -441,6 +447,34 @@ export default function CRMPage() {
               <input value={newLead.notes} onChange={(e) => setNewLead({...newLead, notes: e.target.value})}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 text-white"
                 placeholder="Cliente referido por..." />
+            </div>
+            {customFields.map((cf, idx) => (
+              <div key={idx}>
+                <div className="flex items-center gap-1 mb-1">
+                  <input value={cf.name} onChange={(e) => {
+                    const updated = [...customFields];
+                    updated[idx].name = e.target.value;
+                    setCustomFields(updated);
+                  }}
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[9px] text-gray-400 outline-none"
+                    placeholder="Nombre del campo" />
+                  <button onClick={() => setCustomFields(customFields.filter((_, i) => i !== idx))}
+                    className="text-red-400 hover:text-red-300 text-xs">✕</button>
+                </div>
+                <input value={cf.value} onChange={(e) => {
+                  const updated = [...customFields];
+                  updated[idx].value = e.target.value;
+                  setCustomFields(updated);
+                }}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 text-white"
+                  placeholder="Valor" />
+              </div>
+            ))}
+            <div className="sm:col-span-2 md:col-span-3">
+              <button onClick={() => setCustomFields([...customFields, { name: '', value: '' }])}
+                className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold">
+                ➕ Agregar campo personalizado
+              </button>
             </div>
           </div>
           <div className="flex gap-2 mt-4">
