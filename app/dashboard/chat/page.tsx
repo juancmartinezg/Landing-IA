@@ -131,7 +131,32 @@ export default function ChatPage() {
     return colors[Math.abs(hash) % colors.length];
   };
   const handleSendFile = async (file: File) => {
-    if (!file || tab !== 'agent' || !selectedConvId) return;
+    if (!file) return;
+    // En tab agent, enviar por Chatwoot
+    if (tab === 'agent' && !selectedConvId) return;
+    // En tab bot con takeover, subir a S3 y enviar URL por WhatsApp
+    if (tab === 'bot') {
+      if (!selectedPhone || !takenOver) return;
+      setSending(true);
+      try {
+        const res = await fetch(`${API_URL}/upload-url?file_name=${encodeURIComponent(file.name)}&folder=chat`, {
+          headers: { 'client-id': user?.companyId || '' }
+        });
+        const data = await res.json();
+        if (data.upload_url) {
+          await fetch(data.upload_url, { method: 'PUT', headers: { 'Content-Type': data.content_type }, body: file });
+          await fetch(`${API_URL}/conversations/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+            body: JSON.stringify({ phone: selectedPhone, content: `📎 ${file.name}\n${data.public_url}` }),
+          });
+          loadBotMessages(selectedPhone);
+        }
+      } catch (err) { console.error('Error enviando archivo:', err); }
+      setSending(false);
+      return;
+    }
+    if (tab !== 'agent' || !selectedConvId) return;
     setSending(true);
     try {
       const reader = new FileReader();
@@ -241,6 +266,10 @@ export default function ChatPage() {
     return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
   });
   const filteredCw = cwConvs.filter(c => {
+    // Solo mostrar conversaciones con mensajes no leídos o de las últimas 24h
+    const hasUnread = (c.unread_count || 0) > 0;
+    const isRecent = c.last_message_at && (Date.now() - new Date(typeof c.last_message_at === 'number' ? c.last_message_at * 1000 : c.last_message_at).getTime()) < 86400000;
+    if (!hasUnread && !isRecent) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
@@ -271,17 +300,17 @@ export default function ChatPage() {
         </div>
         {/* Tabs */}
         <div className="flex border-b border-white/5">
-          <button onClick={() => setTab('bot')}
+          button onClick={() => setTab('bot')}
             className={`flex-1 py-3 text-xs font-bold transition-all ${
               tab === 'bot' ? 'text-emerald-400 border-b-2 border-emerald-400' : 'text-gray-500'
             }`}>
-            🤖 Bot ({botConvs.length})
+            💬 Chats ({botConvs.length})
           </button>
           <button onClick={() => setTab('agent')}
             className={`flex-1 py-3 text-xs font-bold transition-all relative ${
               tab === 'agent' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-500'
             }`}>
-            🙋 Asesor ({cwConvs.length})
+            🙋 En vivo ({cwConvs.filter(c => c.unread_count > 0).length})
             {cwConvs.reduce((sum, c) => sum + (c.unread_count || 0), 0) > 0 && (
               <span className="absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
             )}
@@ -549,6 +578,10 @@ export default function ChatPage() {
                       rows={1}
                     />
                   </div>
+                  <button onClick={() => fileInputRef.current?.click()}
+                    className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-all shrink-0">
+                    <span className="text-gray-400 text-lg">📎</span>
+                  </button>
                   <button
                     onClick={handleSendBot}
                     disabled={!newMessage.trim() || sending}
