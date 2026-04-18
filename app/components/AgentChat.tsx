@@ -16,20 +16,33 @@ export default function AgentChat({ companyId }: { companyId: string }) {
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
-  useEffect(() => {
+ useEffect(() => {
     if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     if (messages.length > 0) localStorage.setItem('cb_agent_history', JSON.stringify(messages.slice(-20)));
   }, [messages]);
+  useEffect(() => {
+    // Precargar voces del navegador
+    if ('speechSynthesis' in window) {
+      speechSynthesis.getVoices();
+      speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+    }
+  }, []);
   const speak = (text: string) => {
     if (!voiceEnabled) return;
     if ('speechSynthesis' in window) {
       speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
+      // Limpiar emojis y caracteres especiales para voz natural
+      const cleanText = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}✨✅❌⭐🎯📱💬🔒🛒💰📋🏷️🏙️📮📝📤📥➕✏️🗑️📞💳🤖🎙️🔴🔊🔇]/gu, '').replace(/\s+/g, ' ').trim();
+      if (!cleanText) return;
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'es-ES';
       utterance.rate = 1.05;
-      utterance.pitch = 1.1;
+      utterance.pitch = 1.2;
+      // Buscar voz femenina en español
       const voices = speechSynthesis.getVoices();
-      const femaleVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Female') || v.name.includes('Paulina') || v.name.includes('Helena') || v.name.includes('Conchita') || v.name.includes('Lucia')));
+      const femaleVoice = voices.find(v => v.lang.startsWith('es') && /female|paulina|helena|conchita|lucia|monica|sabina/i.test(v.name))
+        || voices.find(v => v.lang.startsWith('es') && !(/male|jorge|diego|andres/i.test(v.name)))
+        || voices.find(v => v.lang.startsWith('es'));
       if (femaleVoice) utterance.voice = femaleVoice;
       speechSynthesis.speak(utterance);
     }
@@ -37,30 +50,48 @@ export default function AgentChat({ companyId }: { companyId: string }) {
   const startListening = async () => {
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognition) {
-      alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Safari.');
+      alert('Reconocimiento de voz no disponible en este navegador. Usa Chrome en Android o Safari en iPhone.');
+      return;
+    }
+    // Detener si ya está escuchando
+    if (listening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setListening(false);
       return;
     }
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
     } catch {
-      alert('Permite el acceso al micrófono para usar esta función.');
+      alert('Permite el acceso al micrófono en la configuración de tu navegador.');
       return;
     }
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'es-ES';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onstart = () => setListening(true);
-    recognition.onresult = (e: any) => {
-      const text = e.results[0][0].transcript;
-      setInput(text);
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'es-ES';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      recognition.onstart = () => setListening(true);
+      recognition.onresult = (e: any) => {
+        const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join('');
+        setInput(transcript);
+        if (e.results[e.results.length - 1].isFinal) {
+          setListening(false);
+          sendMessage(transcript);
+        }
+      };
+      recognition.onerror = (e: any) => {
+        console.error('Speech error:', e.error);
+        setListening(false);
+      };
+      recognition.onend = () => setListening(false);
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error('Error starting recognition:', err);
       setListening(false);
-      sendMessage(text);
-    };
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
+    }
   };
   const sendMessage = async (text?: string) => {
     const msg = text || input.trim();
