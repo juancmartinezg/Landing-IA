@@ -43,12 +43,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         } catch {}
       }
     }
-    if (user?.companyId) {
+    iif (user?.companyId) {
+      // Cargar cache primero para render inmediato
+      const cached = localStorage.getItem('cb_config');
+      if (cached) {
+        try {
+          const c = JSON.parse(cached);
+          setBrandName(c.brand_name || '');
+          setBrandLogo(c.brand_logo_url || '');
+        } catch {}
+      }
       fetch(`${API_URL}/config`, { headers: { 'client-id': user.companyId } })
         .then(res => res.json())
         .then(data => {
           setBrandName(data.brand_name || '');
           setBrandLogo(data.brand_logo_url || '');
+          localStorage.setItem('cb_config', JSON.stringify(data));
         })
         .catch(() => {});
       fetch(`${API_URL}/leads/reminders`, { headers: { 'client-id': user.companyId } })
