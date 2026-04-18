@@ -1,4 +1,4 @@
-use client';
+'use client';
 import { useState, useRef, useEffect } from 'react';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function AgentChat({ companyId }: { companyId: string }) {
