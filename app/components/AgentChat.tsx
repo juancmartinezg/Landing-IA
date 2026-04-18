@@ -26,7 +26,11 @@ export default function AgentChat({ companyId }: { companyId: string }) {
       speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'es-ES';
-      utterance.rate = 1.1;
+      utterance.rate = 1.05;
+      utterance.pitch = 1.1;
+      const voices = speechSynthesis.getVoices();
+      const femaleVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Female') || v.name.includes('Paulina') || v.name.includes('Helena') || v.name.includes('Conchita') || v.name.includes('Lucia')));
+      if (femaleVoice) utterance.voice = femaleVoice;
       speechSynthesis.speak(utterance);
     }
   };
@@ -65,10 +69,11 @@ export default function AgentChat({ companyId }: { companyId: string }) {
     setMessages(prev => [...prev, { role: 'user', text: msg }]);
     setLoading(true);
     try {
+      const history = messages.slice(-6).map(m => ({ role: m.role === 'user' ? 'user' : 'model', text: m.text }));
       const res = await fetch(`${API_URL}/agent/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'client-id': companyId },
-        body: JSON.stringify({ message: msg }),
+        body: JSON.stringify({ message: msg, history }),
       });
       const data = await res.json();
       const reply = data.reply || 'No pude procesar tu solicitud.';
@@ -120,8 +125,8 @@ export default function AgentChat({ companyId }: { companyId: string }) {
               <span className="text-sm">🤖</span>
             </div>
             <div>
-              <p className="text-sm font-bold text-white">Asistente IA</p>
-              <p className="text-[9px] text-gray-500">Pregúntame lo que quieras</p>
+              <p className="text-sm font-bold text-white">Aria ✨</p>
+              <p className="text-[9px] text-gray-500">Tu asistente inteligente</p>
             </div>
             <button onClick={() => setVoiceEnabled(!voiceEnabled)}
               className={`ml-auto w-8 h-8 rounded-full flex items-center justify-center transition-all ${
@@ -134,9 +139,9 @@ export default function AgentChat({ companyId }: { companyId: string }) {
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
             {messages.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-3xl mb-3">🤖</p>
-                <p className="text-sm text-gray-400">¡Hola! Soy tu asistente.</p>
-                <p className="text-[10px] text-gray-600 mt-1">Pregúntame sobre tus leads, ventas, o pídeme que haga algo.</p>
+                <p className="text-3xl mb-3">✨</p>
+                <p className="text-sm text-gray-400">¡Hola! Soy <strong className="text-indigo-400">Aria</strong>, tu asistente.</p>
+                <p className="text-[10px] text-gray-600 mt-1">Pregúntame lo que necesites o pídeme que haga algo por ti 😊</p>
                 <div className="mt-4 space-y-1">
                   {['¿Quién me escribió hoy?', '¿Cuánto he vendido?', '¿Cuántos leads tengo?'].map((q, i) => (
                     <button key={i} onClick={() => sendMessage(q)}
