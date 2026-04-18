@@ -8,23 +8,32 @@ export default function AgentChat({ companyId }: { companyId: string }) {
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [pendingAction, setPendingAction] = useState<any>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   useEffect(() => {
     if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   const speak = (text: string) => {
+    if (!voiceEnabled) return;
     if ('speechSynthesis' in window) {
+      speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'es-ES';
       utterance.rate = 1.1;
       speechSynthesis.speak(utterance);
     }
   };
-  const startListening = () => {
+  const startListening = async () => {
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognition) {
-      alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome.');
+      alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Safari.');
+      return;
+    }
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      alert('Permite el acceso al micrófono para usar esta función.');
       return;
     }
     const recognition = new SpeechRecognition();
@@ -108,8 +117,14 @@ export default function AgentChat({ companyId }: { companyId: string }) {
               <p className="text-sm font-bold text-white">Asistente IA</p>
               <p className="text-[9px] text-gray-500">Pregúntame lo que quieras</p>
             </div>
+            <button onClick={() => setVoiceEnabled(!voiceEnabled)}
+              className={`ml-auto w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                voiceEnabled ? 'bg-indigo-600/20' : 'bg-white/5'
+              }`}>
+              <span className="text-sm">{voiceEnabled ? '🔊' : '🔇'}</span>
+            </button>
             <button onClick={startListening} disabled={listening}
-              className={`ml-auto w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                 listening ? 'bg-red-500 animate-pulse' : 'bg-white/5 hover:bg-white/10'
               }`}>
               <span className="text-lg">{listening ? '🔴' : '🎙️'}</span>
