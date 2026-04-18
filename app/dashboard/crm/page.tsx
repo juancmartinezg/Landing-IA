@@ -328,7 +328,7 @@ export default function CRMPage() {
       });
       if (res.ok) {
         setShowAddLead(false);
-        setNewLead({ phone: '', name: '', email: '', product: '', city: '', zip_code: '', notes: '' });
+        setNewLead({ phone: '', name: '', email: '', product: '', city: '', zip_code: '', notes: '', paid: false });
         setCustomFields([]);
         fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
           .then(r => r.json()).then(d => { setLeads(d.leads || []); });
