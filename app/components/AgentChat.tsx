@@ -113,7 +113,7 @@ export default function AgentChat({ companyId }: { companyId: string }) {
         };
         recognitionRef.current = mediaRecorder;
         mediaRecorder.start();
-        setTimeout(() => { if (mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 10000);
+        // Se detiene al soltar el botón (onTouchEnd/onMouseUp)
       } catch {
         alert('Permite el acceso al micrófono.');
         setListening(false);
@@ -253,9 +253,13 @@ export default function AgentChat({ companyId }: { companyId: string }) {
                 onKeyDown={(e) => { if (e.key === 'Enter' && input.trim()) sendMessage(); }}
                 placeholder="Escribe o habla..."
                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
-              <button onClick={startListening} disabled={listening}
+              <button
+                onTouchStart={(e) => { e.preventDefault(); startListening(); }}
+                onTouchEnd={(e) => { e.preventDefault(); if (listening && recognitionRef.current) { if (recognitionRef.current.stop) recognitionRef.current.stop(); } }}
+                onMouseDown={() => startListening()}
+                onMouseUp={() => { if (listening && recognitionRef.current) { if (recognitionRef.current.stop) recognitionRef.current.stop(); } }}
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 ${
-                  listening ? 'bg-red-500 animate-pulse' : 'bg-white/5 hover:bg-white/10'
+                  listening ? 'bg-red-500 animate-pulse scale-125' : 'bg-white/5 hover:bg-white/10'
                 }`}>
                 <span className="text-lg">{listening ? '🔴' : '🎙️'}</span>
               </button>
