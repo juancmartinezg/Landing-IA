@@ -54,7 +54,8 @@ export default function AgentChat({ companyId }: { companyId: string }) {
       setListening(false);
       return;
     }
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const SpeechRecognition = !isIOS && ((window as any).webkitSpeechRecognition || (window as any).SpeechRecognition);
     if (SpeechRecognition) {
       // Desktop/Android: usar SpeechRecognition nativo
       try {
