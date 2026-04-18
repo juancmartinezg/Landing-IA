@@ -48,49 +48,75 @@ export default function AgentChat({ companyId }: { companyId: string }) {
     }
   };
   const startListening = async () => {
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Reconocimiento de voz no disponible en este navegador. Usa Chrome en Android o Safari en iPhone.');
-      return;
-    }
-    // Detener si ya está escuchando
+    // Detener si ya está grabando
     if (listening && recognitionRef.current) {
-      recognitionRef.current.stop();
+      if (recognitionRef.current.stop) recognitionRef.current.stop();
       setListening(false);
       return;
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(t => t.stop());
-    } catch {
-      alert('Permite el acceso al micrófono en la configuración de tu navegador.');
-      return;
-    }
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'es-ES';
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-      recognition.onstart = () => setListening(true);
-      recognition.onresult = (e: any) => {
-        const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join('');
-        setInput(transcript);
-        if (e.results[e.results.length - 1].isFinal) {
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (SpeechRecognition) {
+      // Desktop/Android: usar SpeechRecognition nativo
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'es-ES';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.onstart = () => setListening(true);
+        recognition.onresult = (e: any) => {
+          const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join('');
+          setInput(transcript);
+          if (e.results[e.results.length - 1].isFinal) {
+            setListening(false);
+            sendMessage(transcript);
+          }
+        };
+        recognition.onerror = () => setListening(false);
+        recognition.onend = () => setListening(false);
+        recognitionRef.current = recognition;
+        recognition.start();
+      } catch { setListening(false); }
+    } else {
+      // iOS/Safari: grabar audio y enviar a Gemini
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        setListening(true);
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+        const mediaRecorder = new MediaRecorder(stream, { mimeType });
+        const chunks: Blob[] = [];
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(t => t.stop());
           setListening(false);
-          sendMessage(transcript);
-        }
-      };
-      recognition.onerror = (e: any) => {
-        console.error('Speech error:', e.error);
+          const blob = new Blob(chunks, { type: mimeType });
+          const reader = new FileReader();
+          reader.onload = async () => {
+            const base64 = (reader.result as string).split(',')[1];
+            setLoading(true);
+            try {
+              const hist = messages.slice(-6).map(m => ({ role: m.role === 'user' ? 'user' : 'model', text: m.text }));
+              const res = await fetch(`${API_URL}/agent/voice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'client-id': companyId },
+                body: JSON.stringify({ audio: base64, mime_type: mimeType, history: hist }),
+              });
+              const data = await res.json();
+              if (data.transcript) setMessages(prev => [...prev, { role: 'user', text: data.transcript }]);
+              const reply = data.reply || 'No pude procesar tu audio.';
+              setMessages(prev => [...prev, { role: 'agent', text: reply }]);
+              speak(reply);
+            } catch { setMessages(prev => [...prev, { role: 'agent', text: 'Error procesando audio.' }]); }
+            setLoading(false);
+          };
+          reader.readAsDataURL(blob);
+        };
+        recognitionRef.current = mediaRecorder;
+        mediaRecorder.start();
+        setTimeout(() => { if (mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 10000);
+      } catch {
+        alert('Permite el acceso al micrófono.');
         setListening(false);
-      };
-      recognition.onend = () => setListening(false);
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
-      console.error('Error starting recognition:', err);
-      setListening(false);
+      }
     }
   };
   const sendMessage = async (text?: string) => {
