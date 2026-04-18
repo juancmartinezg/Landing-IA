@@ -258,10 +258,12 @@ export default function AgentChat({ companyId }: { companyId: string }) {
                 onTouchEnd={(e) => { e.preventDefault(); if (listening && recognitionRef.current) { if (recognitionRef.current.stop) recognitionRef.current.stop(); } }}
                 onMouseDown={() => startListening()}
                 onMouseUp={() => { if (listening && recognitionRef.current) { if (recognitionRef.current.stop) recognitionRef.current.stop(); } }}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                onContextMenu={(e) => e.preventDefault()}
+                style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', touchAction: 'none' } as any}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 select-none ${
                   listening ? 'bg-red-500 animate-pulse scale-125' : 'bg-white/5 hover:bg-white/10'
                 }`}>
-                <span className="text-lg">{listening ? '🔴' : '🎙️'}</span>
+                <span className="text-lg select-none">{listening ? '🔴' : '🎙️'}</span>
               </button>
               <button onClick={() => sendMessage()} disabled={!input.trim() || loading}
                 className="w-10 h-10 bg-indigo-600 hover:bg-indigo-500 rounded-full flex items-center justify-center transition-all disabled:opacity-30 shrink-0">
