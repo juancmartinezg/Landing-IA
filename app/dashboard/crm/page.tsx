@@ -99,7 +99,7 @@ export default function CRMPage() {
   const [showAddLead, setShowAddLead] = useState(false);
   const [editingLead, setEditingLead] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', email: '', city: '', zip_code: '' });
-  const [newLead, setNewLead] = useState({ phone: '', name: '', email: '', product: '', city: '', zip_code: '', notes: '' });
+  const [newLead, setNewLead] = useState({ phone: '', name: '', email: '', product: '', city: '', zip_code: '', notes: '', paid: false });
   const [customFields, setCustomFields] = useState<{name: string, value: string}[]>([]);
   const [savingLead, setSavingLead] = useState(false);
   const [csvData, setCsvData] = useState<any[]>([]);
@@ -261,6 +261,7 @@ export default function CRMPage() {
           else if (lower.includes('postal') || lower.includes('zip') || lower.includes('codigo')) autoMap[h] = 'zip_code';
           else if (lower.includes('nota') || lower.includes('note') || lower.includes('comentario')) autoMap[h] = 'notes';
           else if (lower.includes('tag') || lower.includes('etiqueta')) autoMap[h] = 'tags';
+          else if (lower.includes('pagado') || lower.includes('paid') || lower.includes('compro') || lower.includes('estado')) autoMap[h] = 'paid';
         });
         setColumnMap(autoMap);
         const rows: any[] = [];
@@ -315,6 +316,7 @@ export default function CRMPage() {
       if (newLead.city) lead.city = newLead.city;
       if (newLead.zip_code) lead.zip_code = newLead.zip_code;
       if (newLead.notes) lead.notes = newLead.notes;
+      if (newLead.paid) lead.paid = true;
       if (customFields.length > 0) {
         lead.custom_fields = {};
         customFields.forEach(cf => { if (cf.name && cf.value) lead.custom_fields[cf.name] = cf.value; });
@@ -448,6 +450,15 @@ export default function CRMPage() {
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 text-white"
                 placeholder="Cliente referido por..." />
             </div>
+            <div className="sm:col-span-2 md:col-span-3 flex items-center gap-3">
+              <button onClick={() => setNewLead({...newLead, paid: !newLead.paid})}
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0 ${
+                  newLead.paid ? 'bg-emerald-500 border-emerald-500' : 'border-white/20 hover:border-white/40'
+                }`}>
+                {newLead.paid && <span className="text-white text-xs">✓</span>}
+              </button>
+              <span className="text-xs text-gray-400">✅ Ya realizó el pago</span>
+            </div>
             {customFields.map((cf, idx) => (
               <div key={idx}>
                 <div className="flex items-center gap-1 mb-1">
@@ -544,6 +555,7 @@ export default function CRMPage() {
                       <option value="zip_code" className="bg-[#1a1f2e]">📮 Código postal</option>
                       <option value="notes" className="bg-[#1a1f2e]">📝 Notas</option>
                       <option value="tags" className="bg-[#1a1f2e]">🏷️ Tags</option>
+                      <option value="paid" className="bg-[#1a1f2e]">✅ Pagó (si/no)</option>
                     </select>
                   </div>
                 ))}
