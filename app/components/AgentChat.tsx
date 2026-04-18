@@ -20,31 +20,53 @@ export default function AgentChat({ companyId }: { companyId: string }) {
     if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     if (messages.length > 0) localStorage.setItem('cb_agent_history', JSON.stringify(messages.slice(-20)));
   }, [messages]);
+  const getVoicesAsync = () => {
+    return new Promise<SpeechSynthesisVoice[]>((resolve) => {
+      let voices = speechSynthesis.getVoices();
+      if (voices.length) return resolve(voices);
+      speechSynthesis.onvoiceschanged = () => {
+        voices = speechSynthesis.getVoices();
+        resolve(voices);
+      };
+    });
+  };
   useEffect(() => {
-    // Precargar voces del navegador
-    if ('speechSynthesis' in window) {
-      speechSynthesis.getVoices();
-      speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
-    }
+    // Desbloquear audio en iOS al primer click
+    const unlockAudio = () => {
+      if ('speechSynthesis' in window) {
+        const u = new SpeechSynthesisUtterance('');
+        speechSynthesis.speak(u);
+      }
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+    return () => {
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
   }, []);
-  const speak = (text: string) => {
+  const speak = async (text: string) => {
     if (!voiceEnabled) return;
-    if ('speechSynthesis' in window) {
+    if (!('speechSynthesis' in window)) return;
+    try {
       speechSynthesis.cancel();
-      // Limpiar emojis y caracteres especiales para voz natural
       const cleanText = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}✨✅❌⭐🎯📱💬🔒🛒💰📋🏷️🏙️📮📝📤📥➕✏️🗑️📞💳🤖🎙️🔴🔊🔇]/gu, '').replace(/\s+/g, ' ').trim();
       if (!cleanText) return;
+      const voices = await getVoicesAsync();
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = 'es-ES';
-      utterance.rate = 1.05;
-      utterance.pitch = 1.2;
-      // Buscar voz femenina en español
-      const voices = speechSynthesis.getVoices();
-      const femaleVoice = voices.find(v => v.lang.startsWith('es') && /female|paulina|helena|conchita|lucia|monica|sabina/i.test(v.name))
-        || voices.find(v => v.lang.startsWith('es') && !(/male|jorge|diego|andres/i.test(v.name)))
-        || voices.find(v => v.lang.startsWith('es'));
-      if (femaleVoice) utterance.voice = femaleVoice;
+      utterance.lang = 'es-US';
+      const voice = voices.find(v => v.lang.includes('es') && v.name.includes('Siri'))
+        || voices.find(v => v.lang.includes('es') && /female|paulina|helena|conchita|lucia|monica|sabina/i.test(v.name))
+        || voices.find(v => v.lang.includes('es'))
+        || voices[0];
+      if (voice) utterance.voice = voice;
+      utterance.rate = 1;
+      utterance.pitch = 1.1;
       speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.error('Error en speech:', err);
     }
   };
   const startListening = async () => {
@@ -170,10 +192,17 @@ export default function AgentChat({ companyId }: { companyId: string }) {
   return (
     <>
       {/* Boton flotante */}
-      <button onClick={() => setOpen(!open)}
+
+      <button onClick={() => {
+        setOpen(!open);
+        if ('speechSynthesis' in window) {
+          const u = new SpeechSynthesisUtterance('');
+          speechSynthesis.speak(u);
+        }
+      }}
         className="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-500 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-600/30 z-50 transition-all hover:scale-110">
         <span className="text-2xl">{open ? '✕' : '🤖'}</span>
-      </button>
+      </button>        
       {/* Panel del chat */}
       {open && (
         <div className="fixed bottom-24 right-6 w-[350px] md:w-[400px] h-[500px] bg-[#0B0F1A] border border-white/10 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
