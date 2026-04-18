@@ -1,6 +1,7 @@
 'use client';
 import { useAuth } from '../providers';
 import ToastProvider from '../components/Toast';
+import AgentChat from '../components/AgentChat';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
@@ -242,6 +243,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {children}
           </ToastProvider>
         </main>
+        {user?.companyId && (
+          <AgentChat companyId={user.companyId} />
+        )}
       </div>
     </div>
   );
