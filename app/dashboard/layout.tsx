@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         } catch {}
       }
     }
-    iif (user?.companyId) {
+    if (user?.companyId) {
       // Cargar cache primero para render inmediato
       const cached = localStorage.getItem('cb_config');
       if (cached) {
