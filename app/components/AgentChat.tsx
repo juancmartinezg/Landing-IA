@@ -3,7 +3,12 @@ import { useState, useRef, useEffect } from 'react';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function AgentChat({ companyId }: { companyId: string }) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      try { return JSON.parse(localStorage.getItem('cb_agent_history') || '[]'); } catch { return []; }
+    }
+    return [];
+  });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
@@ -13,6 +18,7 @@ export default function AgentChat({ companyId }: { companyId: string }) {
   const recognitionRef = useRef<any>(null);
   useEffect(() => {
     if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) localStorage.setItem('cb_agent_history', JSON.stringify(messages.slice(-20)));
   }, [messages]);
   const speak = (text: string) => {
     if (!voiceEnabled) return;
@@ -123,12 +129,6 @@ export default function AgentChat({ companyId }: { companyId: string }) {
               }`}>
               <span className="text-sm">{voiceEnabled ? '🔊' : '🔇'}</span>
             </button>
-            <button onClick={startListening} disabled={listening}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                listening ? 'bg-red-500 animate-pulse' : 'bg-white/5 hover:bg-white/10'
-              }`}>
-              <span className="text-lg">{listening ? '🔴' : '🎙️'}</span>
-            </button>
           </div>
           {/* Mensajes */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
@@ -188,8 +188,14 @@ export default function AgentChat({ companyId }: { companyId: string }) {
             <div className="flex items-center gap-2">
               <input value={input} onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && input.trim()) sendMessage(); }}
-                placeholder="Escribe o usa el micrófono..."
+                placeholder="Escribe o habla..."
                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
+              <button onClick={startListening} disabled={listening}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                  listening ? 'bg-red-500 animate-pulse' : 'bg-white/5 hover:bg-white/10'
+                }`}>
+                <span className="text-lg">{listening ? '🔴' : '🎙️'}</span>
+              </button>
               <button onClick={() => sendMessage()} disabled={!input.trim() || loading}
                 className="w-10 h-10 bg-indigo-600 hover:bg-indigo-500 rounded-full flex items-center justify-center transition-all disabled:opacity-30 shrink-0">
                 <span className="text-white text-lg">➤</span>
