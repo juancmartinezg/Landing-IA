@@ -165,13 +165,8 @@ export default function AgentChat({ companyId }: { companyId: string }) {
         setMessages(prev => [...prev, { role: 'agent', text: reply }]);
         setPendingAction(null);
       }
-      / Reproducir audio Polly si viene, sino fallback a speechSynthesis
-      if (data.audio_b64) {
-        const audio = new Audio(`data:audio/mp3;base64,${data.audio_b64}`);
-        audio.play().catch(() => speak(reply));
-      } else {
-        speak(reply);
-      }
+            speak(reply);
+
     } catch {
       setMessages(prev => [...prev, { role: 'agent', text: 'Error de conexión. Intenta de nuevo.' }]);
     }
