@@ -25,12 +25,28 @@ export default function ChatPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+  const [lastMsgCount, setLastMsgCount] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Sonido de nuevo mensaje
+  useEffect(() => {
+    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2Nk4yGfXJ1e4eLjIqDe3V2fIOKjImEfHZ2fIKJi4mFfnl4fIGHiomHgn16eX2Dh4mIhoN+enl8gYaIiIaDf3t6fIGFh4eGhIB8e3x/g4aGhoWBfnx8f4KFhoaFgn98fH6BhIWFhYOAfnx9f4GEhYWEg4B+fX1/gYOEhISDgX9+fX+Bg4OEg4KBf35+f4GCg4ODgoGAf35/gIGCg4OCgoF/f39/gIGCgoKCgYB/f3+AgIGCgoKBgYCAf3+AgIGBgoKBgYCAf4CAgIGBgYGBgYCAf4CAgIGBgYGBgYCAf4CAgICBgYGBgYCAgICAgICBgYGBgYCAgA==');
+  }, []);
   // Cargar conversaciones del bot
   const loadBotConvs = () => {
     fetch(`${API_URL}/conversations/active`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
-      .then(data => { setBotConvs(data.conversations || []); setLoadingBot(false); })
+      .then(data => {
+        const convs = data.conversations || [];
+        const totalMsgs = convs.reduce((sum: number, c: any) => sum + (c.message_count || 0), 0);
+        // Detectar nuevo mensaje y reproducir sonido
+        if (lastMsgCount > 0 && totalMsgs > lastMsgCount && audioRef.current) {
+          audioRef.current.play().catch(() => {});
+        }
+        setLastMsgCount(totalMsgs);
+        setBotConvs(convs);
+        setLoadingBot(false);
+      })
       .catch(() => setLoadingBot(false));
   };
   // Cargar mensajes de una conversacion del bot
@@ -58,10 +74,10 @@ export default function ChatPage() {
     setCwConvs(paused);
     setLoadingCw(false);
   };
-  // Cargar mensajes de Chatwoot
-  const loadCwMessages = (convId: string, isPolling = false) => {
+  // Cargar mensajes de conversacion con asesor (misma API que bot)
+  const loadCwMessages = (phone: string, isPolling = false) => {
     if (!isPolling) setLoadingCwMsgs(true);
-    fetch(`${API_URL}/chatwoot/messages?conversation_id=${convId}`, { headers: { 'client-id': user?.companyId || '' } })
+    fetch(`${API_URL}/conversations?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => {
         const msgs = data.messages || [];
@@ -188,19 +204,19 @@ export default function ChatPage() {
       setSending(false);
     }
   };
-  // Enviar mensaje por Chatwoot
+  // Enviar mensaje como asesor (tab En vivo)
   const handleSendCw = async () => {
-    if (!newMessage.trim() || !selectedConvId) return;
+    if (!newMessage.trim() || !selectedPhone) return;
     setSending(true);
     const msg = newMessage.trim();
     setNewMessage('');
     try {
-      await fetch(`${API_URL}/chatwoot/send`, {
+      await fetch(`${API_URL}/conversations/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
-        body: JSON.stringify({ conversation_id: selectedConvId, content: msg }),
+        body: JSON.stringify({ phone: selectedPhone, content: msg }),
       });
-      loadCwMessages(selectedConvId);
+      loadBotMessages(selectedPhone);
     } catch (err) {
       console.error('Error enviando:', err);
     }
