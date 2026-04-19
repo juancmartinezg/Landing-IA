@@ -11,7 +11,7 @@ export default function ChatPage() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [botMessages, setBotMessages] = useState<any[]>([]);
   const [loadingBotMsgs, setLoadingBotMsgs] = useState(false);
-  // === Chatwoot conversations ===
+  
   const [cwConvs, setCwConvs] = useState<any[]>([]);
   const [loadingCw, setLoadingCw] = useState(true);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
