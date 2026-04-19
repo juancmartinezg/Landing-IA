@@ -28,27 +28,24 @@ export default function ChatPage() {
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   const lastMsgCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Sonido de nuevo mensaje (notificacion)
-  useEffect(() => {
+  // Sonido de nuevo mensaje
+  const playNotificationSound = () => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const createBeep = () => {
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        oscillator.frequency.value = 880;
-        oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-        oscillator.start(ctx.currentTime);
-        oscillator.stop(ctx.currentTime + 0.3);
-      };
-      audioRef.current = { play: () => { try { createBeep(); } catch {} return Promise.resolve(); } } as any;
-    } catch {
-      audioRef.current = null;
-    }
-  }, []);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch {}
+  };
+  // Track de mensajes por conversacion para detectar nuevos
+  const msgCountByPhoneRef = useRef<Record<string, number>>({});
   // Cargar conversaciones del bot
   const loadBotConvs = () => {
     fetch(`${API_URL}/conversations/active`, { headers: { 'client-id': user?.companyId || '' } })
@@ -56,9 +53,18 @@ export default function ChatPage() {
       .then(data => {
         const convs = data.conversations || [];
         const totalMsgs = convs.reduce((sum: number, c: any) => sum + (c.message_count || 0), 0);
-        // Detectar nuevo mensaje y reproducir sonido
-        if (lastMsgCountRef.current > 0 && totalMsgs > lastMsgCountRef.current && audioRef.current) {
-          audioRef.current.play().catch(() => {});
+        // Detectar nuevos mensajes por conversacion
+        let hasNewMsg = false;
+        convs.forEach((c: any) => {
+          const prev = msgCountByPhoneRef.current[c.phone] || 0;
+          if (prev > 0 && c.message_count > prev) {
+            c._hasNew = true;
+            hasNewMsg = true;
+          }
+          msgCountByPhoneRef.current[c.phone] = c.message_count;
+        });
+        if (lastMsgCountRef.current > 0 && totalMsgs > lastMsgCountRef.current) {
+          playNotificationSound();
         }
         lastMsgCountRef.current = totalMsgs;
         setBotConvs(convs);
@@ -378,12 +384,17 @@ export default function ChatPage() {
                       selectedPhone === conv.phone ? 'bg-indigo-600/10 border-l-2 border-l-emerald-500' : ''
                     }`}>
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 md:w-10 md:h-10 bg-emerald-600/20 rounded-full flex items-center justify-center text-xs md:text-sm font-bold text-emerald-400 shrink-0">
-                        {(conv.name || 'U').charAt(0).toUpperCase()}
+                       <div className="relative">
+                        <div className="w-9 h-9 md:w-10 md:h-10 bg-emerald-600/20 rounded-full flex items-center justify-center text-xs md:text-sm font-bold text-emerald-400 shrink-0">
+                          {(conv.name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        {conv._hasNew && selectedPhone !== conv.phone && (
+                          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-[#080B14]" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-center gap-2">
-                          <p className="text-sm font-medium truncate flex-1 min-w-0">{conv.name || 'Sin nombre'}</p>
+                          <p className={`text-sm truncate flex-1 min-w-0 ${conv._hasNew && selectedPhone !== conv.phone ? 'font-bold text-white' : 'font-medium'}`}>{conv.name || 'Sin nombre'}</p>
                           <span className="text-[10px] text-gray-600 shrink-0 whitespace-nowrap">{formatTime(conv.last_interaction)}</span>
                         </div>
                         <p className="text-[11px] text-gray-500 truncate">{conv.last_user_msg || conv.phone}</p>
