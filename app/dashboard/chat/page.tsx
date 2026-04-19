@@ -25,8 +25,8 @@ export default function ChatPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
-  const [lastMsgCount, setLastMsgCount] = useState(0);
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+  const lastMsgCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Sonido de nuevo mensaje (notificacion)
   useEffect(() => {
@@ -57,10 +57,10 @@ export default function ChatPage() {
         const convs = data.conversations || [];
         const totalMsgs = convs.reduce((sum: number, c: any) => sum + (c.message_count || 0), 0);
         // Detectar nuevo mensaje y reproducir sonido
-        if (lastMsgCount > 0 && totalMsgs > lastMsgCount && audioRef.current) {
+        if (lastMsgCountRef.current > 0 && totalMsgs > lastMsgCountRef.current && audioRef.current) {
           audioRef.current.play().catch(() => {});
         }
-        setLastMsgCount(totalMsgs);
+        lastMsgCountRef.current = totalMsgs;
         setBotConvs(convs);
         setLoadingBot(false);
       })
