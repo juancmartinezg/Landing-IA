@@ -28,9 +28,26 @@ export default function ChatPage() {
    const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   const [lastMsgCount, setLastMsgCount] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Sonido de nuevo mensaje
+  // Sonido de nuevo mensaje (notificacion)
   useEffect(() => {
-    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2Nk4yGfXJ1e4eLjIqDe3V2fIOKjImEfHZ2fIKJi4mFfnl4fIGHiomHgn16eX2Dh4mIhoN+enl8gYaIiIaDf3t6fIGFh4eGhIB8e3x/g4aGhoWBfnx8f4KFhoaFgn98fH6BhIWFhYOAfnx9f4GEhYWEg4B+fX1/gYOEhISDgX9+fX+Bg4OEg4KBf35+f4GCg4ODgoGAf35/gIGCg4OCgoF/f39/gIGCgoKCgYB/f3+AgIGCgoKBgYCAf3+AgIGBgoKBgYCAf4CAgIGBgYGBgYCAf4CAgIGBgYGBgYCAf4CAgICBgYGBgYCAgICAgICBgYGBgYCAgA==');
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const createBeep = () => {
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        oscillator.frequency.value = 880;
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.3);
+      };
+      audioRef.current = { play: () => { try { createBeep(); } catch {} return Promise.resolve(); } } as any;
+    } catch {
+      audioRef.current = null;
+    }
   }, []);
   // Cargar conversaciones del bot
   const loadBotConvs = () => {
