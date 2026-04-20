@@ -28,6 +28,7 @@ export default function ChatPage() {
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   const lastMsgCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [phonesWithNew, setPhonesWithNew] = useState<Set<string>>(new Set());
   // Sonido de nuevo mensaje
   const playNotificationSound = () => {
     try {
@@ -53,16 +54,22 @@ export default function ChatPage() {
       .then(data => {
         const convs = data.conversations || [];
         const totalMsgs = convs.reduce((sum: number, c: any) => sum + (c.message_count || 0), 0);
-        // Detectar nuevos mensajes por conversacion
-        let hasNewMsg = false;
+        // Detectar nuevos mensajes por conversacion (persistir en state)
+        const newPhones: string[] = [];
         convs.forEach((c: any) => {
           const prev = msgCountByPhoneRef.current[c.phone] || 0;
           if (prev > 0 && c.message_count > prev) {
-            c._hasNew = true;
-            hasNewMsg = true;
+            newPhones.push(c.phone);
           }
           msgCountByPhoneRef.current[c.phone] = c.message_count;
         });
+        if (newPhones.length > 0) {
+          setPhonesWithNew(prev => {
+            const next = new Set(prev);
+            newPhones.forEach(p => next.add(p));
+            return next;
+          });
+        }
         if (lastMsgCountRef.current > 0 && totalMsgs > lastMsgCountRef.current) {
           playNotificationSound();
         }
@@ -139,6 +146,12 @@ export default function ChatPage() {
     setNewMessage('');
     loadBotMessages(phone);
     setMobileView('chat');
+    // Limpiar punto rojo de esta conversacion
+    setPhonesWithNew(prev => {
+      const next = new Set(prev);
+      next.delete(phone);
+      return next;
+    });
   };
   const selectCwConv = (convId: string) => {
     // convId aquí es el phone de la conversación pausada
@@ -176,8 +189,8 @@ export default function ChatPage() {
   };
   const handleSendFile = async (file: File) => {
     if (!file) return;
-    // En tab agent, enviar por Chatwoot
-    if (tab === 'agent' && !selectedConvId) return;
+    // En tab agent, necesitamos selectedPhone
+    if (tab === 'agent' && !selectedPhone) return;
     // En tab bot con takeover, subir a S3 y enviar URL por WhatsApp
     if (tab === 'bot') {
       if (!selectedPhone || !takenOver) return;
@@ -200,30 +213,24 @@ export default function ChatPage() {
       setSending(false);
       return;
     }
-    if (tab !== 'agent' || !selectedConvId) return;
-    setSending(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = (reader.result as string).split(',')[1];
-        await fetch(`${API_URL}/chatwoot/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
-          body: JSON.stringify({
-            conversation_id: selectedConvId,
-            content: newMessage.trim() || '',
-            file_base64: base64,
-            file_name: file.name,
-            file_type: file.type,
-          }),
+   // Tab En vivo: enviar archivo via S3 + WhatsApp (igual que bot con takeover)
+    if (tab === 'agent' && selectedPhone) {
+      setSending(true);
+      try {
+        const res = await fetch(`${API_URL}/upload-url?file_name=${encodeURIComponent(file.name)}&folder=chat`, {
+          headers: { 'client-id': user?.companyId || '' }
         });
-        setNewMessage('');
-        loadCwMessages(selectedConvId);
-        setSending(false);
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error('Error enviando archivo:', err);
+        const data = await res.json();
+        if (data.upload_url) {
+          await fetch(data.upload_url, { method: 'PUT', headers: { 'Content-Type': data.content_type }, body: file });
+          await fetch(`${API_URL}/conversations/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+            body: JSON.stringify({ phone: selectedPhone, content: `📎 ${file.name}\n${data.public_url}` }),
+          });
+          loadBotMessages(selectedPhone);
+        }
+      } catch (err) { console.error('Error enviando archivo:', err); }
       setSending(false);
     }
   };
@@ -316,15 +323,11 @@ export default function ChatPage() {
     return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
   });
   // Mensajes activos segun tab
-  const activeMessages = tab === 'bot' ? botMessages : cwMessages;
-  const isLoadingMsgs = tab === 'bot' ? loadingBotMsgs : loadingCwMsgs;
-  const hasSelection = tab === 'bot' ? !!selectedPhone : !!selectedConvId;
-  const selectedName = tab === 'bot'
-    ? (botConvs.find(c => c.phone === selectedPhone)?.name || selectedPhone || '')
-    : (cwConvs.find(c => String(c.id) === selectedConvId)?.name || '');
-  const selectedDetail = tab === 'bot'
-    ? (botConvs.find(c => c.phone === selectedPhone)?.phone || '')
-    : (cwConvs.find(c => String(c.id) === selectedConvId)?.phone || '');
+  const activeMessages = tab === 'bot' ? botMessages : botMessages;
+  const isLoadingMsgs = tab === 'bot' ? loadingBotMsgs : loadingBotMsgs;
+  const hasSelection = !!selectedPhone;
+  const selectedName = botConvs.find(c => c.phone === selectedPhone)?.name || selectedPhone || '';
+  const selectedDetail = botConvs.find(c => c.phone === selectedPhone)?.phone || '';
    return (       
        <div className="flex overflow-hidden fixed top-[5.5rem] left-0 right-0 bottom-4 md:relative md:top-auto md:left-auto md:right-auto md:bottom-auto md:-m-6 md:h-[calc(100vh-7rem)] bg-[#0B0F1A] z-10">
       {/* Sidebar — oculto en móvil cuando hay chat abierto */}
@@ -388,13 +391,13 @@ export default function ChatPage() {
                         <div className="w-9 h-9 md:w-10 md:h-10 bg-emerald-600/20 rounded-full flex items-center justify-center text-xs md:text-sm font-bold text-emerald-400 shrink-0">
                           {(conv.name || 'U').charAt(0).toUpperCase()}
                         </div>
-                        {conv._hasNew && selectedPhone !== conv.phone && (
+                        {phonesWithNew.has(conv.phone) && selectedPhone !== conv.phone && (
                           <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-[#080B14]" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-center gap-2">
-                          <p className={`text-sm truncate flex-1 min-w-0 ${conv._hasNew && selectedPhone !== conv.phone ? 'font-bold text-white' : 'font-medium'}`}>{conv.name || 'Sin nombre'}</p>
+                          <p className={`text-sm truncate flex-1 min-w-0 ${phonesWithNew.has(conv.phone) && selectedPhone !== conv.phone ? 'font-bold text-white' : 'font-medium'}`}>{conv.name || 'Sin nombre'}</p>
                           <span className="text-[10px] text-gray-600 shrink-0 whitespace-nowrap">{formatTime(conv.last_interaction)}</span>
                         </div>
                         <p className="text-[11px] text-gray-500 truncate">{conv.last_user_msg || conv.phone}</p>
@@ -566,8 +569,8 @@ export default function ChatPage() {
                 </div>
               )}
             </div>
-            {/* Input - solo para Chatwoot */}
-            {tab === 'agent' && selectedConvId && (
+            {/* Input - tab En vivo (asesor) */}
+            {tab === 'agent' && selectedPhone && (
               <div className="px-4 py-3 border-t border-white/5 bg-[#080B14]">
                 <div className="flex items-end gap-2 max-w-3xl mx-auto">
                   <div className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
