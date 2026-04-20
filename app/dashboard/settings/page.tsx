@@ -905,6 +905,50 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
+        {/* Importar Sitio Web */}
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold">Importar Sitio Web 🌐</h3>
+          </div>
+          <p className="text-[10px] text-gray-500 mb-3">Pega la URL de tu sitio web y el bot aprenderá sobre tu negocio automáticamente.</p>
+          <div className="flex gap-2">
+            <input
+              id="scrape-url"
+              type="url"
+              defaultValue={wizard.website_url || ''}
+              placeholder="https://www.tunegocio.com"
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+            />
+            <button
+              onClick={async () => {
+                const urlInput = document.getElementById('scrape-url') as HTMLInputElement;
+                const url = urlInput?.value?.trim();
+                if (!url) { showToast('Ingresa una URL'); return; }
+                setSaving(true);
+                showToast('⏳ Importando sitio web...');
+                try {
+                  const res = await fetch(`${API_URL}/scrape`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                    body: JSON.stringify({ url }),
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    showToast(`✓ Importado: ${data.title || 'Sitio web'} (${data.char_count} caracteres)`);
+                  } else {
+                    showToast(data.error || 'Error importando');
+                  }
+                } catch (err) { showToast('Error de conexión'); }
+                setSaving(false);
+              }}
+              disabled={saving}
+              className="bg-indigo-600 hover:bg-indigo-500 px-5 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50 whitespace-nowrap shrink-0"
+            >
+              {saving ? '⏳...' : '🌐 Importar'}
+            </button>
+          </div>
+          <p className="text-[9px] text-gray-600 mt-2">El contenido se agrega al contexto del bot. Máximo 5,000 caracteres.</p>
+        </div>
         {/* Pasarela de Pagos */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
           <h3 className="font-bold mb-4">Pasarela de Pagos</h3>
