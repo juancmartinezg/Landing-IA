@@ -310,7 +310,7 @@ export default function ChatPage() {
     };
     return map[state] || { label: state || 'Activo', color: 'bg-gray-500/20 text-gray-400' };
   };
-  // Filtrar conversaciones
+  // Filtrar conversaciones.
   const filteredBot = botConvs.filter(c => {
     if (!search) return true;
     const s = search.toLowerCase();
