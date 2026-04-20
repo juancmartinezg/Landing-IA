@@ -431,7 +431,7 @@ export default function ChatPage() {
               filteredCw.map((conv, i) => (
                 <div key={i} onClick={() => selectCwConv(conv.phone)}
                   className={`px-4 md:px-4 py-3 cursor-pointer transition-all border-b border-white/[0.03] hover:bg-white/[0.03] ${
-                    selectedConvId === String(conv.id) ? 'bg-indigo-600/10 border-l-2 border-l-indigo-500' : ''
+                    selectedPhone === conv.phone ? 'bg-indigo-600/10 border-l-2 border-l-indigo-500' : ''
                   }`}>
                   <div className="flex items-center gap-3">
                     <div className="relative">
