@@ -29,6 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [brandLogo, setBrandLogo] = useState('');
   const [reminders, setReminders] = useState<any[]>([]);
   const [showReminders, setShowReminders] = useState(false);
+  const [unreadChats, setUnreadChats] = useState(0);
   useEffect(() => {
     if (!loading && !user) {
       const stored = localStorage.getItem('cb_user');
@@ -65,12 +66,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .then(res => res.json())
         .then(data => setReminders(data.reminders || []))
         .catch(() => {});
+      // Contar chats que necesitan atencion
+      fetch(`${API_URL}/conversations/active`, { headers: { 'client-id': user.companyId } })
+        .then(res => res.json())
+        .then(data => {
+          const convs = data.conversations || [];
+          const paused = convs.filter((c: any) => c.flow_state === 'PAUSED_FOR_HUMAN').length;
+          setUnreadChats(paused);
+        })
+        .catch(() => {});
     }
     const interval = setInterval(() => {
       if (user?.companyId) {
         fetch(`${API_URL}/leads/reminders`, { headers: { 'client-id': user.companyId } })
           .then(res => res.json())
           .then(data => setReminders(data.reminders || []))
+          .catch(() => {});
+        fetch(`${API_URL}/conversations/active`, { headers: { 'client-id': user.companyId } })
+          .then(res => res.json())
+          .then(data => {
+            const convs = data.conversations || [];
+            const paused = convs.filter((c: any) => c.flow_state === 'PAUSED_FOR_HUMAN').length;
+            setUnreadChats(paused);
+          })
           .catch(() => {});
       }
     }, 60000);
@@ -107,6 +125,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <span className="text-lg">{item.icon}</span>
               {item.label}
+              {item.href === '/dashboard/chat' && unreadChats > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  {unreadChats > 9 ? '9+' : unreadChats}
+                </span>
+              )}
             </a>
           ))}
         </nav>
@@ -152,6 +175,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 >
                   <span className="text-lg">{item.icon}</span>
                   {item.label}
+                  {item.href === '/dashboard/chat' && unreadChats > 0 && (
+                    <span className="ml-auto bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                      {unreadChats > 9 ? '9+' : unreadChats}
+                    </span>
+                  )}
                 </a>
               ))}
             </nav>
