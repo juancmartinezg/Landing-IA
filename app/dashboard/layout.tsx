@@ -17,6 +17,7 @@ const menuItems = [
   { href: '/dashboard/training', label: 'Entrenar Bot', icon: '🎓' },
   { href: '/dashboard/templates', label: 'Plantillas', icon: '📋' },
   { href: '/dashboard/gateway', label: 'Pasarela', icon: '🏦' },
+  { href: '/dashboard/inventory', label: 'Inventario', icon: '📦' },
   { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: '📱' },
   { href: '/dashboard/settings', label: 'Configuracion', icon: '⚙️' },
 ];
