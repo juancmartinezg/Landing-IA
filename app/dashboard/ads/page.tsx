@@ -512,42 +512,58 @@ export default function AdsPage() {
             </div>
           )}
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 mt-6">
-            <h3 className="font-bold mb-3">⚙️ Reglas automáticas</h3>
-            <p className="text-[10px] text-gray-500 mb-3">Define reglas para que la IA optimice automáticamente.</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[9px] text-gray-400 mb-1 block">CPL máximo (pausar si supera)</label>
-                <input type="number" id="rule_max_cpl" defaultValue="0" placeholder="Ej: 5000"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
-              </div>
-              <div>
-                <label className="text-[9px] text-gray-400 mb-1 block">Gasto diario máximo</label>
-                <input type="number" id="rule_max_spend" defaultValue="0" placeholder="Ej: 50000"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
-              </div>
-              <div>
-                <label className="text-[9px] text-gray-400 mb-1 block">Pausar si no hay leads en (horas)</label>
-                <input type="number" id="rule_no_leads" defaultValue="72" placeholder="72"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
-              </div>
-              <div>
-                <label className="text-[9px] text-gray-400 mb-1 block">Escalar si CPL menor a</label>
-                <input type="number" id="rule_scale_cpl" defaultValue="0" placeholder="Ej: 3000"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
-              </div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold">🛡️ Protección de publicidad</h3>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">Activa</span>
             </div>
-            <button onClick={async () => {
-              const rules = {
-                max_cpl: parseInt((document.getElementById('rule_max_cpl') as HTMLInputElement)?.value || '0'),
-                max_spend_daily: parseInt((document.getElementById('rule_max_spend') as HTMLInputElement)?.value || '0'),
-                pause_if_no_leads_hours: parseInt((document.getElementById('rule_no_leads') as HTMLInputElement)?.value || '72'),
-                auto_scale_if_cpl_below: parseInt((document.getElementById('rule_scale_cpl') as HTMLInputElement)?.value || '0'),
-              };
-              const res = await fetch(`${API_URL}/ads/rules`, { method: 'PUT', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
-              if (res.ok) showToast('✓ Reglas guardadas'); else showToast('Error');
-            }} className="mt-3 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-xl text-xs font-bold transition-all">
-              💾 Guardar reglas
-            </button>
+            <div className="space-y-2 mb-4">
+              <p className="text-[10px] text-gray-400 flex items-center gap-2">✅ La IA monitorea tus campañas cada 24 horas</p>
+              <p className="text-[10px] text-gray-400 flex items-center gap-2">✅ Pausa automáticamente si detecta gasto sin resultados</p>
+              <p className="text-[10px] text-gray-400 flex items-center gap-2">✅ Escala lo que funciona y reduce lo que no</p>
+              <p className="text-[10px] text-gray-400 flex items-center gap-2">✅ Te avisa si algo necesita tu atención</p>
+            </div>
+            <details className="group">
+              <summary className="text-[10px] text-gray-500 cursor-pointer hover:text-gray-300 transition-all flex items-center gap-1">
+                ⚙️ Configuraciones avanzadas <span className="text-[8px] group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div className="mt-3 p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
+                <p className="text-[9px] text-red-400 mb-3">⚠️ Modificar estas reglas puede afectar el rendimiento de tus campañas. Si no estás seguro de lo que haces, déjalas en automático (valor 0 = la IA decide).</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[9px] text-gray-400 mb-1 block">💰 Pausar si gasto más de $____ por día sin resultados (0 = automático)</label>
+                    <input type="number" id="rule_max_spend" defaultValue="0" placeholder="0 = la IA decide"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-gray-400 mb-1 block">⏰ Pausar si pasan ___ horas sin que nadie me escriba (0 = automático)</label>
+                    <input type="number" id="rule_no_leads" defaultValue="72" placeholder="72"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-gray-400 mb-1 block">🚫 Pausar si cada persona que me escribe cuesta más de $____ (0 = automático)</label>
+                    <input type="number" id="rule_max_cpl" defaultValue="0" placeholder="0 = la IA decide"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-gray-400 mb-1 block">🚀 Aumentar presupuesto si cada persona me cuesta menos de $____ (0 = automático)</label>
+                    <input type="number" id="rule_scale_cpl" defaultValue="0" placeholder="0 = la IA decide"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+                  </div>
+                </div>
+                <button onClick={async () => {
+                  const rules = {
+                    max_cpl: parseInt((document.getElementById('rule_max_cpl') as HTMLInputElement)?.value || '0'),
+                    max_spend_daily: parseInt((document.getElementById('rule_max_spend') as HTMLInputElement)?.value || '0'),
+                    pause_if_no_leads_hours: parseInt((document.getElementById('rule_no_leads') as HTMLInputElement)?.value || '72'),
+                    auto_scale_if_cpl_below: parseInt((document.getElementById('rule_scale_cpl') as HTMLInputElement)?.value || '0'),
+                  };
+                  const res = await fetch(`${API_URL}/ads/rules`, { method: 'PUT', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
+                  if (res.ok) showToast('✓ Reglas guardadas'); else showToast('Error');
+                }} className="mt-3 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-xl text-xs font-bold transition-all">
+                  💾 Guardar reglas
+                </button>
+              </div>
+            </details>
           </div>
         </div>
       )}
