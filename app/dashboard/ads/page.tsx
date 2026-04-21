@@ -22,7 +22,7 @@ export default function AdsPage() {
     if (typeof window !== 'undefined') { try { return parseInt(localStorage.getItem('ads_wiz_step') || '1'); } catch { return 1; } } return 1;
   });
   const [wiz, setWiz] = useState(() => {
-    const def = { service_slug: '', country: 'CO', city: '', location: '', radius: '10', budget_daily: '15000', duration: '7', ad_account_id: '', page_id: '', page_name: '', instagram_id: '' };
+    const def = { service_slug: '', country: 'CO', city: '', location: '', radius: '10', budget_daily: '15000', duration: '7', ad_account_id: '', page_id: '', page_name: '', instagram_id: '', age_min: '18', age_max: '65', gender: 'all', cities: [] as any[], interests: [] as any[] };
     if (typeof window !== 'undefined') { try { return {...def, ...JSON.parse(localStorage.getItem('ads_wiz_data') || '{}')}; } catch { return def; } } return def;
   });
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -36,6 +36,12 @@ export default function AdsPage() {
   const [period, setPeriod] = useState('last_30d');
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<any>(null);
+  const [citySearch, setCitySearch] = useState('');
+  const [cityResults, setCityResults] = useState<any[]>([]);
+  const [interestSearch, setInterestSearch] = useState('');
+  const [interestResults, setInterestResults] = useState<any[]>([]);
+  const [searchingCity, setSearchingCity] = useState(false);
+  const [searchingInterest, setSearchingInterest] = useState(false);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
   const h = { 'client-id': user?.companyId || '' };
   useEffect(() => {
@@ -95,7 +101,7 @@ export default function AdsPage() {
       const budgetDaily = Math.max(5000, parseInt(wiz.budget_daily || '15000'));
       const res = await fetch(`${API_URL}/ads/campaigns/publish`, {
         method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: campName, objective: 'OUTCOME_LEADS', budget_daily: budgetDaily, variants, country: wiz.country, city: wiz.city, radius: wiz.radius, duration: wiz.duration, service_slug: wiz.service_slug })
+        body: JSON.stringify({ name: campName, objective: 'OUTCOME_LEADS', budget_daily: budgetDaily, variants, country: wiz.country, city: wiz.city, radius: wiz.radius, duration: wiz.duration, service_slug: wiz.service_slug, age_min: parseInt(wiz.age_min || '18'), age_max: parseInt(wiz.age_max || '65'), gender: wiz.gender, cities: wiz.cities, interests: wiz.interests })
       });
       const data = await res.json();
       if (res.ok) {
@@ -147,6 +153,46 @@ export default function AdsPage() {
     const data = await res.json();
     if (res.ok) { showToast(`✓ ${data.message}`); reloadDashboard(); } else showToast(data.error || 'Error');
   };
+  const searchCity = async (q: string) => {
+    setCitySearch(q);
+    if (q.length < 2) { setCityResults([]); return; }
+    setSearchingCity(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/search-targeting?q=${encodeURIComponent(q)}&type=city`, { headers: h });
+      const data = await res.json();
+      setCityResults(data.results || []);
+    } catch {} 
+    setSearchingCity(false);
+  };
+  const searchInterest = async (q: string) => {
+    setInterestSearch(q);
+    if (q.length < 2) { setInterestResults([]); return; }
+    setSearchingInterest(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/search-targeting?q=${encodeURIComponent(q)}&type=interest`, { headers: h });
+      const data = await res.json();
+      setInterestResults(data.results || []);
+    } catch {}
+    setSearchingInterest(false);
+  };
+  const addCity = (city: any) => {
+    if (!wiz.cities.find((c: any) => c.key === city.key)) {
+      setWiz((prev: any) => ({...prev, cities: [...prev.cities, city]}));
+    }
+    setCitySearch(''); setCityResults([]);
+  };
+  const removeCity = (key: string) => {
+    setWiz((prev: any) => ({...prev, cities: prev.cities.filter((c: any) => c.key !== key)}));
+  };
+  const addInterest = (interest: any) => {
+    if (!wiz.interests.find((i: any) => i.id === interest.id)) {
+      setWiz((prev: any) => ({...prev, interests: [...prev.interests, interest]}));
+    }
+    setInterestSearch(''); setInterestResults([]);
+  };
+  const removeInterest = (id: string) => {
+    setWiz((prev: any) => ({...prev, interests: prev.interests.filter((i: any) => i.id !== id)}));
+  };  
   useEffect(() => {
     localStorage.setItem('ads_wiz_step', String(wizStep));
     localStorage.setItem('ads_wiz_data', JSON.stringify(wiz));
@@ -452,53 +498,91 @@ export default function AdsPage() {
             )}
             {wizStep === 2 && (
               <div>
-                <h3 className="font-bold text-lg mb-2">¿Dónde están tus clientes?</h3>
-                <p className="text-xs text-gray-400 mb-4">Configura la ubicación de tu anuncio</p>
-                <div className="space-y-3 mb-4">
+                <h3 className="font-bold text-lg mb-2">¿A quién quieres llegar?</h3>
+                <p className="text-xs text-gray-400 mb-4">La IA optimizará automáticamente. Ajusta si quieres.</p>
+                <div className="space-y-4 mb-4">
                   <div>
                     <label className="text-xs text-gray-400 mb-1 block">País</label>
                     <select value={wiz.country} onChange={e => setWiz({...wiz, country: e.target.value})}
                       className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white">
-                      <option value="CO">🇨🇴 Colombia</option>
-                      <option value="MX">🇲🇽 México</option>
-                      <option value="AR">🇦🇷 Argentina</option>
-                      <option value="CL">🇨🇱 Chile</option>
-                      <option value="PE">🇵🇪 Perú</option>
-                      <option value="EC">🇪🇨 Ecuador</option>
-                      <option value="US">🇺🇸 Estados Unidos</option>
-                      <option value="ES">🇪🇸 España</option>
-                      <option value="BR">🇧🇷 Brasil</option>
-                      <option value="PA">🇵🇦 Panamá</option>
+                      {[['CO','🇨🇴 Colombia'],['MX','🇲🇽 México'],['AR','🇦🇷 Argentina'],['CL','🇨🇱 Chile'],['PE','🇵🇪 Perú'],['EC','🇪🇨 Ecuador'],['US','🇺🇸 Estados Unidos'],['ES','🇪🇸 España'],['BR','🇧🇷 Brasil'],['PA','🇵🇦 Panamá']].map(([v,l]) => (
+                        <option key={v} value={v}>{l}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-400 mb-1 block">Ciudad (opcional)</label>
-                    <input value={wiz.city} onChange={e => setWiz({...wiz, city: e.target.value})} placeholder="Ej: Medellín, Bogotá, Miami..."
+                    <label className="text-xs text-gray-400 mb-1 block">Ciudades</label>
+                    <input value={citySearch} onChange={e => searchCity(e.target.value)} placeholder="Buscar ciudad..."
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
+                    {searchingCity && <p className="text-[8px] text-gray-500 mt-1">Buscando...</p>}
+                    {cityResults.length > 0 && (
+                      <div className="mt-1 max-h-32 overflow-y-auto bg-[#1a1f2e] border border-white/10 rounded-xl">
+                        {cityResults.map((c: any, i: number) => (
+                          <button key={i} onClick={() => addCity(c)} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-all border-b border-white/5">
+                            {c.name} <span className="text-gray-500">({c.region}, {c.country_name})</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {wiz.cities.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {wiz.cities.map((c: any, i: number) => (
+                          <span key={i} className="text-[9px] px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center gap-1">
+                            {c.name} <button onClick={() => removeCity(c.key)} className="text-red-400 hover:text-red-300">✕</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {wiz.cities.length === 0 && <p className="text-[8px] text-gray-600 mt-1">Sin ciudades = todo el país</p>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Edad mínima</label>
+                      <input type="number" value={wiz.age_min} onChange={e => setWiz({...wiz, age_min: e.target.value})} min="13" max="65"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Edad máxima</label>
+                      <input type="number" value={wiz.age_max} onChange={e => setWiz({...wiz, age_max: e.target.value})} min="13" max="65"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
+                    </div>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-400 mb-2 block">Alcance</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { id: '10', icon: '📍', label: 'Mi zona (10 km)' },
-                        { id: '25', icon: '🏙️', label: 'Mi ciudad (25 km)' },
-                        { id: '50', icon: '🗺️', label: 'Mi región (50 km)' },
-                        { id: '0', icon: '🌎', label: 'Todo el país' },
-                      ].map(opt => (
-                        <button key={opt.id} onClick={() => setWiz({...wiz, radius: opt.id})}
-                          className={`p-2.5 rounded-xl text-left transition-all border ${wiz.radius === opt.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
-                          <p className="text-xs font-bold">{opt.icon} {opt.label}</p>
+                    <label className="text-xs text-gray-400 mb-2 block">Género</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[{id:'all',l:'👥 Todos'},{id:'male',l:'👨 Hombres'},{id:'female',l:'👩 Mujeres'}].map(g => (
+                        <button key={g.id} onClick={() => setWiz({...wiz, gender: g.id})}
+                          className={`p-2 rounded-xl text-center text-xs font-bold transition-all border ${wiz.gender === g.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                          {g.l}
                         </button>
                       ))}
                     </div>
                   </div>
-                  {wiz.radius !== '0' && (
-                    <div>
-                      <label className="text-xs text-gray-400 mb-1 block">Dirección del negocio (para el radio)</label>
-                      <input value={wiz.location} onChange={e => setWiz({...wiz, location: e.target.value})} placeholder="Ej: Calle 80 #45-20"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
-                    </div>
-                  )}
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Intereses (opcional)</label>
+                    <input value={interestSearch} onChange={e => searchInterest(e.target.value)} placeholder="Buscar interés... (ej: fitness, cocina, armas)"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
+                    {searchingInterest && <p className="text-[8px] text-gray-500 mt-1">Buscando...</p>}
+                    {interestResults.length > 0 && (
+                      <div className="mt-1 max-h-32 overflow-y-auto bg-[#1a1f2e] border border-white/10 rounded-xl">
+                        {interestResults.map((int: any, i: number) => (
+                          <button key={i} onClick={() => addInterest(int)} className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-all border-b border-white/5">
+                            {int.name} {int.audience_size > 0 && <span className="text-gray-500">({(int.audience_size || 0).toLocaleString()} personas)</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {wiz.interests.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {wiz.interests.map((int: any, i: number) => (
+                          <span key={i} className="text-[9px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                            {int.name} <button onClick={() => removeInterest(int.id)} className="text-red-400 hover:text-red-300">✕</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[8px] text-gray-600 mt-1">Sin intereses = la IA de Meta decide (Advantage+)</p>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setWizStep(1)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
@@ -769,7 +853,7 @@ export default function AdsPage() {
                   + Agregar variante
                 </button>
                 <div className="bg-white/[0.02] rounded-xl p-3 mb-4">
-                  <p className="text-[10px] text-gray-400">📋 Resumen: {variants.length} anuncios • ${parseInt(wiz.budget_daily || '0').toLocaleString()}/día • {wiz.duration === '0' ? 'Indefinida' : `${wiz.duration} días`} • {wiz.radius === '0' ? 'Todo el país' : `${wiz.city || wiz.country} (${wiz.radius} km)`}</p>
+                  <p className="text-[10px] text-gray-400">📋 {variants.length} anuncios • ${parseInt(wiz.budget_daily || '0').toLocaleString()}/día • {wiz.duration === '0' ? 'Indefinida' : `${wiz.duration} días`} • {wiz.cities?.length > 0 ? wiz.cities.map((c: any) => c.name).join(', ') : wiz.country} • {wiz.age_min}-{wiz.age_max} años • {wiz.gender === 'all' ? 'Todos' : wiz.gender === 'male' ? 'Hombres' : 'Mujeres'}</p>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setWizStep(4)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
