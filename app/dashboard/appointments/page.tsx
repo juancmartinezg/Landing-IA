@@ -104,7 +104,7 @@ export default function AppointmentsPage() {
                 <select value={form.service_name} onChange={e => {
                   const svc = services.find(s => s.name === e.target.value);
                   setForm({...form, service_name: e.target.value, amount: svc?.pricing?.regular_price?.toString() || '0'});
-                }} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white">
+                }} className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white">
                   <option value="">Seleccionar...</option>
                   {services.map((s, i) => <option key={i} value={s.name}>{s.name} - ${(s.pricing?.regular_price || 0).toLocaleString()}</option>)}
                   <option value="Cita manual">Otro (manual)</option>
@@ -130,7 +130,7 @@ export default function AppointmentsPage() {
                 <div>
                   <label className="text-xs text-gray-400 mb-1 block">Duración (horas)</label>
                   <select value={form.duration} onChange={e => setForm({...form, duration: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white">
+                    className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white">
                     <option value="1">1 hora</option>
                     <option value="2">2 horas</option>
                     <option value="3">3 horas</option>
