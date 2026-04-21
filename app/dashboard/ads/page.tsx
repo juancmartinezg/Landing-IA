@@ -24,6 +24,7 @@ export default function AdsPage() {
   const [campFilter, setCampFilter] = useState('all');
   const [previewImg, setPreviewImg] = useState<string | null>(null);
   const [genImgIdx, setGenImgIdx] = useState<number | null>(null);
+  const [businessType, setBusinessType] = useState('servicios');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
   const h = { 'client-id': user?.companyId || '' };
   useEffect(() => {
@@ -43,6 +44,9 @@ export default function AdsPage() {
       if (selAcc) setWiz(prev => ({...prev, ad_account_id: selAcc.id}));
       const selPage = (pg.pages || []).find((x: any) => x.selected);
       if (selPage) setWiz(prev => ({...prev, page_id: selPage.id, page_name: selPage.name}));
+      fetch(`${API_URL}/config`, { headers: h }).then(r => r.json()).then(cfg => {
+        setBusinessType(cfg.business_type || 'servicios');
+      }).catch(() => {});
       setLoading(false);
     });
   }, []);
@@ -56,7 +60,11 @@ export default function AdsPage() {
         body: JSON.stringify({ service_slug: wiz.service_slug, budget_daily: budgetDaily }),
       });
       const data = await res.json();
-      if (data.variants?.length) { setVariants(data.variants); showToast('✅ Creativos listos. Revisa y edita.'); setWizStep(5); }
+      if (data.variants?.length) {
+        const svcImg = data.service_image || '';
+        const withImg = data.variants.map((x: any) => ({...x, image_url: x.image_url || svcImg}));
+        setVariants(withImg); showToast('✅ Creativos listos. Revisa y edita.'); setWizStep(5);
+      }
       else showToast('Error generando creativos');
     } catch { showToast('Error de conexión'); }
     setCreating(false);
@@ -452,7 +460,7 @@ export default function AdsPage() {
                   <button onClick={() => setWizStep(3)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
                   <button onClick={handleGenerate} disabled={creating || !wiz.ad_account_id || !wiz.page_id}
                     className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold disabled:opacity-30 transition-all">
-                    {creating ? '⏳ Generando...' : '✨ Generar anuncios'}
+                    {creating ? '⏳ Generando anuncios (~15s)...' : '✨ Generar anuncios'}
                   </button>
                 </div>
                 {(!wiz.ad_account_id || !wiz.page_id) && (
@@ -481,21 +489,34 @@ export default function AdsPage() {
                               <div className="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center text-gray-600 text-[10px]">Sin imagen</div>
                             )}
                             <div className="flex flex-col gap-1">
-                              <button disabled={genImgIdx === i} onClick={async () => {
-                                setGenImgIdx(i);
-                                const res = await fetch(`${API_URL}/ads/generate-image`, {
-                                  method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ prompt: v.headline + ' ' + v.text, service_slug: wiz.service_slug }),
-                                });
-                                const data = await res.json();
-                                if (res.ok && data.image_url) {
-                                  const nv = [...variants]; nv[i] = {...nv[i], image_url: data.image_url}; setVariants(nv);
-                                  showToast('✅ Imagen generada');
-                                } else showToast(data.error || 'Error generando imagen');
-                                setGenImgIdx(null);
-                              }} className="text-[9px] px-2 py-1 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600/40 font-bold transition-all disabled:opacity-50">
-                                {genImgIdx === i ? '⏳ Generando...' : '🤖 Generar con IA'}
-                              </button>
+                              {genImgIdx === i && (
+                                <div className="w-full">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                      <div className="h-full bg-purple-500 rounded-full animate-pulse" style={{width: '60%', animation: 'pulse 2s infinite'}} />
+                                    </div>
+                                    <span className="text-[8px] text-purple-400">Generando...</span>
+                                  </div>
+                                  <p className="text-[8px] text-gray-600">Puede tardar ~1-2 minutos</p>
+                                </div>
+                              )}
+                              {['servicios', 'salud', 'todos'].includes(businessType) && genImgIdx !== i && (
+                                <button onClick={async () => {
+                                  setGenImgIdx(i);
+                                  const res = await fetch(`${API_URL}/ads/generate-image`, {
+                                    method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ prompt: v.headline + ' ' + v.text, service_slug: wiz.service_slug }),
+                                  });
+                                  const data = await res.json();
+                                  if (res.ok && data.image_url) {
+                                    const nv = [...variants]; nv[i] = {...nv[i], image_url: data.image_url}; setVariants(nv);
+                                    showToast('✅ Imagen generada');
+                                  } else showToast(data.error || 'Error generando imagen');
+                                  setGenImgIdx(null);
+                                }} className="text-[9px] px-2 py-1 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600/40 font-bold transition-all">
+                                  🤖 Generar con IA
+                                </button>
+                              )}
                               <label className="text-[9px] px-2 py-1 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 font-bold transition-all cursor-pointer text-center">
                                 📷 Subir
                                 <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
@@ -539,7 +560,7 @@ export default function AdsPage() {
                   <button onClick={() => setWizStep(4)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
                   <button onClick={handlePublish} disabled={publishing}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold disabled:opacity-30 transition-all">
-                    {publishing ? '⏳ Publicando...' : '🚀 Publicar campaña'}
+                    {publishing ? '⏳ Publicando (~10s)...' : '🚀 Publicar campaña'}
                   </button>
                 </div>
                 <p className="text-[9px] text-gray-600 text-center mt-2">Se crea pausada. Actívala cuando estés listo.</p>
