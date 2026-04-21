@@ -466,7 +466,7 @@ export default function AdsPage() {
                         </div>
                         <span className="text-[9px] text-indigo-400">Generando...</span>
                       </div>
-                      <p className="text-[8px] text-gray-500 text-center">La IA está creando tus anuncios (~15s)</p>
+                      <p className="text-[8px] text-gray-500 text-center">La IA está creando tus anuncios...</p>
                     </div>
                   ) : (
                     <button onClick={handleGenerate} disabled={!wiz.ad_account_id || !wiz.page_id}
@@ -502,7 +502,7 @@ export default function AdsPage() {
                               setVariants(nv); showToast('✅ Copy regenerado');
                             } else showToast('Error regenerando');
                           }} className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all" title="Regenerar texto">
-                            🔄 Copy
+                            🔄 Reacer Copy
                           </button>
                           {variants.length > 1 && (
                             <button onClick={() => { setVariants(prev => prev.filter((_, idx) => idx !== i)); showToast('Variante descartada'); }}
@@ -587,6 +587,22 @@ export default function AdsPage() {
                     </div>
                   ))}
                 </div>
+                <button onClick={async () => {
+                  showToast('⏳ Generando variante adicional...');
+                  const res = await fetch(`${API_URL}/ads/campaigns/generate`, {
+                    method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ service_slug: wiz.service_slug, budget_daily: parseInt(wiz.budget_daily || '15000') }),
+                  });
+                  const data = await res.json();
+                  if (data.variants?.length) {
+                    const svcImg = data.service_image || '';
+                    const newV = {...data.variants[0], image_url: data.variants[0].image_url || svcImg || variants[0]?.image_url || ''};
+                    setVariants(prev => [...prev, newV]);
+                    showToast('✅ Variante agregada');
+                  } else showToast('Error generando');
+                }} className="w-full py-2 rounded-xl border border-dashed border-white/10 text-xs text-gray-400 hover:bg-white/[0.03] hover:text-white transition-all mb-4">
+                  + Agregar variante
+                </button>
                 <div className="bg-white/[0.02] rounded-xl p-3 mb-4">
                   <p className="text-[10px] text-gray-400">📋 Resumen: {variants.length} anuncios • ${parseInt(wiz.budget_daily || '0').toLocaleString()}/día • {wiz.duration === '0' ? 'Indefinida' : `${wiz.duration} días`} • {wiz.radius === '0' ? 'Todo el país' : `${wiz.city || wiz.country} (${wiz.radius} km)`}</p>
                 </div>
