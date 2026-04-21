@@ -48,9 +48,9 @@ export default function AdsPage() {
       setAccounts(accs);
       setPages(pg.pages || []);
       const selAcc = accs.find((x: any) => x.selected);
-      if (selAcc) setWiz(prev => ({...prev, ad_account_id: selAcc.id}));
+      if (selAcc) setWiz((prev: any) => ({...prev, ad_account_id: selAcc.id}));
       const selPage = (pg.pages || []).find((x: any) => x.selected);
-      if (selPage) setWiz(prev => ({...prev, page_id: selPage.id, page_name: selPage.name}));
+      if (selPage) setWiz((prev: any) => ({...prev, page_id: selPage.id, page_name: selPage.name}));
       fetch(`${API_URL}/config`, { headers: h }).then(r => r.json()).then(cfg => {
         setBusinessType(cfg.business_type || 'servicios');
       }).catch(() => {});
