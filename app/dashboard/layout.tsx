@@ -3,6 +3,7 @@ import { useAuth } from '../providers';
 import ToastProvider from '../components/Toast';
 import AgentChat from '../components/AgentChat';
 import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const menuItems = [
@@ -110,13 +111,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="hidden md:flex w-64 bg-[#080B14] border-r border-white/5 flex-col fixed h-full z-30">
         {/* Logo */}
         <div className="px-6 h-16 flex items-center gap-2 border-b border-white/5">
-          <img src="/cb-logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+          <img src="/cb-logo.webp" alt="Logo" className="w-8 h-8 object-contain" />
           <span className="text-lg font-bold tracking-tighter">clientes.bot</span>
         </div>
         {/* Menu */}
         <nav className="flex-1 overflow-y-auto py-4 px-3">
           {menuItems.map((item) => (
-            <a
+            <Link
               key={item.href}
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all mb-1 ${
@@ -132,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {unreadChats > 9 ? '9+' : unreadChats}
                 </span>
               )}
-            </a>
+            </Link>
           ))}
         </nav>
         {/* User */}
@@ -158,14 +159,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <aside className="absolute left-0 top-0 h-full w-64 bg-[#080B14] border-r border-white/5 flex flex-col">
             <div className="px-6 h-16 flex items-center justify-between border-b border-white/5">
               <div className="flex items-center gap-2">
-                <img src="/cb-logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+                <img src="/cb-logo.webp" alt="Logo" className="w-8 h-8 object-contain" />
                 <span className="text-lg font-bold tracking-tighter">clientes.bot</span>
               </div>
               <button onClick={() => setSidebarOpen(false)} className="text-gray-400 text-2xl">×</button>
             </div>
             <nav className="flex-1 overflow-y-auto py-4 px-3">
               {menuItems.map((item) => (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
@@ -182,7 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       {unreadChats > 9 ? '9+' : unreadChats}
                     </span>
                   )}
-                </a>
+                </Link>
               ))}
             </nav>
             <div className="p-4 border-t border-white/5">
@@ -259,9 +260,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                     {reminders.length > 0 && (
                       <div className="px-4 py-2 border-t border-white/5">
-                        <a href="/dashboard/crm" className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold">
+                        <Link href="/dashboard/crm" className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold">
                           Ver todos en CRM →
-                        </a>
+                        </Link>
                       </div>
                     )}
                   </div>

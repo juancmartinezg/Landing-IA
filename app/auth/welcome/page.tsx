@@ -23,7 +23,7 @@ export default function WelcomePage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <img src="/cb-logo.png" alt="Logo" className="w-12 h-12 object-contain" />
+            <img src="/cb-logo.webp" alt="Logo" className="w-12 h-12 object-contain" />
             <span className="text-2xl font-bold text-white tracking-tighter">clientes.bot</span>
           </div>
         </div>

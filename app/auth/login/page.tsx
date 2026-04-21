@@ -37,7 +37,7 @@ export default function LoginPage() {
         
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <img src="/cb-logo.png" alt="Logo" className="w-12 h-12 object-contain" />
+            <img src="/cb-logo.webp" alt="Logo" className="w-12 h-12 object-contain" />
             <span className="text-2xl font-bold text-white tracking-tighter">clientes.bot</span>
           </div>
           <p className="text-gray-400 text-sm">Inicia sesion para acceder a tu dashboard</p>

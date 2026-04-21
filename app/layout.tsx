@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: 'clientes.bot',
     images: [
       {
-        url: '/dashboard-preview.png',
+        url: '/dashboard-preview.webp',
         width: 1200,
         height: 630,
         alt: 'clientes.bot Dashboard Preview',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'clientes.bot | IA para WhatsApp',
     description: 'SaaS de automatización con pagos integrados y CRM.',
-    images: ['/dashboard-preview.png'],
+    images: ['/dashboard-preview.webp'],
   },
   appleWebApp: {
     capable: true,

@@ -13,11 +13,18 @@ export default function AdsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [variants, setVariants] = useState<any[]>([]);
+  const [variants, setVariants] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') { try { return JSON.parse(localStorage.getItem('ads_wiz_variants') || '[]'); } catch { return []; } } return [];
+  });
   const [syncForm, setSyncForm] = useState({ name: '', segment: 'all' });
   const [syncing, setSyncing] = useState(false);
-  const [wizStep, setWizStep] = useState(1);
-  const [wiz, setWiz] = useState({ service_slug: '', country: 'CO', city: '', location: '', radius: '10', budget_daily: '15000', duration: '7', ad_account_id: '', page_id: '', page_name: '', instagram_id: '' });
+  const [wizStep, setWizStep] = useState(() => {
+    if (typeof window !== 'undefined') { try { return parseInt(localStorage.getItem('ads_wiz_step') || '1'); } catch { return 1; } } return 1;
+  });
+  const [wiz, setWiz] = useState(() => {
+    const def = { service_slug: '', country: 'CO', city: '', location: '', radius: '10', budget_daily: '15000', duration: '7', ad_account_id: '', page_id: '', page_name: '', instagram_id: '' };
+    if (typeof window !== 'undefined') { try { return {...def, ...JSON.parse(localStorage.getItem('ads_wiz_data') || '{}')}; } catch { return def; } } return def;
+  });
   const [accounts, setAccounts] = useState<any[]>([]);
   const [pages, setPages] = useState<any[]>([]);
   const [igAccounts, setIgAccounts] = useState<any[]>([]);
@@ -90,6 +97,7 @@ export default function AdsPage() {
       const data = await res.json();
       if (res.ok) {
         showToast('✅ ¡Campaña publicada!'); setTab('campaigns'); setWizStep(1); setVariants([]);
+        localStorage.removeItem('ads_wiz_step'); localStorage.removeItem('ads_wiz_data'); localStorage.removeItem('ads_wiz_variants');
         fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).then(d => setCampaigns(d.campaigns || []));
       } else showToast(data.error || 'Error');
     } catch { showToast('Error de conexión'); }
@@ -116,6 +124,13 @@ export default function AdsPage() {
     } catch { showToast('Error sincronizando'); }
     setSyncing(false);
   };
+  useEffect(() => {
+    localStorage.setItem('ads_wiz_step', String(wizStep));
+    localStorage.setItem('ads_wiz_data', JSON.stringify(wiz));
+  }, [wizStep, wiz]);
+  useEffect(() => {
+    if (variants.length) localStorage.setItem('ads_wiz_variants', JSON.stringify(variants));
+  }, [variants]);
   if (loading) return <div className="text-center py-12 text-gray-500">Cargando...</div>;
     return (
     <div>

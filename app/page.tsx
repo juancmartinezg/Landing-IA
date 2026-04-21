@@ -12,7 +12,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center text-white">
           <div className="flex flex-col md:flex-row items-center gap-0 md:gap-2">
             <img 
-              src="/cb-logo.png" 
+              src="/cb-logo.webp" 
               alt="C.B. Logo" 
               className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]"
             />
@@ -105,7 +105,7 @@ export default function LandingPage() {
               <div 
                 className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 group-hover:scale-105"
                 style={{ 
-                  backgroundImage: "url('/dashboard-preview.png')",
+                  backgroundImage: "url('/dashboard-preview.webp')",
                   backgroundColor: '#0B0F1A' // Color de carga
                 }}
               ></div>
@@ -372,7 +372,7 @@ export default function LandingPage() {
           {/* LOGO EN EL FOOTER (Igual al del Navbar) */}
           <div className="flex items-center gap-2 font-bold">
             <img 
-              src="/cb-logo.png" 
+              src="/cb-logo.webp" 
               className="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(99,102,241,0.4)]" 
               alt="Logo Footer" 
             />
