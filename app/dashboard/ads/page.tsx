@@ -200,7 +200,13 @@ export default function AdsPage() {
   useEffect(() => {
     if (variants.length) localStorage.setItem('ads_wiz_variants', JSON.stringify(variants));
   }, [variants]);
-  if (loading) return <div className="text-center py-12 text-gray-500">Cargando...</div>;
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-20">
+      <div className="w-12 h-12 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+      <p className="text-sm text-gray-400">Cargando administrador de anuncios...</p>
+      <p className="text-[9px] text-gray-600 mt-1">Conectando con Meta Ads</p>
+    </div>
+  );
     return (
     <div>
       {toast && <div className="fixed top-4 right-4 z-50 bg-[#1a1f2e] border border-white/10 rounded-xl px-5 py-3 text-sm font-medium shadow-xl">{toast}</div>}
@@ -353,77 +359,7 @@ export default function AdsPage() {
                     Detectar errores
                   </button>
                 </div>
-              </div>
-              {analysis && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setAnalysis(null)}>
-                  <div className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto" onClick={(e: any) => e.stopPropagation()}>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold">🔍 Análisis de campaña</h3>
-                      <button onClick={() => setAnalysis(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mb-4">
-                      <div className="bg-white/[0.03] rounded-lg p-2 text-center">
-                        <p className="text-[8px] text-gray-500">Gasto</p>
-                        <p className="text-sm font-bold">${(analysis.metrics?.spend || 0).toLocaleString()}</p>
-                      </div>
-                      <div className="bg-white/[0.03] rounded-lg p-2 text-center">
-                        <p className="text-[8px] text-gray-500">Leads</p>
-                        <p className="text-sm font-bold text-emerald-400">{analysis.metrics?.leads || 0}</p>
-                      </div>
-                      <div className="bg-white/[0.03] rounded-lg p-2 text-center">
-                        <p className="text-[8px] text-gray-500">CPL</p>
-                        <p className="text-sm font-bold text-purple-400">${(analysis.metrics?.cpl || 0).toLocaleString()}</p>
-                      </div>
-                    </div>
-                    {analysis.funnel_diagnosis && (
-                      <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-3 mb-4">
-                        <p className="text-[10px] text-indigo-400 font-bold mb-1">📊 Diagnóstico</p>
-                        <p className="text-xs text-gray-300">{analysis.funnel_diagnosis}</p>
-                      </div>
-                    )}
-                    {analysis.ai_insight && (
-                      <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-3 mb-4">
-                        <p className="text-[10px] text-purple-400 font-bold mb-1">🤖 Insight IA</p>
-                        <p className="text-xs text-gray-300">{analysis.ai_insight}</p>
-                      </div>
-                    )}
-                    {(analysis.recommendations || []).length > 0 && (
-                      <div className="mb-4">
-                        <p className="text-[10px] text-gray-400 font-bold mb-2">💡 Recomendaciones</p>
-                        {analysis.recommendations.map((r: any, i: number) => (
-                          <div key={i} className="flex items-center justify-between bg-white/[0.03] rounded-lg p-3 mb-2">
-                            <div className="flex-1">
-                              <p className="text-xs text-white mb-1">{r.reason}</p>
-                              <p className="text-[8px] text-gray-500">Confianza: {r.confidence}</p>
-                            </div>
-                            {r.target_id && (
-                              <button onClick={() => { handleApplyAction(r.action, r.target_id); setAnalysis(null); }}
-                                className="text-[9px] px-2 py-1 rounded-lg bg-emerald-600 text-white font-bold ml-2 shrink-0">
-                                ✅ Aplicar
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {(analysis.ads || []).length > 0 && (
-                      <div>
-                        <p className="text-[10px] text-gray-400 font-bold mb-2">📋 Anuncios</p>
-                        {analysis.ads.map((a: any, i: number) => (
-                          <div key={i} className="flex justify-between items-center text-[10px] py-1 border-b border-white/5">
-                            <span className="text-gray-300 truncate flex-1">{a.name}</span>
-                            <span className="text-gray-400 mx-2">${(a.spend || 0).toLocaleString()}</span>
-                            <span className="text-emerald-400">{a.leads} leads</span>
-                            <span className="text-gray-500 ml-2">CTR {a.ctr}%</span>
-                          </div>
-                        ))}
-                        {analysis.best_ad && <p className="text-[9px] text-emerald-400 mt-2">🏆 Mejor: {analysis.best_ad}</p>}
-                        {analysis.worst_ad && <p className="text-[9px] text-red-400">💀 Peor: {analysis.worst_ad}</p>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+              </div>              
             </>
           )}
         </div>
@@ -975,6 +911,75 @@ export default function AdsPage() {
                   )}
                 </div>
                 <p className="text-[9px] text-gray-600 text-center mt-2">Se crea pausada. Actívala cuando estés listo.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    {analysis && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setAnalysis(null)}>
+          <div className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto" onClick={(e: any) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold">🔍 Análisis de campaña</h3>
+              <button onClick={() => setAnalysis(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="bg-white/[0.03] rounded-lg p-2 text-center">
+                <p className="text-[8px] text-gray-500">Gasto</p>
+                <p className="text-sm font-bold">${(analysis.metrics?.spend || 0).toLocaleString()}</p>
+              </div>
+              <div className="bg-white/[0.03] rounded-lg p-2 text-center">
+                <p className="text-[8px] text-gray-500">Leads</p>
+                <p className="text-sm font-bold text-emerald-400">{analysis.metrics?.leads || 0}</p>
+              </div>
+              <div className="bg-white/[0.03] rounded-lg p-2 text-center">
+                <p className="text-[8px] text-gray-500">CPL</p>
+                <p className="text-sm font-bold text-purple-400">${(analysis.metrics?.cpl || 0).toLocaleString()}</p>
+              </div>
+            </div>
+            {analysis.funnel_diagnosis && (
+              <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-3 mb-4">
+                <p className="text-[10px] text-indigo-400 font-bold mb-1">📊 Diagnóstico</p>
+                <p className="text-xs text-gray-300">{analysis.funnel_diagnosis}</p>
+              </div>
+            )}
+            {analysis.ai_insight && (
+              <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-3 mb-4">
+                <p className="text-[10px] text-purple-400 font-bold mb-1">🤖 Insight IA</p>
+                <p className="text-xs text-gray-300">{analysis.ai_insight}</p>
+              </div>
+            )}
+            {(analysis.recommendations || []).length > 0 && (
+              <div className="mb-4">
+                <p className="text-[10px] text-gray-400 font-bold mb-2">💡 Recomendaciones</p>
+                {analysis.recommendations.map((r: any, ri: number) => (
+                  <div key={ri} className="flex items-center justify-between bg-white/[0.03] rounded-lg p-3 mb-2">
+                    <div className="flex-1">
+                      <p className="text-xs text-white mb-1">{r.reason}</p>
+                      <p className="text-[8px] text-gray-500">Confianza: {r.confidence}</p>
+                    </div>
+                    {r.target_id && (
+                      <button onClick={() => { handleApplyAction(r.action, r.target_id); setAnalysis(null); }}
+                        className="text-[9px] px-2 py-1 rounded-lg bg-emerald-600 text-white font-bold ml-2 shrink-0">
+                        ✅ Aplicar
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {(analysis.ads || []).length > 0 && (
+              <div>
+                <p className="text-[10px] text-gray-400 font-bold mb-2">📋 Anuncios</p>
+                {analysis.ads.map((a: any, ai: number) => (
+                  <div key={ai} className="flex justify-between items-center text-[10px] py-1 border-b border-white/5">
+                    <span className="text-gray-300 truncate flex-1">{a.name}</span>
+                    <span className="text-gray-400 mx-2">${(a.spend || 0).toLocaleString()}</span>
+                    <span className="text-emerald-400">{a.leads} leads</span>
+                  </div>
+                ))}
+                {analysis.best_ad && <p className="text-[9px] text-emerald-400 mt-2">🏆 Mejor: {analysis.best_ad}</p>}
+                {analysis.worst_ad && <p className="text-[9px] text-red-400">💀 Peor: {analysis.worst_ad}</p>}
               </div>
             )}
           </div>
