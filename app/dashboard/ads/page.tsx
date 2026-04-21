@@ -418,7 +418,7 @@ export default function AdsPage() {
                           showToast('⏳ Creando cuenta publicitaria...');
                           const res = await fetch(`${API_URL}/ads/create-account`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' } });
                           const data = await res.json();
-                          if (res.ok) { showToast(`✓ ${data.message}`); const ac = await fetch(`${API_URL}/ads/accounts`, { headers: h }).then(r => r.json()); setAccounts(ac.accounts || []); if (ac.accounts?.length) setWiz(prev => ({...prev, ad_account_id: ac.accounts[0].id})); }
+                          if (res.ok) { showToast(`✓ ${data.message}`); const ac = await fetch(`${API_URL}/ads/accounts`, { headers: h }).then(r => r.json()); setAccounts(ac.accounts || []); if (ac.accounts?.length) setWiz((prev: any) => ({...prev, ad_account_id: ac.accounts[0].id})); }
                           else showToast(data.error || 'Error');
                         }} className="text-[10px] px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all">
                           + Crear cuenta publicitaria
@@ -520,7 +520,7 @@ export default function AdsPage() {
                             🔄 Rehacer Copy
                           </button>
                           {variants.length > 1 && (
-                            <button onClick={() => { setVariants(prev => prev.filter((_, idx) => idx !== i)); showToast('Variante descartada'); }}
+                            <button onClick={() => { setVariants((prev: any[]) => prev.filter((_, idx) => idx !== i)); showToast('Variante descartada'); }}
                               className="text-[8px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all" title="Descartar variante">
                               🗑️
                             </button>
@@ -612,7 +612,7 @@ export default function AdsPage() {
                   if (data.variants?.length) {
                     const svcImg = data.service_image || '';
                     const newV = {...data.variants[0], image_url: data.variants[0].image_url || svcImg || variants[0]?.image_url || ''};
-                    setVariants(prev => [...prev, newV]);
+                    setVariants((prev: any[]) => [...prev, newV]);
                     showToast('✅ Variante agregada');
                   } else showToast('Error generando');
                 }} className="w-full py-2 rounded-xl border border-dashed border-white/10 text-xs text-gray-400 hover:bg-white/[0.03] hover:text-white transition-all mb-4">
