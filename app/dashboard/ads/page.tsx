@@ -489,6 +489,28 @@ export default function AdsPage() {
                     <div key={i} className="border border-white/10 rounded-xl p-4">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-[10px] text-gray-500">Anuncio {i + 1}</span>
+                        <div className="flex gap-1">
+                          <button onClick={async () => {
+                            showToast('⏳ Regenerando copy...');
+                            const res = await fetch(`${API_URL}/ads/campaigns/generate`, {
+                              method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ service_slug: wiz.service_slug, budget_daily: parseInt(wiz.budget_daily || '15000') }),
+                            });
+                            const data = await res.json();
+                            if (data.variants?.length) {
+                              const nv = [...variants]; nv[i] = {...nv[i], headline: data.variants[0].headline, text: data.variants[0].text, description: data.variants[0].description};
+                              setVariants(nv); showToast('✅ Copy regenerado');
+                            } else showToast('Error regenerando');
+                          }} className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all" title="Regenerar texto">
+                            🔄 Copy
+                          </button>
+                          {variants.length > 1 && (
+                            <button onClick={() => { setVariants(prev => prev.filter((_, idx) => idx !== i)); showToast('Variante descartada'); }}
+                              className="text-[8px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all" title="Descartar variante">
+                              🗑️
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <div>
