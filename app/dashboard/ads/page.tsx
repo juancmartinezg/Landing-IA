@@ -21,6 +21,7 @@ export default function AdsPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [pages, setPages] = useState<any[]>([]);
   const [igAccounts, setIgAccounts] = useState<any[]>([]);
+  const [campFilter, setCampFilter] = useState('all');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
   const h = { 'client-id': user?.companyId || '' };
   useEffect(() => {
@@ -173,31 +174,41 @@ export default function AdsPage() {
             <button onClick={() => setTab('create')} className="mt-3 text-indigo-400 text-sm font-bold">Crear →</button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {campaigns.map((c, i) => (
-              <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <p className="font-bold">{c.name}</p>
-                  <p className="text-xs text-gray-500">{c.ad_ids?.length || 0} anuncios • ${(c.budget_daily || 0).toLocaleString()}/día</p>
+          <div>
+            <div className="flex gap-2 mb-4">
+              {[{id:'all',l:'Todas'},{id:'ACTIVE',l:'🟢 Activas'},{id:'PAUSED',l:'⏸ Pausadas'}].map(f => (
+                <button key={f.id} onClick={() => setCampFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${campFilter === f.id ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>
+                  {f.l} ({f.id === 'all' ? campaigns.length : campaigns.filter(c => c.status === f.id).length})
+                </button>
+              ))}
+            </div>
+            <div className="space-y-3">
+              {campaigns.filter(c => campFilter === 'all' || c.status === campFilter).map((c, i) => (
+                <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <p className="font-bold text-sm">{c.name}</p>
+                    <p className="text-xs text-gray-500">{c.ad_ids?.length || 0} anuncios{c.budget_daily ? ` • $${c.budget_daily.toLocaleString()}/día` : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${c.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{c.status || 'PAUSED'}</span>
+                    <button onClick={async () => {
+                      const ns = c.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+                      const res = await fetch(`${API_URL}/ads/campaigns/toggle`, {
+                        method: 'PUT', headers: { ...h, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ campaign_id: c.campaign_id, status: ns }),
+                      });
+                      const data = await res.json();
+                      if (res.ok) { showToast(`✓ ${data.message}`); fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).then(d => setCampaigns(d.campaigns || [])); }
+                      else showToast(data.error || 'Error');
+                    }} className={`text-[10px] px-2 py-1 rounded-full font-bold transition-all ${c.status === 'ACTIVE' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}>
+                      {c.status === 'ACTIVE' ? '⏸ Pausar' : '▶ Activar'}
+                    </button>
+                    <span className="text-[10px] text-gray-600">{new Date((c.created_at || 0) * 1000).toLocaleDateString()}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${c.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{c.status || 'PAUSED'}</span>
-                  <button onClick={async () => {
-                    const ns = c.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-                    const res = await fetch(`${API_URL}/ads/campaigns/toggle`, {
-                      method: 'PUT', headers: { ...h, 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ campaign_id: c.campaign_id, status: ns }),
-                    });
-                    const data = await res.json();
-                    if (res.ok) { showToast(`✓ ${data.message}`); fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).then(d => setCampaigns(d.campaigns || [])); }
-                    else showToast(data.error || 'Error');
-                  }} className={`text-[10px] px-2 py-1 rounded-full font-bold transition-all ${c.status === 'ACTIVE' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}>
-                    {c.status === 'ACTIVE' ? '⏸ Pausar' : '▶ Activar'}
-                  </button>
-                  <span className="text-[10px] text-gray-600">{new Date((c.created_at || 0) * 1000).toLocaleDateString()}</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )
       )}
