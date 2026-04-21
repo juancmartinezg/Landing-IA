@@ -905,6 +905,32 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
+        {/* Descripción Visual del Negocio */}
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold">Identidad Visual 🎨</h3>
+            <button onClick={async () => {
+              setSaving(true);
+              const el = document.getElementById('visual-desc') as HTMLTextAreaElement;
+              await fetch(`${API_URL}/config`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                body: JSON.stringify({ visual_description: el?.value || '' }),
+              });
+              showToast('✓ Descripción visual guardada');
+              setSaving(false);
+            }} disabled={saving}
+              className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
+              {saving ? '...' : 'Guardar'}
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-500 mb-3">Describe cómo se ve tu negocio. La IA usará esto para generar imágenes publicitarias más fieles a tu marca.</p>
+          <textarea id="visual-desc" defaultValue={config?.visual_description || ''}
+            placeholder="Ej: Polígono de tiro al aire libre, rodeado de montañas, zona rural verde, personas con camisetas negras y gafas de protección..."
+            rows={3}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white resize-none" />
+          <p className="text-[9px] text-gray-600 mt-2">Incluye: colores de tu marca, tipo de instalaciones, vestimenta del equipo, ambiente general.</p>
+        </div>
         {/* Importar Sitio Web */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
           <div className="flex justify-between items-center mb-4">
