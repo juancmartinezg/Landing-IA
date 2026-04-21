@@ -191,7 +191,7 @@ export default function AdsPage() {
                     <p className="text-xs text-gray-500">{c.ad_ids?.length || 0} anuncios{c.budget_daily ? ` • $${c.budget_daily.toLocaleString()}/día` : ''}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${c.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{c.status || 'PAUSED'}</span>
+                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${c.status === 'ACTIVE' && c.budget_daily > 0 ? 'bg-emerald-500/20 text-emerald-400' : c.status === 'ACTIVE' ? 'bg-gray-500/20 text-gray-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{c.status === 'ACTIVE' && !c.budget_daily ? 'Finalizada' : c.status === 'ACTIVE' ? 'Activa' : 'Pausada'}</span>
                     <button onClick={async () => {
                       const ns = c.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
                       const res = await fetch(`${API_URL}/ads/campaigns/toggle`, {
@@ -469,6 +469,46 @@ export default function AdsPage() {
                         <span className="text-[10px] text-gray-500">Anuncio {i + 1}</span>
                       </div>
                       <div className="space-y-2">
+                        <div>
+                          <label className="text-[9px] text-gray-500">Imagen</label>
+                          <div className="flex gap-2 items-center">
+                            {v.image_url ? (
+                              <img src={v.image_url} className="w-16 h-16 rounded-lg object-cover" />
+                            ) : (
+                              <div className="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center text-gray-600 text-[10px]">Sin imagen</div>
+                            )}
+                            <div className="flex flex-col gap-1">
+                              <button onClick={async () => {
+                                showToast('⏳ Generando imagen con IA...');
+                                const res = await fetch(`${API_URL}/ads/generate-image`, {
+                                  method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ prompt: v.headline + ' ' + v.text, service_slug: wiz.service_slug }),
+                                });
+                                const data = await res.json();
+                                if (res.ok && data.image_url) {
+                                  const nv = [...variants]; nv[i] = {...nv[i], image_url: data.image_url}; setVariants(nv);
+                                  showToast('✅ Imagen generada');
+                                } else showToast(data.error || 'Error');
+                              }} className="text-[9px] px-2 py-1 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600/40 font-bold transition-all">
+                                🤖 Generar con IA
+                              </button>
+                              <label className="text-[9px] px-2 py-1 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 font-bold transition-all cursor-pointer text-center">
+                                📷 Subir
+                                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  const r = await fetch(`${API_URL}/upload-url?file_name=${encodeURIComponent(file.name)}&folder=ads`, { headers: h });
+                                  const d = await r.json();
+                                  if (d.upload_url) {
+                                    await fetch(d.upload_url, { method: 'PUT', headers: { 'Content-Type': d.content_type }, body: file });
+                                    const nv = [...variants]; nv[i] = {...nv[i], image_url: d.public_url}; setVariants(nv);
+                                    showToast('✅ Imagen subida');
+                                  }
+                                }} />
+                              </label>
+                            </div>
+                          </div>
+                        </div>
                         <div>
                           <label className="text-[9px] text-gray-500">Título</label>
                           <input value={v.headline} onChange={e => { const nv = [...variants]; nv[i] = {...nv[i], headline: e.target.value}; setVariants(nv); }}
