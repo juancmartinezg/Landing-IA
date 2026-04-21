@@ -473,7 +473,8 @@ export default function AdsPage() {
                           <label className="text-[9px] text-gray-500">Imagen</label>
                           <div className="flex gap-2 items-center">
                             {v.image_url ? (
-                              <img src={v.image_url} className="w-16 h-16 rounded-lg object-cover" />
+                              <img src={v.image_url} className="w-16 h-16 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-all"
+                                onClick={() => window.open(v.image_url, '_blank')} title="Click para ver en grande" />
                             ) : (
                               <div className="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center text-gray-600 text-[10px]">Sin imagen</div>
                             )}
