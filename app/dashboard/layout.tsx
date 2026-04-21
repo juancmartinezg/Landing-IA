@@ -18,6 +18,7 @@ const menuItems = [
   { href: '/dashboard/templates', label: 'Plantillas', icon: '📋' },
   { href: '/dashboard/gateway', label: 'Pasarela', icon: '🏦' },
   { href: '/dashboard/inventory', label: 'Inventario', icon: '📦' },
+  { href: '/dashboard/ads', label: 'Facebook Ads', icon: '📢' },
   { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: '📱' },
   { href: '/dashboard/settings', label: 'Configuracion', icon: '⚙️' },
 ];
