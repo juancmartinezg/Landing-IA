@@ -182,6 +182,18 @@ export default function AdsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${c.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{c.status || 'PAUSED'}</span>
+                  <button onClick={async () => {
+                    const ns = c.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+                    const res = await fetch(`${API_URL}/ads/campaigns/toggle`, {
+                      method: 'PUT', headers: { ...h, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ campaign_id: c.campaign_id, status: ns }),
+                    });
+                    const data = await res.json();
+                    if (res.ok) { showToast(`✓ ${data.message}`); fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).then(d => setCampaigns(d.campaigns || [])); }
+                    else showToast(data.error || 'Error');
+                  }} className={`text-[10px] px-2 py-1 rounded-full font-bold transition-all ${c.status === 'ACTIVE' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}>
+                    {c.status === 'ACTIVE' ? '⏸ Pausar' : '▶ Activar'}
+                  </button>
                   <span className="text-[10px] text-gray-600">{new Date((c.created_at || 0) * 1000).toLocaleDateString()}</span>
                 </div>
               </div>
