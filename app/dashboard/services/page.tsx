@@ -7,6 +7,8 @@ const emptyForm = {
   regular_price: '', deposit_required: '', currency: 'COP',
   image_url: '', duration_hours: '1', service_type: 'personalizado',
   post_payment_flow: '', download_url: '',
+  track_inventory: false, sku: '', stock_quantity: '', stock_min_alert: '5',
+  cost_price: '', supplier: '',
 };
 export default function ServicesPage() {
   const { user } = useAuth();
@@ -74,6 +76,12 @@ export default function ServicesPage() {
       service_type: svc.scheduling?.service_type || 'personalizado',
       post_payment_flow: svc.post_payment_flow || '',
       download_url: svc.download_url || '',
+      track_inventory: svc.track_inventory || false,
+      sku: svc.sku || '',
+      stock_quantity: String(svc.stock_quantity ?? ''),
+      stock_min_alert: String(svc.stock_min_alert ?? '5'),
+      cost_price: String(svc.cost_price ?? ''),
+      supplier: svc.supplier || '',
     });
     setShowForm(true);
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -107,6 +115,14 @@ export default function ServicesPage() {
           scheduling_mode: 'calendar',
         },
       };
+      if (form.track_inventory) {
+        payload.track_inventory = true;
+        payload.sku = form.sku;
+        payload.stock_quantity = parseInt(form.stock_quantity) || 0;
+        payload.stock_min_alert = parseInt(form.stock_min_alert) || 5;
+        payload.cost_price = parseInt(form.cost_price) || 0;
+        payload.supplier = form.supplier;
+      }
       if (editingSlug) {
         await fetch(`${API_URL}/services`, {
           method: 'PUT',
@@ -302,6 +318,48 @@ export default function ServicesPage() {
               )}
             </div>
           </div>
+          {/* Inventario */}
+          <div className="mt-4 border-t border-white/5 pt-4">
+            <label className="flex items-center gap-3 cursor-pointer mb-3">
+              <input type="checkbox" checked={form.track_inventory} onChange={e => setForm({...form, track_inventory: e.target.checked})}
+                className="w-4 h-4 rounded bg-white/5 border-white/20 text-indigo-600 focus:ring-indigo-500" />
+              <span className="text-sm font-medium">📦 Tiene inventario</span>
+            </label>
+            {form.track_inventory && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">SKU</label>
+                  <input value={form.sku} onChange={e => setForm({...form, sku: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white"
+                    placeholder="ABC-001" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Stock actual</label>
+                  <input type="number" value={form.stock_quantity} onChange={e => setForm({...form, stock_quantity: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white"
+                    placeholder="100" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Alerta stock bajo</label>
+                  <input type="number" value={form.stock_min_alert} onChange={e => setForm({...form, stock_min_alert: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white"
+                    placeholder="5" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Precio costo</label>
+                  <input type="number" value={form.cost_price} onChange={e => setForm({...form, cost_price: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white"
+                    placeholder="30000" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Proveedor</label>
+                  <input value={form.supplier} onChange={e => setForm({...form, supplier: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white"
+                    placeholder="Nombre proveedor" />
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex gap-3 mt-4">
             <button onClick={closeForm}
               className="px-6 py-3 rounded-xl text-sm font-bold border border-white/10 hover:bg-white/5 transition-all">
@@ -388,7 +446,17 @@ export default function ServicesPage() {
                   <p className="text-xs text-gray-500">{svc.scheduling?.service_type} | {svc.scheduling?.duration_hours}h</p>
                 </div>
                 {svc.pricing?.deposit_required > 0 && (
-                  <p className="text-xs text-gray-500 mb-3">Anticipo: ${svc.pricing.deposit_required.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mb-1">Anticipo: ${svc.pricing.deposit_required.toLocaleString()}</p>
+                )}
+                {svc.track_inventory && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                      (svc.stock_quantity || 0) <= (svc.stock_min_alert || 5) ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
+                    }`}>
+                      📦 {svc.stock_quantity ?? 0} en stock
+                    </span>
+                    {svc.sku && <span className="text-[9px] text-gray-600">SKU: {svc.sku}</span>}
+                  </div>
                 )}
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
                   <button onClick={() => openEdit(svc)}
