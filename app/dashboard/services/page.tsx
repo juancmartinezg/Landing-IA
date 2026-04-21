@@ -17,6 +17,32 @@ export default function ServicesPage() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [showCarousel, setShowCarousel] = useState(false);
+  const [carouselSelected, setCarouselSelected] = useState<string[]>([]);
+  const [creatingCarousel, setCreatingCarousel] = useState(false);
+  const toggleCarouselService = (slug: string) => {
+    setCarouselSelected(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
+  };
+  const handleCreateCarousel = async () => {
+    if (carouselSelected.length < 2) return;
+    setCreatingCarousel(true);
+    try {
+      const res = await fetch(`${API_URL}/templates/carousel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ services: carouselSelected }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`✓ Template "${data.template_name}" creado. ${data.note || ''}`);
+        setShowCarousel(false);
+        setCarouselSelected([]);
+      } else {
+        showToast(data.error || 'Error creando template');
+      }
+    } catch { showToast('Error de conexión'); }
+    setCreatingCarousel(false);
+  };
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -129,9 +155,16 @@ export default function ServicesPage() {
       )}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Servicios 🛍️</h1>
-        <button onClick={showForm ? closeForm : openNew} className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-sm font-bold transition-all">
-          {showForm ? 'Cancelar' : '+ Agregar'}
-        </button>
+       <div className="flex gap-2">
+          {services.length >= 2 && (
+            <button onClick={() => setShowCarousel(!showCarousel)} className="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-sm font-bold transition-all">
+              {showCarousel ? '✕ Cerrar' : '🎠 Carrusel WA'}
+            </button>
+          )}
+          <button onClick={showForm ? closeForm : openNew} className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-sm font-bold transition-all">
+            {showForm ? 'Cancelar' : '+ Agregar'}
+          </button>
+        </div>
       </div>
       {showForm && (
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 mb-6">
@@ -278,6 +311,49 @@ export default function ServicesPage() {
               className="bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50">
               {saving ? 'Guardando...' : editingSlug ? 'Actualizar servicio' : 'Guardar servicio'}
             </button>
+          </div>
+        </div>
+      )}
+     {/* Modal seleccionar servicios para carrusel */}
+      {showCarousel && (
+        <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-6 mb-6">
+          <h3 className="font-bold mb-2">🎠 Crear Carrusel de WhatsApp</h3>
+          <p className="text-[10px] text-gray-400 mb-4">Selecciona 2-10 servicios. Se creará un template de carrusel en Meta (puede tardar en aprobarse).</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mb-4">
+            {services.filter(s => s.active !== false).map((svc, i) => (
+              <button key={i} onClick={() => toggleCarouselService(svc.slug)}
+                className={`p-3 rounded-xl text-left transition-all border ${
+                  carouselSelected.includes(svc.slug)
+                    ? 'border-purple-500 bg-purple-600/10'
+                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                }`}>
+                <div className="flex items-center gap-2">
+                  <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center text-[10px] ${
+                    carouselSelected.includes(svc.slug) ? 'border-purple-500 bg-purple-500 text-white' : 'border-white/20'
+                  }`}>
+                    {carouselSelected.includes(svc.slug) ? '✓' : ''}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold truncate">{svc.name}</p>
+                    <p className="text-[9px] text-gray-500">${(svc.pricing?.regular_price || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">{carouselSelected.length} seleccionados</span>
+            <div className="flex gap-2">
+              <button onClick={() => { setShowCarousel(false); setCarouselSelected([]); }}
+                className="px-4 py-2 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-all">
+                Cancelar
+              </button>
+              <button onClick={handleCreateCarousel}
+                disabled={creatingCarousel || carouselSelected.length < 2}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 disabled:opacity-30 transition-all">
+                {creatingCarousel ? '⏳ Creando...' : `🎠 Crear carrusel (${carouselSelected.length})`}
+              </button>
+            </div>
           </div>
         </div>
       )}
