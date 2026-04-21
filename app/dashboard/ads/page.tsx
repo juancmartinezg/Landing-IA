@@ -376,7 +376,18 @@ export default function AdsPage() {
                   <div>
                     <label className="text-xs text-gray-400 mb-2 block">Cuenta publicitaria</label>
                     {accounts.length === 0 ? (
-                      <p className="text-xs text-yellow-400 bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3">⚠️ No tienes cuentas publicitarias activas. Conéctalas desde Facebook Business.</p>
+                      <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3">
+                        <p className="text-xs text-yellow-400 mb-2">⚠️ No tienes cuentas publicitarias activas.</p>
+                        <button onClick={async () => {
+                          showToast('⏳ Creando cuenta publicitaria...');
+                          const res = await fetch(`${API_URL}/ads/create-account`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' } });
+                          const data = await res.json();
+                          if (res.ok) { showToast(`✓ ${data.message}`); const ac = await fetch(`${API_URL}/ads/accounts`, { headers: h }).then(r => r.json()); setAccounts(ac.accounts || []); if (ac.accounts?.length) setWiz(prev => ({...prev, ad_account_id: ac.accounts[0].id})); }
+                          else showToast(data.error || 'Error');
+                        }} className="text-[10px] px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all">
+                          + Crear cuenta publicitaria
+                        </button>
+                      </div>
                     ) : (
                       <div className="space-y-2">
                         {accounts.map((acc, i) => (
