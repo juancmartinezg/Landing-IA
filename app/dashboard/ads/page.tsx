@@ -74,7 +74,7 @@ export default function AdsPage() {
       const budgetDaily = Math.max(5000, parseInt(wiz.budget_daily || '15000'));
       const res = await fetch(`${API_URL}/ads/campaigns/publish`, {
         method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: campName, objective: 'OUTCOME_LEADS', budget_daily: budgetDaily, variants, country: wiz.country, city: wiz.city, radius: wiz.radius, duration: wiz.duration })
+        body: JSON.stringify({ name: campName, objective: 'OUTCOME_LEADS', budget_daily: budgetDaily, variants, country: wiz.country, city: wiz.city, radius: wiz.radius, duration: wiz.duration, service_slug: wiz.service_slug })
       });
       const data = await res.json();
       if (res.ok) {
