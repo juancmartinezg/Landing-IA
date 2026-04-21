@@ -22,6 +22,8 @@ export default function AdsPage() {
   const [pages, setPages] = useState<any[]>([]);
   const [igAccounts, setIgAccounts] = useState<any[]>([]);
   const [campFilter, setCampFilter] = useState('all');
+  const [previewImg, setPreviewImg] = useState<string | null>(null);
+  const [genImgIdx, setGenImgIdx] = useState<number | null>(null);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
   const h = { 'client-id': user?.companyId || '' };
   useEffect(() => {
@@ -474,13 +476,13 @@ export default function AdsPage() {
                           <div className="flex gap-2 items-center">
                             {v.image_url ? (
                               <img src={v.image_url} className="w-16 h-16 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-all"
-                                onClick={() => window.open(v.image_url, '_blank')} title="Click para ver en grande" />
+                                onClick={() => setPreviewImg(v.image_url)} title="Click para ver en grande" />
                             ) : (
                               <div className="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center text-gray-600 text-[10px]">Sin imagen</div>
                             )}
                             <div className="flex flex-col gap-1">
-                              <button onClick={async () => {
-                                showToast('⏳ Generando imagen con IA...');
+                              <button disabled={genImgIdx === i} onClick={async () => {
+                                setGenImgIdx(i);
                                 const res = await fetch(`${API_URL}/ads/generate-image`, {
                                   method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ prompt: v.headline + ' ' + v.text, service_slug: wiz.service_slug }),
@@ -489,9 +491,10 @@ export default function AdsPage() {
                                 if (res.ok && data.image_url) {
                                   const nv = [...variants]; nv[i] = {...nv[i], image_url: data.image_url}; setVariants(nv);
                                   showToast('✅ Imagen generada');
-                                } else showToast(data.error || 'Error');
-                              }} className="text-[9px] px-2 py-1 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600/40 font-bold transition-all">
-                                🤖 Generar con IA
+                                } else showToast(data.error || 'Error generando imagen');
+                                setGenImgIdx(null);
+                              }} className="text-[9px] px-2 py-1 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600/40 font-bold transition-all disabled:opacity-50">
+                                {genImgIdx === i ? '⏳ Generando...' : '🤖 Generar con IA'}
                               </button>
                               <label className="text-[9px] px-2 py-1 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 font-bold transition-all cursor-pointer text-center">
                                 📷 Subir
@@ -542,6 +545,14 @@ export default function AdsPage() {
                 <p className="text-[9px] text-gray-600 text-center mt-2">Se crea pausada. Actívala cuando estés listo.</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+    {previewImg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setPreviewImg(null)}>
+          <div className="relative max-w-2xl max-h-[80vh] mx-4" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setPreviewImg(null)} className="absolute -top-3 -right-3 w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white text-lg z-10 transition-all">✕</button>
+            <img src={previewImg} className="max-w-full max-h-[80vh] rounded-2xl object-contain" />
           </div>
         </div>
       )}
