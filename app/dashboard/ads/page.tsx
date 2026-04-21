@@ -17,7 +17,7 @@ export default function AdsPage() {
   const [syncForm, setSyncForm] = useState({ name: '', segment: 'all' });
   const [syncing, setSyncing] = useState(false);
   const [wizStep, setWizStep] = useState(1);
-  const [wiz, setWiz] = useState({ service_slug: '', location: '', radius: '10', budget_total: '150000', ad_account_id: '', page_id: '', page_name: '', instagram_id: '' });
+  const [wiz, setWiz] = useState({ service_slug: '', country: 'CO', city: '', location: '', radius: '10', budget_daily: '15000', duration: '7', ad_account_id: '', page_id: '', page_name: '', instagram_id: '' });
   const [accounts, setAccounts] = useState<any[]>([]);
   const [pages, setPages] = useState<any[]>([]);
   const [igAccounts, setIgAccounts] = useState<any[]>([]);
@@ -47,7 +47,7 @@ export default function AdsPage() {
     setCreating(true); setVariants([]);
     showToast('⏳ La IA está creando tus anuncios...');
     try {
-      const budgetDaily = Math.max(5000, Math.round(parseInt(wiz.budget_total) / 7));
+      const budgetDaily = Math.max(5000, parseInt(wiz.budget_daily || '15000'));
       const res = await fetch(`${API_URL}/ads/campaigns/generate`, {
         method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
         body: JSON.stringify({ service_slug: wiz.service_slug, budget_daily: budgetDaily }),
@@ -71,7 +71,7 @@ export default function AdsPage() {
     try {
       const svc = services.find(s => s.slug === wiz.service_slug);
       const campName = svc ? `${svc.name} - ${new Date().toLocaleDateString()}` : `Campaña ${new Date().toLocaleDateString()}`;
-      const budgetDaily = Math.max(5000, Math.round(parseInt(wiz.budget_total) / 7));
+      const budgetDaily = Math.max(5000, parseInt(wiz.budget_daily || '15000'));
       const res = await fetch(`${API_URL}/ads/campaigns/publish`, {
         method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: campName, objective: 'OUTCOME_LEADS', budget_daily: budgetDaily, variants }),
@@ -255,28 +255,53 @@ export default function AdsPage() {
             {wizStep === 2 && (
               <div>
                 <h3 className="font-bold text-lg mb-2">¿Dónde están tus clientes?</h3>
-                <p className="text-xs text-gray-400 mb-4">¿Hasta dónde quieres que llegue tu anuncio?</p>
-                <div className="space-y-2 mb-4">
-                  {[
-                    { id: '5', icon: '📍', label: 'Muy cerca', desc: 'A 5 km de mi negocio' },
-                    { id: '10', icon: '🏘️', label: 'Mi zona', desc: 'A 10 km (recomendado)' },
-                    { id: '25', icon: '🏙️', label: 'Mi ciudad', desc: 'A 25 km' },
-                    { id: '0', icon: '🌎', label: 'Todo el país', desc: 'Sin límite geográfico' },
-                  ].map(opt => (
-                    <button key={opt.id} onClick={() => setWiz({...wiz, radius: opt.id})}
-                      className={`w-full p-3 rounded-xl text-left transition-all border ${wiz.radius === opt.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
-                      <p className="text-sm font-bold">{opt.icon} {opt.label}</p>
-                      <p className="text-[10px] text-gray-500">{opt.desc}</p>
-                    </button>
-                  ))}
-                </div>
-                {wiz.radius !== '0' && (
-                  <div className="mb-4">
-                    <label className="text-xs text-gray-400 mb-1 block">Dirección de tu negocio</label>
-                    <input value={wiz.location} onChange={e => setWiz({...wiz, location: e.target.value})} placeholder="Ej: Calle 80 #45-20, Medellín"
+                <p className="text-xs text-gray-400 mb-4">Configura la ubicación de tu anuncio</p>
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">País</label>
+                    <select value={wiz.country} onChange={e => setWiz({...wiz, country: e.target.value})}
+                      className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white">
+                      <option value="CO">🇨🇴 Colombia</option>
+                      <option value="MX">🇲🇽 México</option>
+                      <option value="AR">🇦🇷 Argentina</option>
+                      <option value="CL">🇨🇱 Chile</option>
+                      <option value="PE">🇵🇪 Perú</option>
+                      <option value="EC">🇪🇨 Ecuador</option>
+                      <option value="US">🇺🇸 Estados Unidos</option>
+                      <option value="ES">🇪🇸 España</option>
+                      <option value="BR">🇧🇷 Brasil</option>
+                      <option value="PA">🇵🇦 Panamá</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Ciudad (opcional)</label>
+                    <input value={wiz.city} onChange={e => setWiz({...wiz, city: e.target.value})} placeholder="Ej: Medellín, Bogotá, Miami..."
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
                   </div>
-                )}
+                  <div>
+                    <label className="text-xs text-gray-400 mb-2 block">Alcance</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: '10', icon: '📍', label: 'Mi zona (10 km)' },
+                        { id: '25', icon: '🏙️', label: 'Mi ciudad (25 km)' },
+                        { id: '50', icon: '🗺️', label: 'Mi región (50 km)' },
+                        { id: '0', icon: '🌎', label: 'Todo el país' },
+                      ].map(opt => (
+                        <button key={opt.id} onClick={() => setWiz({...wiz, radius: opt.id})}
+                          className={`p-2.5 rounded-xl text-left transition-all border ${wiz.radius === opt.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                          <p className="text-xs font-bold">{opt.icon} {opt.label}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {wiz.radius !== '0' && (
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Dirección del negocio (para el radio)</label>
+                      <input value={wiz.location} onChange={e => setWiz({...wiz, location: e.target.value})} placeholder="Ej: Calle 80 #45-20"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <button onClick={() => setWizStep(1)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
                   <button onClick={() => setWizStep(3)} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold transition-all">Siguiente →</button>
@@ -286,26 +311,44 @@ export default function AdsPage() {
             {wizStep === 3 && (
               <div>
                 <h3 className="font-bold text-lg mb-2">¿Cuánto quieres invertir?</h3>
-                <p className="text-xs text-gray-400 mb-4">Presupuesto total (7 días)</p>
+                <p className="text-xs text-gray-400 mb-4">Presupuesto diario (lo que Meta recomienda)</p>
                 <div className="space-y-2 mb-4">
                   {[
-                    { amount: '50000', label: '💡 Probar', desc: '$50,000 — ~300 personas', tag: '' },
-                    { amount: '150000', label: '🚀 Crecer', desc: '$150,000 — ~1,000 personas', tag: 'Recomendado' },
-                    { amount: '350000', label: '🔥 Escalar', desc: '$350,000 — ~3,000 personas', tag: '' },
+                    { amount: '10000', label: '💡 Probar', desc: '$10,000/día — ~200 personas', tag: '' },
+                    { amount: '20000', label: '🚀 Crecer', desc: '$20,000/día — ~600 personas', tag: 'Recomendado' },
+                    { amount: '50000', label: '🔥 Escalar', desc: '$50,000/día — ~1,500 personas', tag: '' },
                   ].map(opt => (
-                    <button key={opt.amount} onClick={() => setWiz({...wiz, budget_total: opt.amount})}
-                      className={`w-full p-3 rounded-xl text-left transition-all border relative ${wiz.budget_total === opt.amount ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                    <button key={opt.amount} onClick={() => setWiz({...wiz, budget_daily: opt.amount})}
+                      className={`w-full p-3 rounded-xl text-left transition-all border relative ${wiz.budget_daily === opt.amount ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
                       <p className="text-sm font-bold">{opt.label}</p>
                       <p className="text-[10px] text-gray-500">{opt.desc}</p>
                       {opt.tag && <span className="absolute top-2 right-3 text-[8px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 font-bold">{opt.tag}</span>}
                     </button>
                   ))}
                 </div>
-                <div className="mb-4">
-                  <label className="text-xs text-gray-400 mb-1 block">Monto personalizado</label>
-                  <input type="number" value={wiz.budget_total} onChange={e => setWiz({...wiz, budget_total: e.target.value})}
+                <div className="mb-3">
+                  <label className="text-xs text-gray-400 mb-1 block">Monto diario personalizado</label>
+                  <input type="number" value={wiz.budget_daily} onChange={e => setWiz({...wiz, budget_daily: e.target.value})}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
-                  <p className="text-[9px] text-gray-600 mt-1">${Math.max(5000, Math.round(parseInt(wiz.budget_total || '0') / 7)).toLocaleString()}/día durante 7 días</p>
+                </div>
+                <div className="mb-4">
+                  <label className="text-xs text-gray-400 mb-2 block">Duración</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: '7', label: '7 días' },
+                      { id: '15', label: '15 días' },
+                      { id: '30', label: '30 días' },
+                      { id: '0', label: 'Indefinida' },
+                    ].map(opt => (
+                      <button key={opt.id} onClick={() => setWiz({...wiz, duration: opt.id})}
+                        className={`p-2.5 rounded-xl text-center transition-all border ${wiz.duration === opt.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                        <p className="text-xs font-bold">{opt.label}</p>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-gray-600 mt-2">
+                    {wiz.duration === '0' ? 'La campaña correrá hasta que la pauses' : `Total estimado: $${(parseInt(wiz.budget_daily || '0') * parseInt(wiz.duration || '7')).toLocaleString()}`}
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setWizStep(2)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
@@ -412,7 +455,7 @@ export default function AdsPage() {
                   ))}
                 </div>
                 <div className="bg-white/[0.02] rounded-xl p-3 mb-4">
-                  <p className="text-[10px] text-gray-400">📋 Resumen: {variants.length} anuncios • ${parseInt(wiz.budget_total).toLocaleString()} total • {wiz.radius === '0' ? 'Todo el país' : `${wiz.radius} km`}</p>
+                  <p className="text-[10px] text-gray-400">📋 Resumen: {variants.length} anuncios • ${parseInt(wiz.budget_daily || '0').toLocaleString()}/día • {wiz.duration === '0' ? 'Indefinida' : `${wiz.duration} días`} • {wiz.radius === '0' ? 'Todo el país' : `${wiz.city || wiz.country} (${wiz.radius} km)`}</p>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setWizStep(4)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
