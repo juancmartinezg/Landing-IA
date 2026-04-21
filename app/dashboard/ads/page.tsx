@@ -12,11 +12,15 @@ export default function AdsPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [variants, setVariants] = useState<any[]>([]);
   const [syncForm, setSyncForm] = useState({ name: '', segment: 'all' });
   const [syncing, setSyncing] = useState(false);
   const [wizStep, setWizStep] = useState(1);
-  const [wiz, setWiz] = useState({ goal: 'whatsapp', service_slug: '', location: '', radius: '10', budget_total: '100000' });
+  const [wiz, setWiz] = useState({ service_slug: '', location: '', radius: '10', budget_total: '150000', ad_account_id: '', page_id: '', page_name: '', instagram_id: '' });
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [pages, setPages] = useState<any[]>([]);
+  const [igAccounts, setIgAccounts] = useState<any[]>([]);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
   const h = { 'client-id': user?.companyId || '' };
   useEffect(() => {
@@ -25,39 +29,67 @@ export default function AdsPage() {
       fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).catch(() => ({ campaigns: [] })),
       fetch(`${API_URL}/ads/audiences`, { headers: h }).then(r => r.json()).catch(() => ({ audiences: [] })),
       fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).catch(() => ({ services: [] })),
-    ]).then(([m, c, a, s]) => {
+      fetch(`${API_URL}/ads/accounts`, { headers: h }).then(r => r.json()).catch(() => ({ accounts: [] })),
+      fetch(`${API_URL}/ads/pages`, { headers: h }).then(r => r.json()).catch(() => ({ pages: [] })),
+    ]).then(([m, c, a, s, ac, pg]) => {
       setMetrics(m); setCampaigns(c.campaigns || []); setAudiences(a.audiences || []); setServices(s.services || []);
+      const accs = ac.accounts || [];
+      setAccounts(accs);
+      setPages(pg.pages || []);
+      const selAcc = accs.find((x: any) => x.selected);
+      if (selAcc) setWiz(prev => ({...prev, ad_account_id: selAcc.id}));
+      const selPage = (pg.pages || []).find((x: any) => x.selected);
+      if (selPage) setWiz(prev => ({...prev, page_id: selPage.id, page_name: selPage.name}));
       setLoading(false);
     });
   }, []);
-  const handleLaunch = async () => {
+  const handleGenerate = async () => {
     setCreating(true); setVariants([]);
-    showToast('⏳ La IA está creando tu campaña...');
+    showToast('⏳ La IA está creando tus anuncios...');
     try {
       const budgetDaily = Math.max(5000, Math.round(parseInt(wiz.budget_total) / 7));
-      const genRes = await fetch(`${API_URL}/ads/campaigns/generate`, {
+      const res = await fetch(`${API_URL}/ads/campaigns/generate`, {
         method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
         body: JSON.stringify({ service_slug: wiz.service_slug, budget_daily: budgetDaily }),
       });
-      const genData = await genRes.json();
-      const v = genData.variants || [];
-      if (!v.length) { showToast('Error generando anuncios'); setCreating(false); return; }
-      setVariants(v);
-      const svc = services.find(s => s.slug === wiz.service_slug);
-      const campName = svc ? `${svc.name} - ${new Date().toLocaleDateString()}` : `Campaña ${new Date().toLocaleDateString()}`;
-      const pubRes = await fetch(`${API_URL}/ads/campaigns/publish`, {
-        method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: campName, objective: wiz.goal === 'whatsapp' ? 'OUTCOME_LEADS' : 'OUTCOME_TRAFFIC', budget_daily: budgetDaily, variants: v }),
-      });
-      const pubData = await pubRes.json();
-      if (pubRes.ok) {
-        showToast('✅ ¡Campaña creada! La IA optimizará automáticamente.');
-        setTab('metrics'); setWizStep(1);
-        fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).then(d => setCampaigns(d.campaigns || []));
-        fetch(`${API_URL}/ads/metrics`, { headers: h }).then(r => r.json()).then(d => setMetrics(d));
-      } else showToast(pubData.error || 'Error publicando');
+      const data = await res.json();
+      if (data.variants?.length) { setVariants(data.variants); showToast('✅ Creativos listos. Revisa y edita.'); setWizStep(5); }
+      else showToast('Error generando creativos');
     } catch { showToast('Error de conexión'); }
     setCreating(false);
+  };
+  const handlePublish = async () => {
+    if (!variants.length) return;
+    setPublishing(true);
+    // Guardar cuenta seleccionada
+    if (wiz.ad_account_id || wiz.page_id) {
+      await fetch(`${API_URL}/ads/select-account`, {
+        method: 'PUT', headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ad_account_id: wiz.ad_account_id, page_id: wiz.page_id, page_name: wiz.page_name, instagram_id: wiz.instagram_id }),
+      }).catch(() => {});
+    }
+    try {
+      const svc = services.find(s => s.slug === wiz.service_slug);
+      const campName = svc ? `${svc.name} - ${new Date().toLocaleDateString()}` : `Campaña ${new Date().toLocaleDateString()}`;
+      const budgetDaily = Math.max(5000, Math.round(parseInt(wiz.budget_total) / 7));
+      const res = await fetch(`${API_URL}/ads/campaigns/publish`, {
+        method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: campName, objective: 'OUTCOME_LEADS', budget_daily: budgetDaily, variants }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('✅ ¡Campaña publicada!'); setTab('campaigns'); setWizStep(1); setVariants([]);
+        fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).then(d => setCampaigns(d.campaigns || []));
+      } else showToast(data.error || 'Error');
+    } catch { showToast('Error de conexión'); }
+    setPublishing(false);
+  };
+  const loadInstagram = async (pageId: string) => {
+    try {
+      const res = await fetch(`${API_URL}/ads/instagram`, { headers: h });
+      const data = await res.json();
+      setIgAccounts(data.instagram_accounts || []);
+    } catch {}
   };
   const handleSyncAudience = async () => {
     setSyncing(true);
@@ -195,7 +227,7 @@ export default function AdsPage() {
         <div className="max-w-lg mx-auto">
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
             <div className="flex gap-1 mb-6">
-              {[1,2,3].map(s => (
+              {[1,2,3,4,5].map(s => (
                 <div key={s} className={`flex-1 h-1.5 rounded-full transition-all ${s <= wizStep ? 'bg-indigo-500' : 'bg-white/10'}`} />
               ))}
             </div>
@@ -217,9 +249,7 @@ export default function AdsPage() {
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setWizStep(2)} className="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold transition-all">
-                  Siguiente →
-                </button>
+                <button onClick={() => setWizStep(2)} className="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold transition-all">Siguiente →</button>
               </div>
             )}
             {wizStep === 2 && (
@@ -243,8 +273,7 @@ export default function AdsPage() {
                 {wiz.radius !== '0' && (
                   <div className="mb-4">
                     <label className="text-xs text-gray-400 mb-1 block">Dirección de tu negocio</label>
-                    <input value={wiz.location} onChange={e => setWiz({...wiz, location: e.target.value})}
-                      placeholder="Ej: Calle 80 #45-20, Medellín"
+                    <input value={wiz.location} onChange={e => setWiz({...wiz, location: e.target.value})} placeholder="Ej: Calle 80 #45-20, Medellín"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
                   </div>
                 )}
@@ -257,12 +286,12 @@ export default function AdsPage() {
             {wizStep === 3 && (
               <div>
                 <h3 className="font-bold text-lg mb-2">¿Cuánto quieres invertir?</h3>
-                <p className="text-xs text-gray-400 mb-4">Presupuesto total para esta campaña (7 días)</p>
+                <p className="text-xs text-gray-400 mb-4">Presupuesto total (7 días)</p>
                 <div className="space-y-2 mb-4">
                   {[
-                    { amount: '50000', label: '💡 Probar', desc: '$50,000 — ~300 personas verán tu anuncio', tag: '' },
+                    { amount: '50000', label: '💡 Probar', desc: '$50,000 — ~300 personas', tag: '' },
                     { amount: '150000', label: '🚀 Crecer', desc: '$150,000 — ~1,000 personas', tag: 'Recomendado' },
-                    { amount: '350000', label: '🔥 Escalar', desc: '$350,000 — ~3,000 personas', tag: 'Más resultados' },
+                    { amount: '350000', label: '🔥 Escalar', desc: '$350,000 — ~3,000 personas', tag: '' },
                   ].map(opt => (
                     <button key={opt.amount} onClick={() => setWiz({...wiz, budget_total: opt.amount})}
                       className={`w-full p-3 rounded-xl text-left transition-all border relative ${wiz.budget_total === opt.amount ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
@@ -273,24 +302,131 @@ export default function AdsPage() {
                   ))}
                 </div>
                 <div className="mb-4">
-                  <label className="text-xs text-gray-400 mb-1 block">O escribe un monto personalizado</label>
+                  <label className="text-xs text-gray-400 mb-1 block">Monto personalizado</label>
                   <input type="number" value={wiz.budget_total} onChange={e => setWiz({...wiz, budget_total: e.target.value})}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
                   <p className="text-[9px] text-gray-600 mt-1">${Math.max(5000, Math.round(parseInt(wiz.budget_total || '0') / 7)).toLocaleString()}/día durante 7 días</p>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setWizStep(2)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
-                  <button onClick={handleLaunch} disabled={creating}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold disabled:opacity-30 transition-all">
-                    {creating ? '⏳ Creando...' : '🚀 Lanzar campaña'}
+                  <button onClick={() => setWizStep(4)} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold transition-all">Siguiente →</button>
+                </div>
+              </div>
+            )}
+            {wizStep === 4 && (
+              <div>
+                <h3 className="font-bold text-lg mb-2">¿Dónde publicar?</h3>
+                <p className="text-xs text-gray-400 mb-4">Selecciona tu cuenta publicitaria y página</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-2 block">Cuenta publicitaria</label>
+                    {accounts.length === 0 ? (
+                      <p className="text-xs text-yellow-400 bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3">⚠️ No tienes cuentas publicitarias activas. Conéctalas desde Facebook Business.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {accounts.map((acc, i) => (
+                          <button key={i} onClick={() => setWiz({...wiz, ad_account_id: acc.id})}
+                            className={`w-full p-3 rounded-xl text-left transition-all border ${wiz.ad_account_id === acc.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                            <p className="text-sm font-bold">{acc.name}</p>
+                            <p className="text-[10px] text-gray-500">{acc.business_name} • {acc.currency}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-2 block">Página de Facebook</label>
+                    {pages.length === 0 ? (
+                      <p className="text-xs text-yellow-400 bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3">⚠️ No tienes páginas vinculadas.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {pages.map((pg, i) => (
+                          <button key={i} onClick={() => { setWiz({...wiz, page_id: pg.id, page_name: pg.name}); loadInstagram(pg.id); }}
+                            className={`w-full p-3 rounded-xl text-left transition-all border flex items-center gap-3 ${wiz.page_id === pg.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                            {pg.picture && <img src={pg.picture} className="w-8 h-8 rounded-full shrink-0" />}
+                            <p className="text-sm font-bold">{pg.name}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {igAccounts.length > 0 && (
+                    <div>
+                      <label className="text-xs text-gray-400 mb-2 block">Instagram (opcional)</label>
+                      <div className="space-y-2">
+                        <button onClick={() => setWiz({...wiz, instagram_id: ''})}
+                          className={`w-full p-3 rounded-xl text-left transition-all border ${!wiz.instagram_id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                          <p className="text-sm">Sin Instagram</p>
+                        </button>
+                        {igAccounts.map((ig, i) => (
+                          <button key={i} onClick={() => setWiz({...wiz, instagram_id: ig.id})}
+                            className={`w-full p-3 rounded-xl text-left transition-all border flex items-center gap-3 ${wiz.instagram_id === ig.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                            {ig.profile_pic && <img src={ig.profile_pic} className="w-8 h-8 rounded-full shrink-0" />}
+                            <p className="text-sm font-bold">@{ig.username}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <button onClick={() => setWizStep(3)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
+                  <button onClick={handleGenerate} disabled={creating || !wiz.ad_account_id || !wiz.page_id}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold disabled:opacity-30 transition-all">
+                    {creating ? '⏳ Generando...' : '✨ Generar anuncios'}
                   </button>
                 </div>
-                <p className="text-[9px] text-gray-600 text-center mt-3">La IA creará los anuncios automáticamente y los optimizará cada día.</p>
+                {(!wiz.ad_account_id || !wiz.page_id) && (
+                  <p className="text-[9px] text-yellow-400 text-center mt-2">Selecciona cuenta y página para continuar</p>
+                )}
+              </div>
+            )}
+            {wizStep === 5 && variants.length > 0 && (
+              <div>
+                <h3 className="font-bold text-lg mb-2">Revisa tus anuncios</h3>
+                <p className="text-xs text-gray-400 mb-4">La IA generó {variants.length} variantes. Edita lo que quieras.</p>
+                <div className="space-y-3 mb-4">
+                  {variants.map((v, i) => (
+                    <div key={i} className="border border-white/10 rounded-xl p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] text-gray-500">Anuncio {i + 1}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-[9px] text-gray-500">Título</label>
+                          <input value={v.headline} onChange={e => { const nv = [...variants]; nv[i] = {...nv[i], headline: e.target.value}; setVariants(nv); }}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-gray-500">Texto principal</label>
+                          <textarea value={v.text} onChange={e => { const nv = [...variants]; nv[i] = {...nv[i], text: e.target.value}; setVariants(nv); }}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white resize-none h-16" />
+                        </div>
+                        <div>
+                          <label className="text-[9px] text-gray-500">Descripción</label>
+                          <input value={v.description} onChange={e => { const nv = [...variants]; nv[i] = {...nv[i], description: e.target.value}; setVariants(nv); }}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-white/[0.02] rounded-xl p-3 mb-4">
+                  <p className="text-[10px] text-gray-400">📋 Resumen: {variants.length} anuncios • ${parseInt(wiz.budget_total).toLocaleString()} total • {wiz.radius === '0' ? 'Todo el país' : `${wiz.radius} km`}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setWizStep(4)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
+                  <button onClick={handlePublish} disabled={publishing}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold disabled:opacity-30 transition-all">
+                    {publishing ? '⏳ Publicando...' : '🚀 Publicar campaña'}
+                  </button>
+                </div>
+                <p className="text-[9px] text-gray-600 text-center mt-2">Se crea pausada. Actívala cuando estés listo.</p>
               </div>
             )}
           </div>
         </div>
-      )} 
+      )}
     </div>
   );
 }
