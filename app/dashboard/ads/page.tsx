@@ -458,10 +458,22 @@ export default function AdsPage() {
                 </div>
                 <div className="flex gap-2 mt-4">
                   <button onClick={() => setWizStep(3)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
-                  <button onClick={handleGenerate} disabled={creating || !wiz.ad_account_id || !wiz.page_id}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold disabled:opacity-30 transition-all">
-                    {creating ? '⏳ Generando anuncios (~15s)...' : '✨ Generar anuncios'}
-                  </button>
+                  {creating ? (
+                    <div className="flex-1 py-3 rounded-xl bg-indigo-600/30 px-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-indigo-500 rounded-full animate-pulse" style={{width: '70%'}} />
+                        </div>
+                        <span className="text-[9px] text-indigo-400">Generando...</span>
+                      </div>
+                      <p className="text-[8px] text-gray-500 text-center">La IA está creando tus anuncios (~15s)</p>
+                    </div>
+                  ) : (
+                    <button onClick={handleGenerate} disabled={!wiz.ad_account_id || !wiz.page_id}
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold disabled:opacity-30 transition-all">
+                      ✨ Generar anuncios
+                    </button>
+                  )}
                 </div>
                 {(!wiz.ad_account_id || !wiz.page_id) && (
                   <p className="text-[9px] text-yellow-400 text-center mt-2">Selecciona cuenta y página para continuar</p>
@@ -558,10 +570,22 @@ export default function AdsPage() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setWizStep(4)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
-                  <button onClick={handlePublish} disabled={publishing}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold disabled:opacity-30 transition-all">
-                    {publishing ? '⏳ Publicando (~10s)...' : '🚀 Publicar campaña'}
-                  </button>
+                  {publishing ? (
+                    <div className="flex-1 py-3 rounded-xl bg-emerald-600/30 px-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500 rounded-full animate-pulse" style={{width: '60%'}} />
+                        </div>
+                        <span className="text-[9px] text-emerald-400">Publicando...</span>
+                      </div>
+                      <p className="text-[8px] text-gray-500 text-center">Creando campaña en Meta (~10s)</p>
+                    </div>
+                  ) : (
+                    <button onClick={handlePublish}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold transition-all">
+                      🚀 Publicar campaña
+                    </button>
+                  )}
                 </div>
                 <p className="text-[9px] text-gray-600 text-center mt-2">Se crea pausada. Actívala cuando estés listo.</p>
               </div>
