@@ -308,6 +308,52 @@ export default function AdsPage() {
                   </div>
                 ))}
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <h4 className="text-xs font-bold mb-2">📝 Resumen IA</h4>
+                  <button onClick={async () => {
+                    showToast('⏳ Generando resumen...');
+                    const res = await fetch(`${API_URL}/ads/narrative?period=${period}`, { headers: h });
+                    const data = await res.json();
+                    showToast(data.narrative || 'Sin datos');
+                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 font-bold transition-all">
+                    Generar resumen
+                  </button>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <h4 className="text-xs font-bold mb-2">🌎 Por región</h4>
+                  <button onClick={async () => {
+                    const res = await fetch(`${API_URL}/ads/geo-breakdown?period=${period}`, { headers: h });
+                    const data = await res.json();
+                    const top = (data.regions || []).slice(0, 5).map((r: any) => `${r.region}: $${r.spend.toLocaleString()}`).join('\n');
+                    showToast(top || 'Sin datos geo');
+                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all">
+                    Ver regiones
+                  </button>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <h4 className="text-xs font-bold mb-2">✅ Estado del sistema</h4>
+                  <button onClick={async () => {
+                    const res = await fetch(`${API_URL}/ads/check-landing`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: '{}' });
+                    const data = await res.json();
+                    const msg = (data.checks || []).map((c: any) => `${c.ok ? '✅' : '❌'} ${c.check}: ${c.detail}`).join('\n');
+                    showToast(msg);
+                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all">
+                    Verificar
+                  </button>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <h4 className="text-xs font-bold mb-2">⚠️ Errores</h4>
+                  <button onClick={async () => {
+                    const res = await fetch(`${API_URL}/ads/errors`, { headers: h });
+                    const data = await res.json();
+                    if (data.count > 0) showToast(`${data.count} campañas con problemas: ${data.errors.map((e: any) => e.name).join(', ')}`);
+                    else showToast('✅ Sin errores detectados');
+                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 font-bold transition-all">
+                    Detectar errores
+                  </button>
+                </div>
+              </div>
               {analysis && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setAnalysis(null)}>
                   <div className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto" onClick={(e: any) => e.stopPropagation()}>
@@ -465,6 +511,44 @@ export default function AdsPage() {
               ))}
             </div>
           )}
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 mt-6">
+            <h3 className="font-bold mb-3">⚙️ Reglas automáticas</h3>
+            <p className="text-[10px] text-gray-500 mb-3">Define reglas para que la IA optimice automáticamente.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[9px] text-gray-400 mb-1 block">CPL máximo (pausar si supera)</label>
+                <input type="number" id="rule_max_cpl" defaultValue="0" placeholder="Ej: 5000"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+              </div>
+              <div>
+                <label className="text-[9px] text-gray-400 mb-1 block">Gasto diario máximo</label>
+                <input type="number" id="rule_max_spend" defaultValue="0" placeholder="Ej: 50000"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+              </div>
+              <div>
+                <label className="text-[9px] text-gray-400 mb-1 block">Pausar si no hay leads en (horas)</label>
+                <input type="number" id="rule_no_leads" defaultValue="72" placeholder="72"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+              </div>
+              <div>
+                <label className="text-[9px] text-gray-400 mb-1 block">Escalar si CPL menor a</label>
+                <input type="number" id="rule_scale_cpl" defaultValue="0" placeholder="Ej: 3000"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+              </div>
+            </div>
+            <button onClick={async () => {
+              const rules = {
+                max_cpl: parseInt((document.getElementById('rule_max_cpl') as HTMLInputElement)?.value || '0'),
+                max_spend_daily: parseInt((document.getElementById('rule_max_spend') as HTMLInputElement)?.value || '0'),
+                pause_if_no_leads_hours: parseInt((document.getElementById('rule_no_leads') as HTMLInputElement)?.value || '72'),
+                auto_scale_if_cpl_below: parseInt((document.getElementById('rule_scale_cpl') as HTMLInputElement)?.value || '0'),
+              };
+              const res = await fetch(`${API_URL}/ads/rules`, { method: 'PUT', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
+              if (res.ok) showToast('✓ Reglas guardadas'); else showToast('Error');
+            }} className="mt-3 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-xl text-xs font-bold transition-all">
+              💾 Guardar reglas
+            </button>
+          </div>
         </div>
       )}
       {tab === 'create' && (
