@@ -954,7 +954,7 @@ export default function AdsPage() {
             {analysis.ai_insight && (
               <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-3 mb-4">
                 <p className="text-[10px] text-purple-400 font-bold mb-1">🤖 Insight IA</p>
-                <p className="text-xs text-gray-300">{analysis.ai_insight}</p>
+                <p className="text-xs text-gray-300 whitespace-pre-wrap">{analysis.ai_insight}</p>
               </div>
             )}
             {(analysis.recommendations || []).length > 0 && (
