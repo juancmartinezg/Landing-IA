@@ -119,7 +119,7 @@ export default function AppointmentsPage() {
                 <div>
                   <label className="text-xs text-gray-400 mb-1 block">Hora *</label>
                   <select value={form.hour} onChange={e => setForm({...form, hour: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white">
+                    className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white">
                     {Array.from({length: 14}, (_, i) => i + 7).map(h => (
                       <option key={h} value={h}>{h}:00 {h < 12 ? 'AM' : h === 12 ? 'PM' : 'PM'}</option>
                     ))}
@@ -140,14 +140,14 @@ export default function AppointmentsPage() {
                 <div>
                   <label className="text-xs text-gray-400 mb-1 block">Monto</label>
                   <input type="number" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
+                    className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
                 </div>
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Notas</label>
                 <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})}
                   placeholder="Notas adicionales..." rows={2}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white resize-none" />
+                  className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white resize-none" />
               </div>
             </div>
             <div className="flex gap-3 mt-5">

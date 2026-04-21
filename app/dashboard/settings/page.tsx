@@ -941,7 +941,7 @@ export default function SettingsPage() {
             <input
               id="scrape-url"
               type="url"
-              defaultValue={wizard.website_url || ''}
+              defaultValue={config?.website_url || wizard.website_url || ''}
               placeholder="https://www.tunegocio.com"
               className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
             />
@@ -974,6 +974,9 @@ export default function SettingsPage() {
             </button>
           </div>
           <p className="text-[9px] text-gray-600 mt-2">El contenido se agrega al contexto del bot. Máximo 5,000 caracteres.</p>
+          {config?.prompt?.includes('INFORMACION DEL SITIO WEB') && (
+            <p className="text-[9px] text-emerald-400 mt-1">✅ Sitio web importado y activo en el bot</p>
+          )}
         </div>
         {/* Pasarela de Pagos */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
