@@ -42,6 +42,7 @@ export default function AdsPage() {
   const [interestResults, setInterestResults] = useState<any[]>([]);
   const [searchingCity, setSearchingCity] = useState(false);
   const [searchingInterest, setSearchingInterest] = useState(false);
+  const [toolLoading, setToolLoading] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
   const h = { 'client-id': user?.companyId || '' };
   useEffect(() => {
@@ -317,49 +318,56 @@ export default function AdsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                   <h4 className="text-xs font-bold mb-2">📝 Resumen IA</h4>
-                  <button onClick={async () => {
-                    showToast('⏳ Generando resumen...');
+                  <button disabled={toolLoading === 'narrative'} onClick={async () => {
+                    setToolLoading('narrative');
                     const res = await fetch(`${API_URL}/ads/narrative?period=${period}`, { headers: h });
                     const data = await res.json();
                     showToast(data.narrative || 'Sin datos');
-                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 font-bold transition-all">
-                    Generar resumen
+                    setToolLoading('');
+                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 font-bold transition-all disabled:opacity-50">
+                    {toolLoading === 'narrative' ? '⏳ Generando...' : 'Generar resumen'}
                   </button>
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                   <h4 className="text-xs font-bold mb-2">🌎 Por región</h4>
-                  <button onClick={async () => {
+                  <button disabled={toolLoading === 'geo'} onClick={async () => {
+                    setToolLoading('geo');
                     const res = await fetch(`${API_URL}/ads/geo-breakdown?period=${period}`, { headers: h });
                     const data = await res.json();
                     const top = (data.regions || []).slice(0, 5).map((r: any) => `${r.region}: $${r.spend.toLocaleString()}`).join('\n');
                     showToast(top || 'Sin datos geo');
-                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all">
-                    Ver regiones
+                    setToolLoading('');
+                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all disabled:opacity-50">
+                    {toolLoading === 'geo' ? '⏳ Cargando...' : 'Ver regiones'}
                   </button>
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                   <h4 className="text-xs font-bold mb-2">✅ Estado del sistema</h4>
-                  <button onClick={async () => {
+                  <button disabled={toolLoading === 'check'} onClick={async () => {
+                    setToolLoading('check');
                     const res = await fetch(`${API_URL}/ads/check-landing`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: '{}' });
                     const data = await res.json();
                     const msg = (data.checks || []).map((c: any) => `${c.ok ? '✅' : '❌'} ${c.check}: ${c.detail}`).join('\n');
                     showToast(msg);
-                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all">
-                    Verificar
+                    setToolLoading('');
+                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all disabled:opacity-50">
+                    {toolLoading === 'check' ? '⏳ Verificando...' : 'Verificar'}
                   </button>
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                   <h4 className="text-xs font-bold mb-2">⚠️ Errores</h4>
-                  <button onClick={async () => {
+                  <button disabled={toolLoading === 'errors'} onClick={async () => {
+                    setToolLoading('errors');
                     const res = await fetch(`${API_URL}/ads/errors`, { headers: h });
                     const data = await res.json();
                     if (data.count > 0) showToast(`${data.count} campañas con problemas: ${data.errors.map((e: any) => e.name).join(', ')}`);
                     else showToast('✅ Sin errores detectados');
-                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 font-bold transition-all">
-                    Detectar errores
+                    setToolLoading('');
+                  }} className="text-[9px] px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 font-bold transition-all disabled:opacity-50">
+                    {toolLoading === 'errors' ? '⏳ Buscando...' : 'Detectar errores'}
                   </button>
                 </div>
-              </div>              
+              </div>             
             </>
           )}
         </div>
@@ -403,9 +411,9 @@ export default function AdsPage() {
                         className={`text-[9px] px-2 py-1 rounded-lg font-bold transition-all ${c.status === 'ACTIVE' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}>
                         {c.status === 'ACTIVE' ? '⏸ Pausar' : '▶ Activar'}
                       </button>
-                      <button onClick={() => handleAnalyze(c.campaign_id)}
-                        className="text-[9px] px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all">
-                        🔍
+                      <button onClick={() => handleAnalyze(c.campaign_id)} disabled={analyzing === c.campaign_id}
+                        className="text-[9px] px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all disabled:opacity-50">
+                        {analyzing === c.campaign_id ? '⏳' : '🔍'}
                       </button>
                     </div>
                   </div>
