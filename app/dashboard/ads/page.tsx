@@ -42,7 +42,6 @@ export default function AdsPage() {
     Promise.all([
       fetch(`${API_URL}/ads/dashboard?period=last_30d`, { headers: h }).then(r => r.json()).catch(() => ({ global: {}, campaigns: [], alerts: [] })),
       fetch(`${API_URL}/ads/audiences`, { headers: h }).then(r => r.json()).catch(() => ({ audiences: [] })),
-      fetch(`${API_URL}/ads/audiences`, { headers: h }).then(r => r.json()).catch(() => ({ audiences: [] })),
       fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).catch(() => ({ services: [] })),
       fetch(`${API_URL}/ads/accounts`, { headers: h }).then(r => r.json()).catch(() => ({ accounts: [] })),
       fetch(`${API_URL}/ads/pages`, { headers: h }).then(r => r.json()).catch(() => ({ pages: [] })),
@@ -302,6 +301,7 @@ export default function AdsPage() {
                         {analysis.recommendations.map((r: any, i: number) => (
                           <div key={i} className="flex items-center justify-between bg-white/[0.03] rounded-lg p-3 mb-2">
                             <div className="flex-1">
+                              <p className="text-xs text-white mb-1">{r.reason}</p>
                               <p className="text-[8px] text-gray-500">Confianza: {r.confidence}</p>
                             </div>
                             {r.target_id && (
