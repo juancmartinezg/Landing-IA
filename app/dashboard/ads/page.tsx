@@ -32,18 +32,22 @@ export default function AdsPage() {
   const [previewImg, setPreviewImg] = useState<string | null>(null);
   const [genImgIdx, setGenImgIdx] = useState<number | null>(null);
   const [businessType, setBusinessType] = useState('servicios');
+  const [dashboard, setDashboard] = useState<any>(null);
+  const [period, setPeriod] = useState('last_30d');
+  const [analyzing, setAnalyzing] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<any>(null);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
   const h = { 'client-id': user?.companyId || '' };
   useEffect(() => {
     Promise.all([
-      fetch(`${API_URL}/ads/metrics`, { headers: h }).then(r => r.json()).catch(() => ({})),
-      fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).catch(() => ({ campaigns: [] })),
+      fetch(`${API_URL}/ads/dashboard?period=last_30d`, { headers: h }).then(r => r.json()).catch(() => ({ global: {}, campaigns: [], alerts: [] })),
+      fetch(`${API_URL}/ads/audiences`, { headers: h }).then(r => r.json()).catch(() => ({ audiences: [] })),
       fetch(`${API_URL}/ads/audiences`, { headers: h }).then(r => r.json()).catch(() => ({ audiences: [] })),
       fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).catch(() => ({ services: [] })),
       fetch(`${API_URL}/ads/accounts`, { headers: h }).then(r => r.json()).catch(() => ({ accounts: [] })),
       fetch(`${API_URL}/ads/pages`, { headers: h }).then(r => r.json()).catch(() => ({ pages: [] })),
-    ]).then(([m, c, a, s, ac, pg]) => {
-      setMetrics(m); setCampaigns(c.campaigns || []); setAudiences(a.audiences || []); setServices(s.services || []);
+    ]).then(([dash, a, s, ac, pg]) => {
+      setDashboard(dash); setMetrics(dash.global || {}); setCampaigns(dash.campaigns || []); setAudiences(a.audiences || []); setServices(s.services || []);
       const accs = ac.accounts || [];
       setAccounts(accs);
       setPages(pg.pages || []);
@@ -124,6 +128,26 @@ export default function AdsPage() {
     } catch { showToast('Error sincronizando'); }
     setSyncing(false);
   };
+  const reloadDashboard = (p?: string) => {
+    const pr = p || period;
+    fetch(`${API_URL}/ads/dashboard?period=${pr}`, { headers: h }).then(r => r.json()).then(d => {
+      setDashboard(d); setMetrics(d.global || {}); setCampaigns(d.campaigns || []);
+    }).catch(() => {});
+  };
+  const handleAnalyze = async (campaignId: string) => {
+    setAnalyzing(campaignId); setAnalysis(null);
+    try {
+      const res = await fetch(`${API_URL}/ads/analyze`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ campaign_id: campaignId }) });
+      const data = await res.json();
+      setAnalysis(data);
+    } catch { showToast('Error analizando'); }
+    setAnalyzing(null);
+  };
+  const handleApplyAction = async (action: string, targetId: string) => {
+    const res = await fetch(`${API_URL}/ads/apply-action`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ action, target_id: targetId }) });
+    const data = await res.json();
+    if (res.ok) { showToast(`✓ ${data.message}`); reloadDashboard(); } else showToast(data.error || 'Error');
+  };
   useEffect(() => {
     localStorage.setItem('ads_wiz_step', String(wizStep));
     localStorage.setItem('ads_wiz_data', JSON.stringify(wiz));
@@ -164,27 +188,148 @@ export default function AdsPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Invertido</p>
-                  <p className="text-2xl font-bold text-white">${(metrics?.spend || 0).toLocaleString()}</p>
+              <div className="flex gap-2 mb-4">
+                {[{id:'today',l:'Hoy'},{id:'last_7d',l:'7 días'},{id:'last_30d',l:'30 días'},{id:'last_90d',l:'90 días'}].map(p => (
+                  <button key={p.id} onClick={() => { setPeriod(p.id); reloadDashboard(p.id); }}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${period === p.id ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>
+                    {p.l}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Invertido</p>
+                  <p className="text-xl font-bold text-white">${(metrics?.spend || 0).toLocaleString()}</p>
                 </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Personas alcanzadas</p>
-                  <p className="text-2xl font-bold text-indigo-400">{(metrics?.impressions || 0).toLocaleString()}</p>
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Alcance</p>
+                  <p className="text-xl font-bold text-indigo-400">{(metrics?.reach || metrics?.impressions || 0).toLocaleString()}</p>
                 </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Te escribieron</p>
-                  <p className="text-2xl font-bold text-emerald-400">{metrics?.leads || metrics?.clicks || 0}</p>
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Te escribieron</p>
+                  <p className="text-xl font-bold text-emerald-400">{metrics?.leads || 0}</p>
                 </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Costo por cliente</p>
-                  <p className="text-2xl font-bold text-purple-400">${(metrics?.leads ? Math.round((metrics?.spend || 0) / metrics.leads) : 0).toLocaleString()}</p>
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Costo / lead</p>
+                  <p className="text-xl font-bold text-purple-400">${(metrics?.cpl || 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">ROI</p>
+                  <p className="text-xl font-bold text-yellow-400">{metrics?.roas || 0}x</p>
+                  {(metrics?.sales || 0) > 0 && <p className="text-[8px] text-gray-500">{metrics.sales} ventas</p>}
                 </div>
               </div>
-              {(metrics?.spend || 0) > 0 && (metrics?.leads || 0) === 0 && (
-                <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-4 mb-4">
-                  <p className="text-xs text-yellow-400 font-bold">💡 Aún no tienes leads. Es normal los primeros 2-3 días mientras Facebook aprende. La IA está optimizando.</p>
+              {(dashboard?.alerts || []).length > 0 && (
+                <div className="space-y-2 mb-6">
+                  {dashboard.alerts.map((a: any, i: number) => (
+                    <div key={i} className={`rounded-xl p-3 border ${a.severity === 'danger' ? 'bg-red-500/5 border-red-500/20' : a.severity === 'success' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-yellow-500/5 border-yellow-500/20'}`}>
+                      <p className={`text-xs font-bold ${a.severity === 'danger' ? 'text-red-400' : a.severity === 'success' ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                        {a.severity === 'danger' ? '🔴' : a.severity === 'success' ? '🟢' : '🟡'} {a.campaign}: {a.message}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <h3 className="font-bold mb-3">Rendimiento por campaña</h3>
+              <div className="space-y-2">
+                {campaigns.filter((c: any) => c.metrics?.spend > 0 || c.status === 'ACTIVE').map((c: any, i: number) => (
+                  <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`w-2 h-2 rounded-full ${c.rendimiento === 'alto' ? 'bg-emerald-500' : c.rendimiento === 'medio' ? 'bg-yellow-500' : c.rendimiento === 'bajo' ? 'bg-red-500' : 'bg-gray-500'}`} />
+                          <p className="font-bold text-sm truncate">{c.name}</p>
+                          <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold ${c.status_human === 'activa' ? 'bg-emerald-500/20 text-emerald-400' : c.status_human === 'pausada' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-gray-500/20 text-gray-400'}`}>{c.status_human}</span>
+                        </div>
+                        <div className="flex gap-3 text-[10px] text-gray-400">
+                          <span>${(c.metrics?.spend || 0).toLocaleString()}</span>
+                          <span>{c.metrics?.leads || 0} leads</span>
+                          <span>CPL ${(c.metrics?.cpl || 0).toLocaleString()}</span>
+                          <span>CTR {c.metrics?.ctr || 0}%</span>
+                          {c.metrics?.frequency > 0 && <span>Freq {c.metrics.frequency}</span>}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => handleAnalyze(c.campaign_id)} disabled={analyzing === c.campaign_id}
+                          className="text-[9px] px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all disabled:opacity-50">
+                          {analyzing === c.campaign_id ? '⏳...' : '🔍 Analizar'}
+                        </button>
+                        <button onClick={() => handleApplyAction(c.status === 'ACTIVE' ? 'pausar' : 'activar', c.campaign_id)}
+                          className={`text-[9px] px-2 py-1 rounded-lg font-bold transition-all ${c.status === 'ACTIVE' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                          {c.status === 'ACTIVE' ? '⏸' : '▶'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {analysis && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setAnalysis(null)}>
+                  <div className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto" onClick={(e: any) => e.stopPropagation()}>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-bold">🔍 Análisis de campaña</h3>
+                      <button onClick={() => setAnalysis(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className="bg-white/[0.03] rounded-lg p-2 text-center">
+                        <p className="text-[8px] text-gray-500">Gasto</p>
+                        <p className="text-sm font-bold">${(analysis.metrics?.spend || 0).toLocaleString()}</p>
+                      </div>
+                      <div className="bg-white/[0.03] rounded-lg p-2 text-center">
+                        <p className="text-[8px] text-gray-500">Leads</p>
+                        <p className="text-sm font-bold text-emerald-400">{analysis.metrics?.leads || 0}</p>
+                      </div>
+                      <div className="bg-white/[0.03] rounded-lg p-2 text-center">
+                        <p className="text-[8px] text-gray-500">CPL</p>
+                        <p className="text-sm font-bold text-purple-400">${(analysis.metrics?.cpl || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    {analysis.funnel_diagnosis && (
+                      <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-3 mb-4">
+                        <p className="text-[10px] text-indigo-400 font-bold mb-1">📊 Diagnóstico</p>
+                        <p className="text-xs text-gray-300">{analysis.funnel_diagnosis}</p>
+                      </div>
+                    )}
+                    {analysis.ai_insight && (
+                      <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-3 mb-4">
+                        <p className="text-[10px] text-purple-400 font-bold mb-1">🤖 Insight IA</p>
+                        <p className="text-xs text-gray-300">{analysis.ai_insight}</p>
+                      </div>
+                    )}
+                    {(analysis.recommendations || []).length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-[10px] text-gray-400 font-bold mb-2">💡 Recomendaciones</p>
+                        {analysis.recommendations.map((r: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between bg-white/[0.03] rounded-lg p-3 mb-2">
+                            <div className="flex-1">
+                              <p className="text-[8px] text-gray-500">Confianza: {r.confidence}</p>
+                            </div>
+                            {r.target_id && (
+                              <button onClick={() => { handleApplyAction(r.action, r.target_id); setAnalysis(null); }}
+                                className="text-[9px] px-2 py-1 rounded-lg bg-emerald-600 text-white font-bold ml-2 shrink-0">
+                                ✅ Aplicar
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(analysis.ads || []).length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-gray-400 font-bold mb-2">📋 Anuncios</p>
+                        {analysis.ads.map((a: any, i: number) => (
+                          <div key={i} className="flex justify-between items-center text-[10px] py-1 border-b border-white/5">
+                            <span className="text-gray-300 truncate flex-1">{a.name}</span>
+                            <span className="text-gray-400 mx-2">${(a.spend || 0).toLocaleString()}</span>
+                            <span className="text-emerald-400">{a.leads} leads</span>
+                            <span className="text-gray-500 ml-2">CTR {a.ctr}%</span>
+                          </div>
+                        ))}
+                        {analysis.best_ad && <p className="text-[9px] text-emerald-400 mt-2">🏆 Mejor: {analysis.best_ad}</p>}
+                        {analysis.worst_ad && <p className="text-[9px] text-red-400">💀 Peor: {analysis.worst_ad}</p>}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </>
@@ -204,32 +349,37 @@ export default function AdsPage() {
               {[{id:'all',l:'Todas'},{id:'ACTIVE',l:'🟢 Activas'},{id:'PAUSED',l:'⏸ Pausadas'}].map(f => (
                 <button key={f.id} onClick={() => setCampFilter(f.id)}
                   className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${campFilter === f.id ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>
-                  {f.l} ({f.id === 'all' ? campaigns.length : campaigns.filter(c => c.status === f.id).length})
+                  {f.l} ({f.id === 'all' ? campaigns.length : campaigns.filter((c: any) => c.status === f.id).length})
                 </button>
               ))}
             </div>
             <div className="space-y-3">
-              {campaigns.filter(c => campFilter === 'all' || c.status === campFilter).map((c, i) => (
-                <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div>
-                    <p className="font-bold text-sm">{c.name}</p>
-                    <p className="text-xs text-gray-500">{c.ad_ids?.length || 0} anuncios{c.budget_daily ? ` • $${c.budget_daily.toLocaleString()}/día` : ''}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${c.status === 'ACTIVE' && c.budget_daily > 0 ? 'bg-emerald-500/20 text-emerald-400' : c.status === 'ACTIVE' ? 'bg-gray-500/20 text-gray-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{c.status === 'ACTIVE' && !c.budget_daily ? 'Finalizada' : c.status === 'ACTIVE' ? 'Activa' : 'Pausada'}</span>
-                    <button onClick={async () => {
-                      const ns = c.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-                      const res = await fetch(`${API_URL}/ads/campaigns/toggle`, {
-                        method: 'PUT', headers: { ...h, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ campaign_id: c.campaign_id, status: ns }),
-                      });
-                      const data = await res.json();
-                      if (res.ok) { showToast(`✓ ${data.message}`); fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).then(d => setCampaigns(d.campaigns || [])); }
-                      else showToast(data.error || 'Error');
-                    }} className={`text-[10px] px-2 py-1 rounded-full font-bold transition-all ${c.status === 'ACTIVE' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}>
-                      {c.status === 'ACTIVE' ? '⏸ Pausar' : '▶ Activar'}
-                    </button>
-                    <span className="text-[10px] text-gray-600">{new Date((c.created_at || 0) * 1000).toLocaleDateString()}</span>
+              {campaigns.filter((c: any) => campFilter === 'all' || c.status === campFilter).map((c: any, i: number) => (
+                <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm truncate">{c.name}</p>
+                      <div className="flex gap-3 text-[10px] text-gray-500 mt-1">
+                        <span>{c.ad_count || c.ad_ids?.length || 0} anuncios</span>
+                        {c.budget_daily > 0 && <span>${c.budget_daily.toLocaleString()}/día</span>}
+                        {c.metrics?.leads > 0 && <span className="text-emerald-400">{c.metrics.leads} leads</span>}
+                        {c.metrics?.spend > 0 && <span>${(c.metrics.spend || 0).toLocaleString()}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${c.rendimiento === 'alto' ? 'bg-emerald-500/20 text-emerald-400' : c.rendimiento === 'medio' ? 'bg-yellow-500/20 text-yellow-400' : c.rendimiento === 'bajo' ? 'bg-red-500/20 text-red-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                        {c.rendimiento === 'alto' ? '🟢 Alto' : c.rendimiento === 'medio' ? '🟡 Medio' : c.rendimiento === 'bajo' ? '🔴 Bajo' : '⚪ Sin datos'}
+                      </span>
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${c.status_human === 'activa' ? 'bg-emerald-500/20 text-emerald-400' : c.status_human === 'pausada' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-gray-500/20 text-gray-400'}`}>{c.status_human || c.status}</span>
+                      <button onClick={() => handleApplyAction(c.status === 'ACTIVE' ? 'pausar' : 'activar', c.campaign_id)}
+                        className={`text-[9px] px-2 py-1 rounded-lg font-bold transition-all ${c.status === 'ACTIVE' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}>
+                        {c.status === 'ACTIVE' ? '⏸ Pausar' : '▶ Activar'}
+                      </button>
+                      <button onClick={() => handleAnalyze(c.campaign_id)}
+                        className="text-[9px] px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all">
+                        🔍
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
