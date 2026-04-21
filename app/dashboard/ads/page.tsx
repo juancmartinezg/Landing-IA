@@ -502,7 +502,7 @@ export default function AdsPage() {
                               setVariants(nv); showToast('✅ Copy regenerado');
                             } else showToast('Error regenerando');
                           }} className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all" title="Regenerar texto">
-                            🔄 Reacer Copy
+                            🔄 Rehacer Copy
                           </button>
                           {variants.length > 1 && (
                             <button onClick={() => { setVariants(prev => prev.filter((_, idx) => idx !== i)); showToast('Variante descartada'); }}
