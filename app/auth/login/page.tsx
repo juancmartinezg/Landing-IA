@@ -9,12 +9,12 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register' | 'confirm'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const [password2, setPassword2] = useState('');
   useEffect(() => {
     if (checked) return;
     setChecked(true);
@@ -31,21 +31,8 @@ export default function LoginPage() {
     setError(''); setSubmitting(true);
     if (mode === 'register') {
       if (!name.trim()) { setError('Escribe tu nombre'); setSubmitting(false); return; }
-      <div className="relative">
-                <input value={password} onChange={e => setPassword(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="Contraseña"
-                  onKeyDown={e => { if (e.key === 'Enter' && email && password) handleEmailSubmit(); }}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white pr-12" />
-                <button type="button" onClick={() => setShowPass(!showPass)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white text-sm transition-all">
-                  {showPass ? '🙈' : '👁️'}
-                </button>
-              </div>
-              {mode === 'register' && <p className="text-[9px] text-gray-500 -mt-1 ml-1">Mínimo 8 caracteres, una mayúscula y un número</p>}
-              {mode === 'register' && (
-                <input value={password2} onChange={e => setPassword2(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="Confirmar contraseña"
-                  onKeyDown={e => { if (e.key === 'Enter' && email && password && password2) handleEmailSubmit(); }}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white" />
-              )}
+      if (password.length < 8) { setError('La contraseña debe tener mínimo 8 caracteres'); setSubmitting(false); return; }
+      if (password !== password2) { setError('Las contraseñas no coinciden'); setSubmitting(false); return; }
       const res = await signUpWithEmail(email, password, name);
       if (res.ok && res.needsConfirm) { setMode('confirm'); }
       else if (res.error) setError(res.error);
@@ -116,25 +103,35 @@ export default function LoginPage() {
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <form onSubmit={e => { e.preventDefault(); handleEmailSubmit(); }} className="space-y-3">
               {mode === 'register' && (
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Tu nombre"
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white" />
               )}
               <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Email"
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white" />
-              <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Contraseña"
-                onKeyDown={e => { if (e.key === 'Enter' && email && password) handleEmailSubmit(); }}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white" />
-              <button onClick={handleEmailSubmit} disabled={submitting || !email || !password}
+              <div className="relative">
+                <input value={password} onChange={e => setPassword(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="Contraseña"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white pr-12" />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white text-sm transition-all">
+                  {showPass ? '🙈' : '👁️'}
+                </button>
+              </div>
+              {mode === 'register' && <p className="text-[9px] text-gray-500 -mt-1 ml-1">Mínimo 8 caracteres, una mayúscula y un número</p>}
+              {mode === 'register' && (
+                <input value={password2} onChange={e => setPassword2(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="Confirmar contraseña"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white" />
+              )}
+              <button type="submit" disabled={submitting || !email || !password}
                 className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50">
                 {submitting ? '⏳...' : mode === 'register' ? 'Crear cuenta' : 'Iniciar sesión'}
               </button>
-            </div>
+            </form>
           )}
           {mode !== 'confirm' && (
             <div className="mt-4 text-center">
-              <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+              <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setPassword(''); setPassword2(''); }}
                 className="text-gray-400 text-sm hover:text-white transition-all">
                 {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
               </button>
