@@ -2,6 +2,7 @@
 import { useAuth } from '../../providers';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 export default function LoginPage() {
   const { user, loading, loginWithGoogle, signUpWithEmail, signInWithEmail, confirmSignUp } = useAuth();
   const router = useRouter();
@@ -139,7 +140,7 @@ export default function LoginPage() {
           )}
         </div>
         <div className="text-center mt-6">
-          <a href="/" className="text-gray-500 text-sm hover:text-white transition-colors">← Volver al inicio</a>
+          <Link href="/" className="text-gray-500 text-sm hover:text-white transition-colors">← Volver al inicio</Link>
         </div>
       </div>
     </div>

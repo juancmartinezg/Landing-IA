@@ -4,7 +4,7 @@ import { useAuth } from '../../providers';
 import Script from 'next/script';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const META_APP_ID = '27398458396409385';
-const META_CONFIG_ID = '694128837119269';
+//const META_CONFIG_ID = '694128837119269';
 export default function WhatsAppPage() {
   const { user } = useAuth();
   const [config, setConfig] = useState<any>(null);
@@ -67,14 +67,7 @@ const handleSignupResponse = useCallback(async (response: any) => {
     FB.login((response: any) => {
       handleSignupResponse(response);
     }, {
-      config_id: META_CONFIG_ID,
-      response_type: 'code',
-      override_default_response_type: true,
-      extras: {
-        setup: {},
-        featureType: '',
-        sessionInfoVersion: '3',
-      },
+      scope: 'whatsapp_business_management,whatsapp_business_messaging,business_management',
     });
   };
   const handleDisconnect = async () => {
