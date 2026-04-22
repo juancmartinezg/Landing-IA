@@ -14,7 +14,7 @@ export default function DashboardPage() {
   }, []);
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-2">Bienvenido, {user?.name || user?.email || 'Usuario'} 👋</h1>
+      <h1 className="text-3xl font-bold mb-2">Bienvenido{(() => { try { const c = JSON.parse(localStorage.getItem('cb_config') || '{}'); return c.brand_name ? `, ${c.brand_name}` : (user?.name ? `, ${user.name}` : ''); } catch { return ''; } })()} 👋</h1>
       <p className="text-gray-400 mb-8">Este es tu centro de comando</p>
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
