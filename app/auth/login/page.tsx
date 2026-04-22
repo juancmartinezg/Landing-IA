@@ -33,7 +33,7 @@ export default function LoginPage() {
       if (!name.trim()) { setError('Escribe tu nombre'); setSubmitting(false); return; }
       <div className="relative">
                 <input value={password} onChange={e => setPassword(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="Contraseña"
-                  onKeyDown={e => { if (e.key === 'Enter' && email && password && mode === 'login') handleEmailSubmit(); }}
+                  onKeyDown={e => { if (e.key === 'Enter' && email && password) handleEmailSubmit(); }}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white pr-12" />
                 <button type="button" onClick={() => setShowPass(!showPass)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white text-sm transition-all">
