@@ -248,7 +248,7 @@ export default function AdsPage() {
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                   <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Invertido</p>
                   <p className="text-xl font-bold text-white">${(metrics?.spend || 0).toLocaleString()}</p>
@@ -301,7 +301,7 @@ export default function AdsPage() {
                           {c.metrics?.frequency > 0 && <span>Freq {c.metrics.frequency}</span>}
                         </div>
                       </div>
-                      <div className="flex gap-1 shrink-0">
+                      <div className="flex flex-wrap gap-1 shrink-0">
                         <button onClick={() => handleAnalyze(c.campaign_id)} disabled={analyzing === c.campaign_id}
                           className="text-[9px] px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all disabled:opacity-50">
                           {analyzing === c.campaign_id ? '⏳...' : '🔍 Analizar'}
@@ -402,7 +402,7 @@ export default function AdsPage() {
                         {c.metrics?.spend > 0 && <span>${(c.metrics.spend || 0).toLocaleString()}</span>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-wrap items-center gap-1 shrink-0">
                       <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${c.rendimiento === 'alto' ? 'bg-emerald-500/20 text-emerald-400' : c.rendimiento === 'medio' ? 'bg-yellow-500/20 text-yellow-400' : c.rendimiento === 'bajo' ? 'bg-red-500/20 text-red-400' : 'bg-gray-500/20 text-gray-400'}`}>
                         {c.rendimiento === 'alto' ? '🟢 Alto' : c.rendimiento === 'medio' ? '🟡 Medio' : c.rendimiento === 'bajo' ? '🔴 Bajo' : '⚪ Sin datos'}
                       </span>
@@ -925,8 +925,8 @@ export default function AdsPage() {
         </div>
       )}
     {analysis && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setAnalysis(null)}>
-          <div className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto" onClick={(e: any) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto py-4" onClick={() => setAnalysis(null)}>
+          <div className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-5 w-full max-w-lg mx-4 my-auto max-h-[90vh] overflow-y-auto overscroll-contain" onClick={(e: any) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold">🔍 Análisis de campaña</h3>
               <button onClick={() => setAnalysis(null)} className="text-gray-400 hover:text-white text-xl">✕</button>

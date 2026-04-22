@@ -20,22 +20,22 @@ export default function PaymentsPage() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Pagos 💳</h1>
       {/* Resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
-          <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Total Recaudado</p>
-          <p className="text-3xl font-bold text-emerald-400">${totalPaid.toLocaleString()}</p>
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 md:p-6">
+          <p className="text-[9px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Total Recaudado</p>
+          <p className="text-xl md:text-3xl font-bold text-emerald-400">${totalPaid.toLocaleString()}</p>
         </div>
-        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
-          <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Pagos Aprobados</p>
-          <p className="text-3xl font-bold text-indigo-400">{payments.filter(p => p.status === 'PAGADO').length}</p>
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 md:p-6">
+          <p className="text-[9px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Aprobados</p>
+          <p className="text-xl md:text-3xl font-bold text-indigo-400">{payments.filter(p => p.status === 'PAGADO').length}</p>
         </div>
-        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
-          <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Pendientes</p>
-          <p className="text-3xl font-bold text-yellow-400">{totalPending}</p>
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 md:p-6">
+          <p className="text-[9px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Pendientes</p>
+          <p className="text-xl md:text-3xl font-bold text-yellow-400">{totalPending}</p>
         </div>
       </div>
       {/* Filtros */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 overflow-x-auto">
         {['all', 'PAGADO', 'PENDING', 'RECHAZADO'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
