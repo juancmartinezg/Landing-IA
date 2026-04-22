@@ -204,7 +204,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
       {/* Main Content */}
-      <div className="flex-1 md:ml-64">
+      <div className="flex-1 md:ml-64 overflow-x-hidden w-full max-w-full">
         {/* Top Navbar */}
         <header className="h-16 border-b border-white/5 bg-[#0B0F1A]/80 backdrop-blur-md flex items-center px-6 sticky top-0 z-20">
           <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-400 text-2xl mr-4">
@@ -279,7 +279,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
         {/* Page Content */}
-         <main className="p-6">
+         <main className="p-3 md:p-6 overflow-x-hidden">
           <ToastProvider>
             {children}
           </ToastProvider>
