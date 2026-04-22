@@ -40,6 +40,7 @@ export default function LoginPage() {
                   {showPass ? '🙈' : '👁️'}
                 </button>
               </div>
+              {mode === 'register' && <p className="text-[9px] text-gray-500 -mt-1 ml-1">Mínimo 8 caracteres, una mayúscula y un número</p>}
               {mode === 'register' && (
                 <input value={password2} onChange={e => setPassword2(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="Confirmar contraseña"
                   onKeyDown={e => { if (e.key === 'Enter' && email && password && password2) handleEmailSubmit(); }}
