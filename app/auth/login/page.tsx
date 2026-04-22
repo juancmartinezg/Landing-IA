@@ -13,6 +13,8 @@ export default function LoginPage() {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [password2, setPassword2] = useState('');
   useEffect(() => {
     if (checked) return;
     setChecked(true);
@@ -29,7 +31,20 @@ export default function LoginPage() {
     setError(''); setSubmitting(true);
     if (mode === 'register') {
       if (!name.trim()) { setError('Escribe tu nombre'); setSubmitting(false); return; }
-      if (password.length < 8) { setError('La contraseña debe tener mínimo 8 caracteres'); setSubmitting(false); return; }
+      <div className="relative">
+                <input value={password} onChange={e => setPassword(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="Contraseña"
+                  onKeyDown={e => { if (e.key === 'Enter' && email && password && mode === 'login') handleEmailSubmit(); }}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white pr-12" />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white text-sm transition-all">
+                  {showPass ? '🙈' : '👁️'}
+                </button>
+              </div>
+              {mode === 'register' && (
+                <input value={password2} onChange={e => setPassword2(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="Confirmar contraseña"
+                  onKeyDown={e => { if (e.key === 'Enter' && email && password && password2) handleEmailSubmit(); }}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white" />
+              )}
       const res = await signUpWithEmail(email, password, name);
       if (res.ok && res.needsConfirm) { setMode('confirm'); }
       else if (res.error) setError(res.error);
