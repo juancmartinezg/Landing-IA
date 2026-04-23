@@ -4,6 +4,7 @@ import { useAuth } from '../../providers';
 import Link from 'next/link';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const META_APP_ID = '27398458396409385';
+const META_CONFIG_ID = '694128837119269';
 export default function WhatsAppPage() {
   const { user } = useAuth();
   const [config, setConfig] = useState<any>(null);
@@ -41,8 +42,8 @@ export default function WhatsAppPage() {
   const isConnected = config?.phone_number_id && config?.waba_id && config.phone_number_id !== 'pending' && config.waba_id !== 'pending' && config.phone_number_id !== 'DISCONNECTED' && config.waba_id !== 'DISCONNECTED';
   const handleSignupResponse = useCallback(async (response: any) => {
     console.log('Embedded Signup response:', JSON.stringify(response));
-    setConnecting(true);
     if (response.authResponse) {
+      setConnecting(true);
       const accessToken = response.authResponse.accessToken;
       try {
         const res = await fetch(
@@ -66,10 +67,12 @@ export default function WhatsAppPage() {
       } catch (err: any) {
         showToast('Error de conexión con el servidor');
       }
+      setConnecting(false);
     } else {
-      showToast('Cancelaste la conexión o hubo un error');
+      if (response.status !== 'unknown') {
+        showToast('Cancelaste la conexión o hubo un error');
+      }
     }
-    setConnecting(false);
   }, [config, user]);
   const handleConnect = () => {
     const FB = (window as any).FB;
@@ -78,9 +81,10 @@ export default function WhatsAppPage() {
       return;
     }
     FB.login((response: any) => {
+      window.focus();
       handleSignupResponse(response);
     }, {
-      config_id: '694128837119269',
+      config_id: META_CONFIG_ID,
       response_type: 'code',
       override_default_response_type: true,
       extras: {
@@ -114,6 +118,15 @@ export default function WhatsAppPage() {
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-[#1a1f2e] border border-white/10 rounded-xl px-5 py-3 text-sm font-medium shadow-xl">
           {toast}
+        </div>
+      )}
+      {connecting && (
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center">
+          <div className="bg-[#1a1f2e] border border-white/10 rounded-3xl p-10 text-center max-w-sm">
+            <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+            <h3 className="text-xl font-bold text-white mb-2">Conectando WhatsApp...</h3>
+            <p className="text-gray-400 text-sm">Completa el proceso en la ventana de Facebook.<br />Esta pantalla se actualizará automáticamente.</p>
+          </div>
         </div>
       )}
       <h1 className="text-2xl font-bold mb-6">Conectar WhatsApp 📱</h1>
