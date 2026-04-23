@@ -34,7 +34,7 @@ export default function WhatsAppPage() {
       setSdkReady(true);
     };
     const script = document.createElement('script');
-        script.src = 'https://connect.facebook.net/es_LA/sdk/xfbml.customerchat.js'; 
+    script.src = 'https://connect.facebook.net/en_US/sdk.js';
     script.async = true;
     script.defer = true;
     document.body.appendChild(script);
@@ -84,7 +84,7 @@ export default function WhatsAppPage() {
       response_type: 'code',
       override_default_response_type: true,
       extras: {
-        sessionInfoVersion: '3',
+        version: 'v4',
       },
     });
   };
