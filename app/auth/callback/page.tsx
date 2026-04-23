@@ -15,6 +15,7 @@ function CallbackHandler() {
       return;
     }
     const redirectUri = `${window.location.origin}/auth/callback`;
+    console.log('[CALLBACK] code:', code, 'redirect_uri:', redirectUri);
     fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -27,6 +28,7 @@ function CallbackHandler() {
     })
       .then(res => res.json())
       .then(async (data) => {
+        console.log('[CALLBACK] token response:', data);
         if (data.id_token) {
           const payload = JSON.parse(atob(data.id_token.split('.')[1]));
           const email = payload.email || '';
