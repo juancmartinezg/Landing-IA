@@ -58,9 +58,9 @@ function CallbackHandler() {
             refresh_token: data.refresh_token,
           }));
           if (!companyId) {
-            router.push('/auth/welcome');
+            window.location.href = '/auth/welcome';
           } else {
-            router.push('/dashboard');
+            window.location.href = '/dashboard';
           }
         } else {
           console.error('Token exchange failed:', data);
