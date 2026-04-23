@@ -29,12 +29,12 @@ export default function WhatsAppPage() {
         appId: META_APP_ID,
         cookie: true,
         xfbml: false,
-        version: 'v22.0',
+        version: 'v25.0',
       });
       setSdkReady(true);
     };
     const script = document.createElement('script');
-    script.src = 'https://connect.facebook.net/es_LA/sdk.js';
+        script.src = 'https://connect.facebook.net/es_LA/sdk/xfbml.customerchat.js'; 
     script.async = true;
     script.defer = true;
     document.body.appendChild(script);
