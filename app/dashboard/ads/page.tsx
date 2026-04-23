@@ -116,7 +116,7 @@ export default function AdsPage() {
   };
   const loadInstagram = async (pageId: string) => {
     try {
-      const res = await fetch(`${API_URL}/ads/instagram`, { headers: h });
+      const res = await fetch(`${API_URL}/ads/instagram?page_id=${encodeURIComponent(pageId)}`, { headers: h });
       const data = await res.json();
       setIgAccounts(data.instagram_accounts || []);
     } catch {}
