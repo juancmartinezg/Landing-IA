@@ -80,19 +80,29 @@ export default function WhatsAppPage() {
       showToast('Facebook SDK no cargado. Recarga la página.');
       return;
     }
-    // Interceptar window.open para capturar referencia al popup
     const originalOpen = window.open.bind(window);
     let fbPopup: Window | null = null;
+    let responded = false;
     window.open = function (...args: any[]) {
       fbPopup = originalOpen(...args);
       return fbPopup;
     } as typeof window.open;
     setConnecting(true);
     FB.login((response: any) => {
-      // Restaurar window.open original
       window.open = originalOpen;
-      // Cerrar el popup de Facebook
+      responded = true;
+      // Intentar cerrar inmediatamente
       try { if (fbPopup && !fbPopup.closed) fbPopup.close(); } catch {}
+      // Si no se cerró, monitorear y cerrar cuando sea posible
+      if (fbPopup && !fbPopup.closed) {
+        const closer = setInterval(() => {
+          try {
+            if (!fbPopup || fbPopup.closed) { clearInterval(closer); return; }
+            fbPopup.close();
+          } catch { clearInterval(closer); }
+        }, 500);
+        setTimeout(() => clearInterval(closer), 10000);
+      }
       window.focus();
       if (response.authResponse) {
         handleSignupResponse(response);
