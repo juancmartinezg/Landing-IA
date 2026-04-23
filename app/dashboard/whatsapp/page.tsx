@@ -80,9 +80,28 @@ export default function WhatsAppPage() {
       showToast('Facebook SDK no cargado. Recarga la página.');
       return;
     }
+    // Interceptar window.open para capturar referencia al popup
+    const originalOpen = window.open.bind(window);
+    let fbPopup: Window | null = null;
+    window.open = function (...args: any[]) {
+      fbPopup = originalOpen(...args);
+      return fbPopup;
+    } as typeof window.open;
+    setConnecting(true);
     FB.login((response: any) => {
+      // Restaurar window.open original
+      window.open = originalOpen;
+      // Cerrar el popup de Facebook
+      try { if (fbPopup && !fbPopup.closed) fbPopup.close(); } catch {}
       window.focus();
-      handleSignupResponse(response);
+      if (response.authResponse) {
+        handleSignupResponse(response);
+      } else {
+        setConnecting(false);
+        if (response.status !== 'unknown') {
+          showToast('Cancelaste la conexión o hubo un error');
+        }
+      }
     }, {
       config_id: META_CONFIG_ID,
       response_type: 'code',
