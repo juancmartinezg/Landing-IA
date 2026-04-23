@@ -1,10 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../providers';
-import Script from 'next/script';
+import Link from 'next/link';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const META_APP_ID = '27398458396409385';
-//const META_CONFIG_ID = '694128837119269';
 export default function WhatsAppPage() {
   const { user } = useAuth();
   const [config, setConfig] = useState<any>(null);
@@ -18,14 +17,29 @@ export default function WhatsAppPage() {
   };
   useEffect(() => {
     fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' } })
-      .then(res => res.json())
-      .then(data => { setConfig(data); setLoading(false); })
+      .then((res: any) => res.json())
+      .then((data: any) => { setConfig(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
-    const isConnected = config?.phone_number_id && config?.waba_id && config.phone_number_id !== 'pending' && config.waba_id !== 'pending' && config.phone_number_id !== 'DISCONNECTED' && config.waba_id !== 'DISCONNECTED';
-
-  // Callback cuando el usuario completa el signup
-const handleSignupResponse = useCallback(async (response: any) => {
+  useEffect(() => {
+    if ((window as any).FB) { setSdkReady(true); return; }
+    (window as any).fbAsyncInit = function () {
+      (window as any).FB.init({
+        appId: META_APP_ID,
+        cookie: true,
+        xfbml: false,
+        version: 'v22.0',
+      });
+      setSdkReady(true);
+    };
+    const script = document.createElement('script');
+    script.src = 'https://connect.facebook.net/es_LA/sdk.js';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+  }, []);
+  const isConnected = config?.phone_number_id && config?.waba_id && config.phone_number_id !== 'pending' && config.waba_id !== 'pending' && config.phone_number_id !== 'DISCONNECTED' && config.waba_id !== 'DISCONNECTED';
+  const handleSignupResponse = useCallback(async (response: any) => {
     console.log('Embedded Signup response:', JSON.stringify(response));
     setConnecting(true);
     if (response.authResponse) {
@@ -49,15 +63,14 @@ const handleSignupResponse = useCallback(async (response: any) => {
         } else {
           showToast('Error: ' + (data.error || 'No se pudo conectar'));
         }
-      } catch (err) {
+      } catch (err: any) {
         showToast('Error de conexión con el servidor');
       }
     } else {
       showToast('Cancelaste la conexión o hubo un error');
     }
     setConnecting(false);
-  }, [config]);
-  // Iniciar el Embedded Signup
+  }, [config, user]);
   const handleConnect = () => {
     const FB = (window as any).FB;
     if (!FB) {
@@ -67,7 +80,14 @@ const handleSignupResponse = useCallback(async (response: any) => {
     FB.login((response: any) => {
       handleSignupResponse(response);
     }, {
-      scope: 'whatsapp_business_management,whatsapp_business_messaging,business_management',
+      config_id: '694128837119269',
+      response_type: 'code',
+      override_default_response_type: true,
+      extras: {
+        setup: {},
+        featureType: '',
+        sessionInfoVersion: '3',
+      },
     });
   };
   const handleDisconnect = async () => {
@@ -88,27 +108,9 @@ const handleSignupResponse = useCallback(async (response: any) => {
       showToast('Error desconectando');
     }
   };
-  const initFacebookSDK = () => {
-    const FB = (window as any).FB;
-    if (FB) {
-      FB.init({
-        appId: META_APP_ID,
-        cookie: true,
-        xfbml: true,
-        version: 'v21.0',
-      });
-      setSdkReady(true);
-    }
-  };
   if (loading) return <div className="text-center py-12 text-gray-500">Cargando...</div>;
   return (
     <div>
-      {/* Facebook SDK */}
-      <Script
-        src="https://connect.facebook.net/en_US/sdk.js"
-        strategy="lazyOnload"
-        onLoad={initFacebookSDK}
-      />
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-[#1a1f2e] border border-white/10 rounded-xl px-5 py-3 text-sm font-medium shadow-xl">
           {toast}
@@ -155,21 +157,21 @@ const handleSignupResponse = useCallback(async (response: any) => {
           </div>
           <h3 className="font-bold mb-4">Acciones rápidas</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a href="/dashboard/chat" className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 hover:border-indigo-500/30 transition-all group">
+            <Link href="/dashboard/chat" className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 hover:border-indigo-500/30 transition-all group">
               <p className="text-2xl mb-2">💬</p>
               <h3 className="font-bold group-hover:text-indigo-400 transition-colors">Chat en vivo</h3>
               <p className="text-sm text-gray-500">Ver conversaciones activas</p>
-            </a>
-            <a href="/dashboard/services" className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 hover:border-indigo-500/30 transition-all group">
+            </Link>
+            <Link href="/dashboard/services" className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 hover:border-indigo-500/30 transition-all group">
               <p className="text-2xl mb-2">🛍️</p>
               <h3 className="font-bold group-hover:text-indigo-400 transition-colors">Catálogo</h3>
               <p className="text-sm text-gray-500">Gestionar servicios del bot</p>
-            </a>
-            <a href="/dashboard/settings" className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 hover:border-indigo-500/30 transition-all group">
+            </Link>
+            <Link href="/dashboard/settings" className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 hover:border-indigo-500/30 transition-all group">
               <p className="text-2xl mb-2">⚙️</p>
               <h3 className="font-bold group-hover:text-indigo-400 transition-colors">Configuración</h3>
               <p className="text-sm text-gray-500">Ajustar personalidad del bot</p>
-            </a>
+            </Link>
           </div>
         </div>
       ) : (
