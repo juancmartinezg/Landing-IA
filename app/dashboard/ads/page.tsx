@@ -977,6 +977,27 @@ export default function AdsPage() {
                 ))}
               </div>
             )}
+            <div className="mb-4">
+              <p className="text-[10px] text-gray-400 font-bold mb-2">⚡ Acciones rápidas</p>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => { handleApplyAction('pausar', analysis.campaign_id); setAnalysis(null); }}
+                  className="text-[9px] px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 font-bold transition-all">
+                  ⏸ Pausar campaña
+                </button>
+                <button onClick={() => { handleApplyAction('activar', analysis.campaign_id); setAnalysis(null); }}
+                  className="text-[9px] px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all">
+                  ▶ Activar campaña
+                </button>
+                <button onClick={() => { handleApplyAction('escalar', analysis.campaign_id); setAnalysis(null); }}
+                  className="text-[9px] px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all">
+                  🚀 Aumentar presupuesto 20%
+                </button>
+                <button onClick={() => { setAnalysis(null); setTab('create'); setWizStep(1); }}
+                  className="text-[9px] px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 font-bold transition-all">
+                  ✨ Crear nuevos creativos
+                </button>
+              </div>
+            </div>
             {(analysis.ads || []).length > 0 && (
               <div>
                 <p className="text-[10px] text-gray-400 font-bold mb-2">📋 Anuncios</p>
