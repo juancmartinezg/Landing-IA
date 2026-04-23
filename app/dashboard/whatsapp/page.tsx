@@ -55,12 +55,8 @@ export default function WhatsAppPage() {
         );
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast('✅ ¡WhatsApp conectado exitosamente!');
-          setConfig({
-            ...config,
-            phone_number_id: data.phone_number_id,
-            waba_id: data.waba_id,
-          });
+          window.location.href = '/dashboard/whatsapp';
+          return;
         } else {
           showToast('Error: ' + (data.error || 'No se pudo conectar'));
         }
@@ -68,48 +64,19 @@ export default function WhatsAppPage() {
         showToast('Error de conexión con el servidor');
       }
       setConnecting(false);
-    } else {
-      if (response.status !== 'unknown') {
-        showToast('Cancelaste la conexión o hubo un error');
-      }
     }
   }, [config, user]);
   const handleConnect = () => {
     const FB = (window as any).FB;
-    if (!FB) {
-      showToast('Facebook SDK no cargado. Recarga la página.');
-      return;
-    }
-    const originalOpen = window.open.bind(window);
-    let fbPopup: Window | null = null;
-    let responded = false;
-    window.open = function (...args: any[]) {
-      fbPopup = originalOpen(...args);
-      return fbPopup;
-    } as typeof window.open;
+    if (!FB) return showToast('SDK no cargado');
     setConnecting(true);
     FB.login((response: any) => {
-      window.open = originalOpen;
-      responded = true;
-      // Intentar cerrar inmediatamente
-      try { if (fbPopup && !fbPopup.closed) fbPopup.close(); } catch {}
-      // Si no se cerró, monitorear y cerrar cuando sea posible
-      if (fbPopup && !fbPopup.closed) {
-        const closer = setInterval(() => {
-          try {
-            if (!fbPopup || fbPopup.closed) { clearInterval(closer); return; }
-            fbPopup.close();
-          } catch { clearInterval(closer); }
-        }, 500);
-        setTimeout(() => clearInterval(closer), 10000);
-      }
-      window.focus();
       if (response.authResponse) {
         handleSignupResponse(response);
       } else {
         setConnecting(false);
         if (response.status !== 'unknown') {
-          showToast('Cancelaste la conexión o hubo un error');
+          showToast('Conexión cancelada');
         }
       }
     }, {
@@ -117,8 +84,6 @@ export default function WhatsAppPage() {
       response_type: 'code',
       override_default_response_type: true,
       extras: {
-        setup: {},
-        featureType: '',
         sessionInfoVersion: '3',
       },
     });
