@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../providers';
 import Link from 'next/link';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
@@ -12,6 +12,7 @@ export default function WhatsAppPage() {
   const [connecting, setConnecting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
+  const sessionData = useRef<any>(null);
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
@@ -22,13 +23,15 @@ export default function WhatsAppPage() {
       .then((data: any) => { setConfig(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
+  // SDK de Facebook — patron oficial
   useEffect(() => {
     if ((window as any).FB) { setSdkReady(true); return; }
     (window as any).fbAsyncInit = function () {
       (window as any).FB.init({
         appId: META_APP_ID,
+        autoLogAppEvents: true,
         cookie: true,
-        xfbml: false,
+        xfbml: true,
         version: 'v25.0',
       });
       setSdkReady(true);
@@ -39,20 +42,43 @@ export default function WhatsAppPage() {
     script.defer = true;
     document.body.appendChild(script);
   }, []);
+  // Listener para recibir datos de sesion del Embedded Signup
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== 'https://www.facebook.com') return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'WA_EMBEDDED_SIGNUP') {
+          console.log('WA_EMBEDDED_SIGNUP data:', data.data);
+          sessionData.current = data.data;
+        }
+      } catch {}
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
   const isConnected = config?.phone_number_id && config?.waba_id && config.phone_number_id !== 'pending' && config.waba_id !== 'pending' && config.phone_number_id !== 'DISCONNECTED' && config.waba_id !== 'DISCONNECTED';
   const handleSignupResponse = useCallback(async (response: any) => {
     console.log('Embedded Signup response:', JSON.stringify(response));
     if (response.authResponse) {
       setConnecting(true);
-      const accessToken = response.authResponse.accessToken;
+      const code = response.authResponse.code || '';
+      const accessToken = response.authResponse.accessToken || '';
+      const waData = sessionData.current || {};
       try {
-        const res = await fetch(
-          `${API_URL}/meta/exchange?access_token=${encodeURIComponent(accessToken)}`,
-          {
-            method: 'POST',
-            headers: { 'client-id': user?.companyId || '' },
-          }
-        );
+        const res = await fetch(`${API_URL}/meta/exchange`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'client-id': user?.companyId || '',
+          },
+          body: JSON.stringify({
+            code,
+            access_token: accessToken,
+            waba_id: waData.whatsapp_business_account_id || waData.waba_id || '',
+            phone_number_id: waData.phone_number_id || '',
+          }),
+        });
         const data = await res.json();
         if (res.ok && data.success) {
           window.location.href = '/dashboard/whatsapp';
@@ -69,6 +95,7 @@ export default function WhatsAppPage() {
   const handleConnect = () => {
     const FB = (window as any).FB;
     if (!FB) return showToast('SDK no cargado');
+    sessionData.current = null;
     setConnecting(true);
     FB.login((response: any) => {
       if (response.authResponse) {
