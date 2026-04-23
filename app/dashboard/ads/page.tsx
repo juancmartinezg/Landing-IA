@@ -52,8 +52,9 @@ export default function AdsPage() {
       fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).catch(() => ({ services: [] })),
       fetch(`${API_URL}/ads/accounts`, { headers: h }).then(r => r.json()).catch(() => ({ accounts: [] })),
       fetch(`${API_URL}/ads/pages`, { headers: h }).then(r => r.json()).catch(() => ({ pages: [] })),
-    ]).then(([dash, a, s, ac, pg]) => {
-      setDashboard(dash); setMetrics(dash.global || {}); setCampaigns(dash.campaigns || []); setAudiences(a.audiences || []); setServices(s.services || []);
+      fetch(`${API_URL}/ads/instagram`, { headers: h }).then(r => r.json()).catch(() => ({ instagram_accounts: [] })),
+    ]).then(([dash, a, s, ac, pg, ig]) => {
+      setDashboard(dash); setMetrics(dash.global || {}); setCampaigns(dash.campaigns || []); setAudiences(a.audiences || []); setServices(s.services || []); setIgAccounts(ig.instagram_accounts || []);
       const accs = ac.accounts || [];
       setAccounts(accs);
       setPages(pg.pages || []);
