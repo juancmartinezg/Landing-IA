@@ -228,11 +228,27 @@ export default function AdsPage() {
       {toast && <div className="fixed top-4 right-4 z-50 bg-[#1a1f2e] border border-white/10 rounded-xl px-5 py-3 text-sm font-medium shadow-xl">{toast}</div>}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Publicidad 📢</h1>
-        {campaigns.length > 0 && tab !== 'create' && (
-          <button onClick={() => { setTab('create'); setWizStep(1); }} className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-sm font-bold transition-all">
-            + Nueva campaña
-          </button>
-        )}
+        <div className="flex gap-2">
+          {tab === 'create' && (wizStep > 1 || variants.length > 0 || wiz.service_slug) && (
+            <button onClick={() => {
+              if (!confirm('¿Descartar el borrador? Perderás los cambios del wizard.')) return;
+              localStorage.removeItem('ads_wiz_step');
+              localStorage.removeItem('ads_wiz_data');
+              localStorage.removeItem('ads_wiz_variants');
+              setWizStep(1);
+              setVariants([]);
+              setWiz({ service_slug: '', country: 'CO', city: '', location: '', radius: '10', budget_daily: '15000', duration: '7', ad_account_id: '', page_id: '', page_name: '', instagram_id: '', age_min: '18', age_max: '65', gender: 'all', cities: [] as any[], interests: [] as any[] });
+              showToast('Borrador descartado');
+            }} className="bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 px-3 py-2 rounded-xl text-xs font-bold transition-all">
+              🗑️ Descartar borrador
+            </button>
+          )}
+          {campaigns.length > 0 && tab !== 'create' && (
+            <button onClick={() => { setTab('create'); setWizStep(1); }} className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-sm font-bold transition-all">
+              + Nueva campaña
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex gap-2 mb-6 overflow-x-auto">
         {[{id:'metrics',l:'📊 Resultados'},{id:'campaigns',l:'📋 Mis campañas'},{id:'audiences',l:'👥 Audiencias'},{id:'create',l:'✨ Crear campaña'}].map(t => (
@@ -747,7 +763,10 @@ export default function AdsPage() {
                     ) : (
                       <div className="space-y-2">
                         {accounts.map((acc, i) => (
-                          <button key={i} onClick={() => setWiz({...wiz, ad_account_id: acc.id})}
+                          <button key={i} onClick={() => {
+                            setWiz({...wiz, ad_account_id: acc.id, page_id: '', page_name: '', instagram_id: ''});
+                            setIgAccounts([]);
+                          }}
                             className={`w-full p-3 rounded-xl text-left transition-all border ${wiz.ad_account_id === acc.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
                             <p className="text-sm font-bold">{acc.name}</p>
                             <p className="text-[10px] text-gray-500">{acc.business_name} • {acc.currency}</p>
@@ -756,23 +775,25 @@ export default function AdsPage() {
                       </div>
                     )}
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-400 mb-2 block">Página de Facebook</label>
-                    {pages.length === 0 ? (
-                      <p className="text-xs text-yellow-400 bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3">⚠️ No tienes páginas vinculadas.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {pages.map((pg, i) => (
-                          <button key={i} onClick={() => { setWiz({...wiz, page_id: pg.id, page_name: pg.name}); loadInstagram(pg.id); }}
-                            className={`w-full p-3 rounded-xl text-left transition-all border flex items-center gap-3 ${wiz.page_id === pg.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
-                            {pg.picture && <img src={pg.picture} className="w-8 h-8 rounded-full shrink-0" />}
-                            <p className="text-sm font-bold">{pg.name}</p>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {igAccounts.length > 0 && (
+                  {wiz.ad_account_id && (
+                    <div>
+                      <label className="text-xs text-gray-400 mb-2 block">Página de Facebook</label>
+                      {pages.length === 0 ? (
+                        <p className="text-xs text-yellow-400 bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3">⚠️ No tienes páginas vinculadas a esta cuenta.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {pages.map((pg, i) => (
+                            <button key={i} onClick={() => { setWiz({...wiz, page_id: pg.id, page_name: pg.name, instagram_id: ''}); setIgAccounts([]); loadInstagram(pg.id); }}
+                              className={`w-full p-3 rounded-xl text-left transition-all border flex items-center gap-3 ${wiz.page_id === pg.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                              {pg.picture && <img src={pg.picture} className="w-8 h-8 rounded-full shrink-0" />}
+                              <p className="text-sm font-bold">{pg.name}</p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {wiz.page_id && igAccounts.length > 0 && (
                     <div>
                       <label className="text-xs text-gray-400 mb-2 block">Instagram (opcional)</label>
                       <div className="space-y-2">
