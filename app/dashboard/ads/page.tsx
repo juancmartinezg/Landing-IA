@@ -34,6 +34,8 @@ export default function AdsPage() {
   const [businessType, setBusinessType] = useState('servicios');
   const [dashboard, setDashboard] = useState<any>(null);
   const [period, setPeriod] = useState('last_30d');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [dashboardCampFilter, setDashboardCampFilter] = useState<string>('all');
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<any>(null);
   const [citySearch, setCitySearch] = useState('');
@@ -59,7 +61,12 @@ export default function AdsPage() {
       setAccounts(accs);
       setPages(pg.pages || []);
       const selAcc = accs.find((x: any) => x.selected);
-      if (selAcc) setWiz((prev: any) => ({...prev, ad_account_id: selAcc.id}));
+      if (selAcc) {
+        setWiz((prev: any) => ({...prev, ad_account_id: selAcc.id}));
+        setSelectedAccountId(selAcc.id);
+      } else if (accs.length > 0) {
+        setSelectedAccountId(accs[0].id);
+      }
       const selPage = (pg.pages || []).find((x: any) => x.selected);
       if (selPage) setWiz((prev: any) => ({...prev, page_id: selPage.id, page_name: selPage.name}));
       fetch(`${API_URL}/config`, { headers: h }).then(r => r.json()).then(cfg => {
@@ -135,11 +142,18 @@ export default function AdsPage() {
     } catch { showToast('Error sincronizando'); }
     setSyncing(false);
   };
-  const reloadDashboard = (p?: string) => {
+  const reloadDashboard = (p?: string, accId?: string) => {
     const pr = p || period;
-    fetch(`${API_URL}/ads/dashboard?period=${pr}`, { headers: h }).then(r => r.json()).then(d => {
+    const account = accId !== undefined ? accId : selectedAccountId;
+    const url = `${API_URL}/ads/dashboard?period=${pr}${account ? `&ad_account_id=${encodeURIComponent(account)}` : ''}`;
+    fetch(url, { headers: h }).then(r => r.json()).then(d => {
       setDashboard(d); setMetrics(d.global || {}); setCampaigns(d.campaigns || []);
     }).catch(() => {});
+  };
+  const changeAccount = (accId: string) => {
+    setSelectedAccountId(accId);
+    setDashboardCampFilter('all');
+    reloadDashboard(period, accId);
   };
   const handleAnalyze = async (campaignId: string) => {
     setAnalyzing(campaignId); setAnalysis(null);
@@ -240,14 +254,41 @@ export default function AdsPage() {
               </button>
             </div>
           ) : (
-            <>
-              <div className="flex gap-2 mb-4">
+             <>
+              {accounts.length > 0 && (
+                <div className="flex flex-col sm:flex-row gap-2 mb-3 items-start sm:items-center">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-widest">Cuenta:</label>
+                  <select value={selectedAccountId} onChange={(e) => changeAccount(e.target.value)}
+                    className="bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-indigo-500">
+                    {accounts.map((acc: any) => (
+                      <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency || 'COP'})</option>
+                    ))}
+                  </select>
+                  {campaigns.length > 0 && (
+                    <>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-widest ml-0 sm:ml-3">Campaña:</label>
+                      <select value={dashboardCampFilter} onChange={(e) => setDashboardCampFilter(e.target.value)}
+                        className="bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-indigo-500 max-w-full">
+                        <option value="all">Todas las campañas</option>
+                        {campaigns.map((c: any) => (
+                          <option key={c.campaign_id} value={c.campaign_id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                </div>
+              )}
+              <div className="flex gap-2 mb-4 flex-wrap">
                 {[{id:'today',l:'Hoy'},{id:'last_7d',l:'7 días'},{id:'last_30d',l:'30 días'},{id:'last_90d',l:'90 días'}].map(p => (
                   <button key={p.id} onClick={() => { setPeriod(p.id); reloadDashboard(p.id); }}
-                    className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${period === p.id ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${period === p.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/5'}`}>
                     {p.l}
                   </button>
                 ))}
+                <button onClick={() => reloadDashboard()}
+                  className="ml-auto px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all">
+                  🔄 Actualizar
+                </button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
@@ -285,7 +326,7 @@ export default function AdsPage() {
               )}
               <h3 className="font-bold mb-3">Rendimiento por campaña</h3>
               <div className="space-y-2">
-                {campaigns.filter((c: any) => c.metrics?.spend > 0 || c.status === 'ACTIVE').map((c: any, i: number) => (
+                {campaigns.filter((c: any) => (c.metrics?.spend > 0 || c.status === 'ACTIVE') && (dashboardCampFilter === 'all' || c.campaign_id === dashboardCampFilter)).map((c: any, i: number) => (
                   <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
