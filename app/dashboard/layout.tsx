@@ -9,6 +9,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const menuItems = [
   { href: '/dashboard', label: 'Metricas', icon: '📊' },
   { href: '/dashboard/crm', label: 'CRM / Leads', icon: '👥' },
+  { href: '/dashboard/agents', label: 'Mi equipo', icon: '🧑‍💼' },
   { href: '/dashboard/chat', label: 'Conversaciones', icon: '💬' },
   { href: '/dashboard/services', label: 'Catálogo', icon: '🛍️' },
   { href: '/dashboard/appointments', label: 'Citas', icon: '📅' },
