@@ -330,12 +330,17 @@ export default function ChatPage() {
   };
   // Filtrar conversaciones.
   const filteredBot = botConvs.filter(c => {
+    // En vivo (bot): conversaciones activas del bot, sin incluir las asignadas a agente
+    if (c.assigned_agent_id) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
   });
   const filteredCw = botConvs.filter(c => {
-    if (c.flow_state !== 'PAUSED_FOR_HUMAN') return false;
+    // Tab Agente: conversaciones asignadas a un agente (o en handoff humano)
+    const hasAgent = !!c.assigned_agent_id;
+    const isPaused = c.flow_state === 'PAUSED_FOR_HUMAN';
+    if (!hasAgent && !isPaused) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
