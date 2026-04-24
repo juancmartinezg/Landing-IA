@@ -10,6 +10,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Metricas', icon: '📊', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { href: '/dashboard/crm', label: 'CRM / Leads', icon: '👥', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { href: '/dashboard/agents', label: 'Mi equipo', icon: '🧑‍💼', roles: ['owner', 'admin'] },
+  { href: '/dashboard/agents/performance', label: 'Ranking equipo', icon: '🏆', roles: ['owner', 'admin'] },
   { href: '/dashboard/chat', label: 'Conversaciones', icon: '💬', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { href: '/dashboard/services', label: 'Catálogo', icon: '🛍️', roles: ['owner', 'admin', 'agent', 'viewer'] },
   { href: '/dashboard/appointments', label: 'Citas', icon: '📅', roles: ['owner', 'admin', 'agent', 'viewer'] },
