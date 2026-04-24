@@ -44,6 +44,28 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    // Interceptar fetch global para agregar headers de rol/agente automaticamente
+    if (typeof window !== 'undefined' && !(window as any).__fetchPatched) {
+      const originalFetch = window.fetch;
+      window.fetch = function (input: any, init?: any) {
+        try {
+          const url = typeof input === 'string' ? input : (input?.url || '');
+          // Solo interceptar llamadas a nuestra API
+          if (url.includes('lambda-url') || url.includes(API_URL)) {
+            const stored = localStorage.getItem('cb_user');
+            if (stored) {
+              const u = JSON.parse(stored);
+              init = init || {};
+              init.headers = { ...(init.headers || {}) };
+              if (u.role && !(init.headers as any)['x-role']) (init.headers as any)['x-role'] = u.role;
+              if (u.agentId && !(init.headers as any)['x-agent-id']) (init.headers as any)['x-agent-id'] = u.agentId;
+            }
+          }
+        } catch {}
+        return originalFetch.call(this, input, init);
+      };
+      (window as any).__fetchPatched = true;
+    }
     const checkUser = async () => {
       const stored = localStorage.getItem('cb_user');
       if (stored) {
