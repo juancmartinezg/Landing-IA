@@ -89,6 +89,9 @@ export default function CRMPage() {
   const [newTag, setNewTag] = useState('');
   const [newNote, setNewNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
+  const [privateNotes, setPrivateNotes] = useState<any[]>([]);
+  const [newPrivateNote, setNewPrivateNote] = useState('');
+  const [savingPrivateNote, setSavingPrivateNote] = useState(false);
   const [view, setView] = useState<'list' | 'kanban'>('list');
   const [showDetail, setShowDetail] = useState(false);
   const [crmFields, setCrmFields] = useState<string[]>([]);
@@ -173,7 +176,25 @@ export default function CRMPage() {
     fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => { setSelectedLead(data); setShowDetail(true); });
+    fetch(`${API_URL}/leads/private-notes?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(res => res.json())
+      .then(data => setPrivateNotes(data.notes || []))
+      .catch(() => setPrivateNotes([]));
     setAiInsight(null);
+  };
+  const addPrivateNote = async (phone: string) => {
+    if (!newPrivateNote.trim()) return;
+    setSavingPrivateNote(true);
+    await fetch(`${API_URL}/leads/private-notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+      body: JSON.stringify({ phone, text: newPrivateNote.trim(), author_name: user?.name || user?.email || '' }),
+    });
+    setNewPrivateNote('');
+    setSavingPrivateNote(false);
+    fetch(`${API_URL}/leads/private-notes?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(res => res.json())
+      .then(data => setPrivateNotes(data.notes || []));
   };
   const closeDetail = () => { setShowDetail(false); };
   const loadAiInsight = (phone: string) => {
@@ -1464,6 +1485,120 @@ export default function CRMPage() {
                   </div>
                 </details>
               </div>
+              {/* Notas privadas del equipo */}
+              <div className="mb-4 pt-4 border-t border-white/5">
+                <details className="group" open>
+                  <summary className="flex items-center justify-between cursor-pointer list-none mb-2">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">🔒 Notas del equipo (privadas)</p>
+                    <span className="text-gray-600 text-[10px] group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="flex gap-1 mb-2">
+                    <input value={newPrivateNote} onChange={(e) => setNewPrivateNote(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && newPrivateNote.trim()) addPrivateNote(selectedLead.lead?.phoneNumber); }}
+                      placeholder="Nota interna, solo la ve tu equipo..."
+                      className="flex-1 bg-white/5 border border-yellow-500/20 rounded-lg px-3 py-2 text-xs outline-none focus:border-yellow-500 text-white" />
+                    <button onClick={() => addPrivateNote(selectedLead.lead?.phoneNumber)}
+                      disabled={!newPrivateNote.trim() || savingPrivateNote}
+                      className="text-xs bg-yellow-600/20 hover:bg-yellow-600 text-yellow-400 hover:text-white px-3 py-2 rounded-lg font-bold transition-all disabled:opacity-30">
+                      {savingPrivateNote ? '...' : '🔒'}
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {privateNotes.map((n: any, i: number) => (
+                      <div key={i} className="text-[10px] p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
+                        <p className="text-gray-300">{n.text}</p>
+                        <p className="text-gray-500 mt-1">
+                          🧑‍💼 {n.author_name} • {new Date((n.created_at || 0) * 1000).toLocaleDateString()} {new Date((n.created_at || 0) * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                        </p>
+                      </div>
+                    ))}
+                    {!privateNotes.length && <p className="text-[10px] text-gray-600 text-center py-2">Sin notas privadas</p>}
+                  </div>
+                </details>
+              </div>
+              {/* Historial de transferencias */}
+              {(selectedLead.lead?.agent_history || []).length > 0 && (
+                <div className="mb-4 pt-4 border-t border-white/5">
+                  <details className="group">
+                    <summary className="flex items-center justify-between cursor-pointer list-none mb-2">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest">🔄 Historial de agentes</p>
+                      <span className="text-gray-600 text-[10px] group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {[...(selectedLead.lead?.agent_history || [])].reverse().map((h: any, i: number) => (
+                        <div key={i} className="text-[10px] p-2 rounded-lg bg-indigo-500/5 border border-indigo-500/10">
+                          <p className="text-gray-300">
+                            {h.action === 'assigned' && <>➕ Asignado a <strong>{h.new_agent_name}</strong></>}
+                            {h.action === 'transferred' && <>🔄 <strong>{h.prev_agent_name}</strong> → <strong>{h.new_agent_name}</strong></>}
+                            {h.action === 'unassigned' && <>➖ Desasignado de <strong>{h.prev_agent_name}</strong></>}
+                          </p>
+                          {h.reason && <p className="text-gray-500 text-[9px] mt-0.5">Motivo: {h.reason}</p>}
+                          <p className="text-gray-600 text-[9px] mt-0.5">
+                            {new Date((h.timestamp || 0) * 1000).toLocaleDateString()} {new Date((h.timestamp || 0) * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              )}
+              {/* Notas privadas del equipo */}
+              <div className="mb-4 pt-4 border-t border-white/5">
+                <details className="group" open>
+                  <summary className="flex items-center justify-between cursor-pointer list-none mb-2">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">🔒 Notas del equipo (privadas)</p>
+                    <span className="text-gray-600 text-[10px] group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="flex gap-1 mb-2">
+                    <input value={newPrivateNote} onChange={(e) => setNewPrivateNote(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && newPrivateNote.trim()) addPrivateNote(selectedLead.lead?.phoneNumber); }}
+                      placeholder="Nota interna, solo la ve tu equipo..."
+                      className="flex-1 bg-white/5 border border-yellow-500/20 rounded-lg px-3 py-2 text-xs outline-none focus:border-yellow-500 text-white" />
+                    <button onClick={() => addPrivateNote(selectedLead.lead?.phoneNumber)}
+                      disabled={!newPrivateNote.trim() || savingPrivateNote}
+                      className="text-xs bg-yellow-600/20 hover:bg-yellow-600 text-yellow-400 hover:text-white px-3 py-2 rounded-lg font-bold transition-all disabled:opacity-30">
+                      {savingPrivateNote ? '...' : '🔒'}
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {privateNotes.map((n: any, i: number) => (
+                      <div key={i} className="text-[10px] p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/10">
+                        <p className="text-gray-300">{n.text}</p>
+                        <p className="text-gray-500 mt-1">
+                          🧑‍💼 {n.author_name} • {new Date((n.created_at || 0) * 1000).toLocaleDateString()} {new Date((n.created_at || 0) * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                        </p>
+                      </div>
+                    ))}
+                    {!privateNotes.length && <p className="text-[10px] text-gray-600 text-center py-2">Sin notas privadas</p>}
+                  </div>
+                </details>
+              </div>
+              {/* Historial de transferencias */}
+              {(selectedLead.lead?.agent_history || []).length > 0 && (
+                <div className="mb-4 pt-4 border-t border-white/5">
+                  <details className="group">
+                    <summary className="flex items-center justify-between cursor-pointer list-none mb-2">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest">🔄 Historial de agentes</p>
+                      <span className="text-gray-600 text-[10px] group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {[...(selectedLead.lead?.agent_history || [])].reverse().map((h: any, i: number) => (
+                        <div key={i} className="text-[10px] p-2 rounded-lg bg-indigo-500/5 border border-indigo-500/10">
+                          <p className="text-gray-300">
+                            {h.action === 'assigned' && <>➕ Asignado a <strong>{h.new_agent_name}</strong></>}
+                            {h.action === 'transferred' && <>🔄 <strong>{h.prev_agent_name}</strong> → <strong>{h.new_agent_name}</strong></>}
+                            {h.action === 'unassigned' && <>➖ Desasignado de <strong>{h.prev_agent_name}</strong></>}
+                          </p>
+                          {h.reason && <p className="text-gray-500 text-[9px] mt-0.5">Motivo: {h.reason}</p>}
+                          <p className="text-gray-600 text-[9px] mt-0.5">
+                            {new Date((h.timestamp || 0) * 1000).toLocaleDateString()} {new Date((h.timestamp || 0) * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              )}
               {/* Notas */}
               <div className="mb-4 pt-4 border-t border-white/5">
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">📝 Notas</p>
