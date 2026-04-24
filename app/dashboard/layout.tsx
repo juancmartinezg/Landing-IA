@@ -7,22 +7,22 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const menuItems = [
-  { href: '/dashboard', label: 'Metricas', icon: '📊' },
-  { href: '/dashboard/crm', label: 'CRM / Leads', icon: '👥' },
-  { href: '/dashboard/agents', label: 'Mi equipo', icon: '🧑‍💼' },
-  { href: '/dashboard/chat', label: 'Conversaciones', icon: '💬' },
-  { href: '/dashboard/services', label: 'Catálogo', icon: '🛍️' },
-  { href: '/dashboard/appointments', label: 'Citas', icon: '📅' },
-  { href: '/dashboard/payments', label: 'Pagos', icon: '💳' },
-  { href: '/dashboard/analytics', label: 'Reportes', icon: '📈' },
-  { href: '/dashboard/memory', label: 'Memoria IA', icon: '🧠' },
-  { href: '/dashboard/training', label: 'Entrenar Bot', icon: '🎓' },
-  { href: '/dashboard/templates', label: 'Plantillas', icon: '📋' },
-  { href: '/dashboard/gateway', label: 'Pasarela', icon: '🏦' },
-  { href: '/dashboard/inventory', label: 'Inventario', icon: '📦' },
-  { href: '/dashboard/ads', label: 'Facebook Ads', icon: '📢' },
-  { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: '📱' },
-  { href: '/dashboard/settings', label: 'Configuracion', icon: '⚙️' },
+  { href: '/dashboard', label: 'Metricas', icon: '📊', roles: ['owner', 'admin', 'agent', 'viewer'] },
+  { href: '/dashboard/crm', label: 'CRM / Leads', icon: '👥', roles: ['owner', 'admin', 'agent', 'viewer'] },
+  { href: '/dashboard/agents', label: 'Mi equipo', icon: '🧑‍💼', roles: ['owner', 'admin'] },
+  { href: '/dashboard/chat', label: 'Conversaciones', icon: '💬', roles: ['owner', 'admin', 'agent', 'viewer'] },
+  { href: '/dashboard/services', label: 'Catálogo', icon: '🛍️', roles: ['owner', 'admin', 'agent', 'viewer'] },
+  { href: '/dashboard/appointments', label: 'Citas', icon: '📅', roles: ['owner', 'admin', 'agent', 'viewer'] },
+  { href: '/dashboard/payments', label: 'Pagos', icon: '💳', roles: ['owner', 'admin', 'agent'] },
+  { href: '/dashboard/analytics', label: 'Reportes', icon: '📈', roles: ['owner', 'admin'] },
+  { href: '/dashboard/memory', label: 'Memoria IA', icon: '🧠', roles: ['owner', 'admin'] },
+  { href: '/dashboard/training', label: 'Entrenar Bot', icon: '🎓', roles: ['owner', 'admin'] },
+  { href: '/dashboard/templates', label: 'Plantillas', icon: '📋', roles: ['owner', 'admin'] },
+  { href: '/dashboard/gateway', label: 'Pasarela', icon: '🏦', roles: ['owner'] },
+  { href: '/dashboard/inventory', label: 'Inventario', icon: '📦', roles: ['owner', 'admin'] },
+  { href: '/dashboard/ads', label: 'Facebook Ads', icon: '📢', roles: ['owner', 'admin'] },
+  { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: '📱', roles: ['owner'] },
+  { href: '/dashboard/settings', label: 'Configuracion', icon: '⚙️', roles: ['owner'] },
 ];
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         {/* Menu */}
         <nav className="flex-1 overflow-y-auto py-4 px-3">
-          {menuItems.map((item) => (
+          {menuItems.filter(item => !user?.role || item.roles.includes(user.role)).map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -166,7 +166,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button onClick={() => setSidebarOpen(false)} className="text-gray-400 text-2xl">×</button>
             </div>
             <nav className="flex-1 overflow-y-auto py-4 px-3">
-              {menuItems.map((item) => (
+              {menuItems.filter(item => !user?.role || item.roles.includes(user.role)).map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
