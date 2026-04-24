@@ -191,11 +191,15 @@ export default function AdsPage() {
     } catch {}
     setSearchingInterest(false);
   };
-  const addCity = (city: any) => {
+ const addCity = (city: any) => {
     if (!wiz.cities.find((c: any) => c.key === city.key)) {
-      setWiz((prev: any) => ({...prev, cities: [...prev.cities, city]}));
+      // Por defecto 25 km, el usuario puede cambiarlo
+      setWiz((prev: any) => ({...prev, cities: [...prev.cities, {...city, radius: 25}]}));
     }
     setCitySearch(''); setCityResults([]);
+  };
+  const updateCityRadius = (key: string, radius: number) => {
+    setWiz((prev: any) => ({...prev, cities: prev.cities.map((c: any) => c.key === key ? {...c, radius} : c)}));
   };
   const removeCity = (key: string) => {
     setWiz((prev: any) => ({...prev, cities: prev.cities.filter((c: any) => c.key !== key)}));
@@ -627,15 +631,23 @@ export default function AdsPage() {
                       </div>
                     )}
                     {wiz.cities.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="space-y-1.5 mt-2">
                         {wiz.cities.map((c: any, i: number) => (
-                          <span key={i} className="text-[9px] px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center gap-1">
-                            {c.name} <button onClick={() => removeCity(c.key)} className="text-red-400 hover:text-red-300">✕</button>
-                          </span>
+                          <div key={i} className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-2 py-1.5">
+                            <span className="text-[10px] text-indigo-300 flex-1 truncate">📍 {c.name}</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <label className="text-[9px] text-gray-500">Radio:</label>
+                              <input type="number" min="1" max="80" value={c.radius || 25}
+                                onChange={(e) => updateCityRadius(c.key, parseInt(e.target.value) || 25)}
+                                className="w-12 bg-white/5 border border-white/10 rounded px-1 py-0.5 text-[10px] text-white outline-none" />
+                              <span className="text-[9px] text-gray-500">km</span>
+                              <button onClick={() => removeCity(c.key)} className="text-red-400 hover:text-red-300 ml-1 text-xs font-bold">✕</button>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     )}
-                    {wiz.cities.length === 0 && <p className="text-[8px] text-gray-600 mt-1">Sin ciudades = todo el país</p>}
+                    {wiz.cities.length === 0 && <p className="text-[8px] text-gray-600 mt-1">Sin ciudades = todo el país. Radio por defecto: 25 km (modificable)</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
