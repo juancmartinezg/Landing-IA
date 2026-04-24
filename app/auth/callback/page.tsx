@@ -34,12 +34,14 @@ function CallbackHandler() {
           const email = payload.email || '';
           const name = payload.name || payload.email || '';
           // Buscar company_id en UserMapping
-          let companyId = '';
+          let companyId = '', role = 'owner', agentId = '';
           try {
             const meRes = await fetch(`${API_URL}/me?email=${encodeURIComponent(email)}`);
             if (meRes.ok) {
               const meData = await meRes.json();
               companyId = meData.company_id || '';
+              role = meData.role || 'owner';
+              agentId = meData.agent_id || '';
             }
           } catch (err) {
             console.error('Error fetching /me:', err);
@@ -50,6 +52,8 @@ function CallbackHandler() {
             sub: payload.sub || '',
             accessToken: data.access_token || '',
             companyId,
+            role,
+            agentId,
           };
           localStorage.setItem('cb_user', JSON.stringify(user));
           localStorage.setItem('cb_tokens', JSON.stringify({

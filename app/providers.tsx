@@ -9,6 +9,8 @@ interface User {
   sub: string;
   accessToken: string;
   companyId: string;
+  role: string;
+  agentId: string;
 }
 interface AuthContextType {
   user: User | null;
@@ -59,8 +61,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               if (res.ok) {
                 const data = await res.json();
                 parsed.companyId = data.company_id || '';
+                parsed.role = data.role || 'owner';
+                parsed.agentId = data.agent_id || '';
               } else {
                 parsed.companyId = '';
+                parsed.role = '';
+                parsed.agentId = '';
               }
             } catch {
               parsed.companyId = '';
@@ -118,12 +124,17 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       if (data.AuthenticationResult) {
         const idToken = data.AuthenticationResult.IdToken;
         const payload = JSON.parse(atob(idToken.split('.')[1]));
-        let companyId = '';
+        let companyId = '', role = 'owner', agentId = '';
         try {
           const meRes = await fetch(`${API_URL}/me?email=${encodeURIComponent(email)}`);
-          if (meRes.ok) { const meData = await meRes.json(); companyId = meData.company_id || ''; }
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            companyId = meData.company_id || '';
+            role = meData.role || 'owner';
+            agentId = meData.agent_id || '';
+          }
         } catch {}
-        const userData = { email, name: payload.name || payload.email || '', sub: payload.sub || '', accessToken: data.AuthenticationResult.AccessToken || '', companyId };
+        const userData = { email, name: payload.name || payload.email || '', sub: payload.sub || '', accessToken: data.AuthenticationResult.AccessToken || '', companyId, role, agentId };
         localStorage.setItem('cb_user', JSON.stringify(userData));
         localStorage.setItem('cb_tokens', JSON.stringify({ id_token: idToken, access_token: data.AuthenticationResult.AccessToken, refresh_token: data.AuthenticationResult.RefreshToken }));
         setUser(userData);
