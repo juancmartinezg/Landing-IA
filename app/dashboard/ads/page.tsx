@@ -775,9 +775,16 @@ export default function AdsPage() {
                     ) : (
                       <div className="space-y-2">
                         {accounts.map((acc, i) => (
-                          <button key={i} onClick={() => {
+                          <button key={i} onClick={async () => {
                             setWiz({...wiz, ad_account_id: acc.id, page_id: '', page_name: '', instagram_id: ''});
                             setIgAccounts([]);
+                            setPages([]);
+                            // Recargar paginas filtradas por la cuenta seleccionada
+                            try {
+                              const r = await fetch(`${API_URL}/ads/pages?ad_account_id=${encodeURIComponent(acc.id)}`, { headers: h });
+                              const d = await r.json();
+                              setPages(d.pages || []);
+                            } catch {}
                           }}
                             className={`w-full p-3 rounded-xl text-left transition-all border ${wiz.ad_account_id === acc.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
                             <p className="text-sm font-bold">{acc.name}</p>
