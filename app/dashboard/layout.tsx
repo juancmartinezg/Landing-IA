@@ -2,6 +2,7 @@
 import { useAuth } from '../providers';
 import ToastProvider from '../components/Toast';
 import AgentChat from '../components/AgentChat';
+import PushSetup from '../components/PushSetup';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -287,7 +288,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </ToastProvider>
         </main>
         {user?.companyId && (
-          <AgentChat companyId={user.companyId} />
+          <>
+            <AgentChat companyId={user.companyId} />
+            <PushSetup />
+          </>
         )}
       </div>
     </div>

@@ -29,20 +29,25 @@ export default function ChatPage() {
   const lastMsgCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [phonesWithNew, setPhonesWithNew] = useState<Set<string>>(new Set());
-  // Sonido de nuevo mensaje
+   // Sonido de nuevo mensaje (2 tonos estilo WhatsApp)
   const playNotificationSound = () => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.3);
+      [880, 1100].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        const startTime = ctx.currentTime + (i * 0.12);
+        gain.gain.setValueAtTime(0.25, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15);
+        osc.start(startTime);
+        osc.stop(startTime + 0.15);
+      });
+      // Vibración en móvil
+      if ('vibrate' in navigator) (navigator as any).vibrate([100, 50, 100]);
     } catch {}
   };
   // Track de mensajes por conversacion para detectar nuevos
@@ -69,6 +74,15 @@ export default function ChatPage() {
             newPhones.forEach(p => next.add(p));
             return next;
           });
+          // Notificacion del sistema (si la ventana no esta activa)
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
+            const conv = convs.find((c: any) => c.phone === newPhones[0]);
+            const name = conv?.name || 'Cliente';
+            const body = conv?.last_user_msg || 'Nuevo mensaje';
+            try {
+              new Notification(`💬 ${name}`, { body, icon: '/icon-192x192.png', tag: 'cb-chat' });
+            } catch {}
+          }
         }
         if (lastMsgCountRef.current > 0 && totalMsgs > lastMsgCountRef.current) {
           playNotificationSound();
@@ -118,6 +132,10 @@ export default function ChatPage() {
   };
   // Inicial
   useEffect(() => {
+    // Pedir permiso de notificaciones del navegador
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
     loadBotConvs();
     loadCwConvs();
     const interval = setInterval(() => {
@@ -348,14 +366,14 @@ export default function ChatPage() {
             className={`flex-1 py-3 text-xs font-bold transition-all ${
               tab === 'bot' ? 'text-emerald-400 border-b-2 border-emerald-400' : 'text-gray-500'
             }`}>
-            💬 Chats ({botConvs.length})
+            🤖 En vivo ({botConvs.length})
           </button>
           <button onClick={() => setTab('agent')}
             className={`flex-1 py-3 text-xs font-bold transition-all relative ${
               tab === 'agent' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-500'
             }`}>
-            🙋 En vivo ({cwConvs.filter(c => c.unread_count > 0).length})
-            {cwConvs.reduce((sum, c) => sum + (c.unread_count || 0), 0) > 0 && (
+            🙋 Agente ({filteredCw.length})
+            {filteredCw.length > 0 && (
               <span className="absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
             )}
           </button>
