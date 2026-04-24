@@ -382,7 +382,7 @@ export default function AdsPage() {
                   <h4 className="text-xs font-bold mb-2">📝 Resumen IA</h4>
                   <button disabled={toolLoading === 'narrative'} onClick={async () => {
                     setToolLoading('narrative');
-                    const res = await fetch(`${API_URL}/ads/narrative?period=${period}`, { headers: h });
+                    const res = await fetch(`${API_URL}/ads/narrative?period=${period}${selectedAccountId ? `&ad_account_id=${encodeURIComponent(selectedAccountId)}` : ''}`, { headers: h });
                     const data = await res.json();
                     showToast(data.narrative || 'Sin datos');
                     setToolLoading('');
@@ -394,7 +394,7 @@ export default function AdsPage() {
                   <h4 className="text-xs font-bold mb-2">🌎 Por región</h4>
                   <button disabled={toolLoading === 'geo'} onClick={async () => {
                     setToolLoading('geo');
-                    const res = await fetch(`${API_URL}/ads/geo-breakdown?period=${period}`, { headers: h });
+                    const res = await fetch(`${API_URL}/ads/geo-breakdown?period=${period}${selectedAccountId ? `&ad_account_id=${encodeURIComponent(selectedAccountId)}` : ''}`, { headers: h });
                     const data = await res.json();
                     const top = (data.regions || []).slice(0, 5).map((r: any) => `${r.region}: $${r.spend.toLocaleString()}`).join('\n');
                     showToast(top || 'Sin datos geo');
