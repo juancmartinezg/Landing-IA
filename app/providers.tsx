@@ -145,7 +145,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       });
       if (data.AuthenticationResult) {
         const idToken = data.AuthenticationResult.IdToken;
-        const payload = JSON.parse(atob(idToken.split('.')[1]));
+        const payload = JSON.parse(decodeURIComponent(atob(idToken.split('.')[1]).split('').map((c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
         let companyId = '', role = 'owner', agentId = '';
         try {
           const meRes = await fetch(`${API_URL}/me?email=${encodeURIComponent(email)}`);
