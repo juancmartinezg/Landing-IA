@@ -2,7 +2,7 @@
   "name": "clientes.bot - Gestión de Clientes con IA",
   "short_name": "clientes.bot",
   "description": "Automatiza tus ventas y atención por WhatsApp con IA",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#0B0F1A",
   "theme_color": "#6366F1",
