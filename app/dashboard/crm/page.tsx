@@ -107,6 +107,8 @@ export default function CRMPage() {
   const [columnMap, setColumnMap] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
+  const [agentsList, setAgentsList] = useState<any[]>([]);
+  const [filterAgent, setFilterAgent] = useState('all');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   useEffect(() => {
     fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' } })
@@ -119,6 +121,10 @@ export default function CRMPage() {
     fetch(`${API_URL}/services`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => setServicesList(data.services || []))
+      .catch(() => {});
+    fetch(`${API_URL}/agents`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(res => res.json())
+      .then(data => setAgentsList((data.agents || []).filter((a: any) => a.active)))
       .catch(() => {});
     fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
@@ -153,9 +159,16 @@ export default function CRMPage() {
     if (filterProduct !== 'all') {
       result = result.filter(l => (l.purchase_info || {}).product_name === filterProduct);
     }
+    if (filterAgent !== 'all') {
+      if (filterAgent === 'unassigned') {
+        result = result.filter(l => !l.assigned_agent_id);
+      } else {
+        result = result.filter(l => l.assigned_agent_id === filterAgent);
+      }
+    }
     setFiltered(result);
     setPage(1);
-  }, [search, filterStatus, filterTag, filterProduct, leads]);
+  }, [search, filterStatus, filterTag, filterProduct, filterAgent, leads]);
   const loadDetail = (phone: string) => {
     fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
@@ -210,6 +223,16 @@ export default function CRMPage() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
       body: JSON.stringify({ phone, stage }),
+    });
+    loadDetail(phone);
+    fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(res => res.json()).then(data => setLeads(data.leads || []));
+  };
+  const assignAgent = async (phone: string, agent_id: string) => {
+    await fetch(`${API_URL}/agents/assign-lead`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+      body: JSON.stringify({ phone, agent_id }),
     });
     loadDetail(phone);
     fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
@@ -395,6 +418,19 @@ export default function CRMPage() {
               <option value="all" className="bg-[#1a1f2e] text-white">Producto</option>
               {[...new Set(leads.map(l => (l.purchase_info || {}).product_name).filter(Boolean))].map(p => (
                 <option key={p} value={p} className="bg-[#1a1f2e] text-white">{p}</option>
+              ))}
+            </select>
+          )}
+          {agentsList.length > 0 && (
+            <select
+              value={filterAgent}
+              onChange={(e) => setFilterAgent(e.target.value)}
+              className="flex-1 sm:flex-none bg-[#0B0F1A] border border-white/10 rounded-xl px-2 py-2 text-xs outline-none focus:border-indigo-500 text-white"
+            >
+              <option value="all" className="bg-[#1a1f2e] text-white">Agente</option>
+              <option value="unassigned" className="bg-[#1a1f2e] text-white">Sin asignar</option>
+              {agentsList.map((a: any) => (
+                <option key={a.agent_id} value={a.agent_id} className="bg-[#1a1f2e] text-white">{a.name}</option>
               ))}
             </select>
           )}
@@ -766,6 +802,9 @@ export default function CRMPage() {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium truncate text-sm">{lead.customer_name || 'Sin nombre'}</p>
                       <p className="text-[10px] text-gray-500 truncate">{lead.phoneNumber}</p>
+                      {lead.assigned_agent_name && (
+                        <p className="text-[10px] text-indigo-400 truncate mt-0.5">🧑‍💼 {lead.assigned_agent_name}</p>
+                      )}
                       {lead.last_user_msg && (
                         <p className="text-[10px] text-gray-600 truncate mt-0.5 hidden sm:block">💬 {lead.last_user_msg}</p>
                       )}
@@ -1018,6 +1057,24 @@ export default function CRMPage() {
                   </div>
                 </div>
               </div>
+              {/* Asignación de agente */}
+              {agentsList.length > 0 && (
+                <div className="mb-4 pt-4 border-t border-white/5">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">🧑‍💼 Agente asignado</p>
+                  <select
+                    value={selectedLead.lead?.assigned_agent_id || ''}
+                    onChange={(e) => assignAgent(selectedLead.lead?.phoneNumber, e.target.value)}
+                    className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-indigo-500 text-white">
+                    <option value="">— Sin asignar —</option>
+                    {agentsList.map((a: any) => (
+                      <option key={a.agent_id} value={a.agent_id}>{a.name} ({a.role})</option>
+                    ))}
+                  </select>
+                  {selectedLead.lead?.assigned_agent_name && (
+                    <p className="text-[10px] text-indigo-400 mt-1">✓ Asignado a {selectedLead.lead.assigned_agent_name}</p>
+                  )}
+                </div>
+              )}
               {selectedLead.payment && (
                 <div className="mb-4 pt-4 border-t border-white/5">
                   <h4 className="font-bold mb-2 text-emerald-400">💳 Pago</h4>
