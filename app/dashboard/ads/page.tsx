@@ -276,7 +276,7 @@ export default function AdsPage() {
       </div>
       <div className="flex gap-2 mb-6 overflow-x-auto">
         {[{id:'metrics',l:'📊 Resultados'},{id:'campaigns',l:'📋 Mis campañas'},{id:'audiences',l:'👥 Audiencias'},{id:'create',l:'✨ Crear campaña'}].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id as any)}
+          <button key={t.id} onClick={() => { setTab(t.id as any); if (t.id === 'campaigns') { fetch(`${API_URL}/ads/campaigns`, { headers: h }).then((r: any) => r.json()).then((d: any) => setCampaigns(d.campaigns || [])).catch(() => {}); } }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${tab === t.id ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>
             {t.l}
           </button>
