@@ -1103,7 +1103,7 @@ export default function AdsPage() {
               <div>
                 <p className="text-[10px] text-gray-400 font-bold mb-2">📋 Anuncios</p>
                 {analysis.ads.map((a: any, ai: number) => (
-                  <div key={ai} className="flex items-center text-[10px] py-2 border-b border-white/5 gap-2">
+                  <div key={ai} className={`flex items-center text-[10px] py-2 border-b gap-2 ${a.status === 'DISAPPROVED' ? 'border-red-500/30 bg-red-500/5 rounded-lg px-2 -mx-2' : a.status === 'WITH_ISSUES' ? 'border-yellow-500/30 bg-yellow-500/5 rounded-lg px-2 -mx-2' : 'border-white/5'}`}>
                     <span className="text-gray-300 truncate flex-1">{a.name}</span>
                     {a.status === 'DISAPPROVED' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold shrink-0">Rechazado</span>}
                     {a.status === 'WITH_ISSUES' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-bold shrink-0">Con problemas</span>}
