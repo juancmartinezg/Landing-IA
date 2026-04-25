@@ -167,6 +167,28 @@ export default function AdsPage() {
     } catch { showToast('Error analizando'); }
     setAnalyzing(null);
   };
+  const [adPreview, setAdPreview] = useState<any>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const openEditAd = async (ad: any) => {
+    setEditingAd(ad);
+    setEditForm({ headline: '', text: '', description: '', image_url: '' });
+    setAdPreview(null);
+    setLoadingPreview(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/ad-preview?ad_id=${encodeURIComponent(ad.id)}`, { headers: h });
+      const data = await res.json();
+      if (res.ok) {
+        setAdPreview(data);
+        setEditForm({
+          headline: data.headline || '',
+          text: data.text || '',
+          description: data.description || '',
+          image_url: data.image_url || '',
+        });
+      }
+    } catch {}
+    setLoadingPreview(false);
+  };
   const handleEditAd = async () => {
     if (!editingAd) return;
     setSavingEdit(true);
@@ -180,6 +202,7 @@ export default function AdsPage() {
         showToast('✅ ' + (data.message || 'Anuncio actualizado'));
         setEditingAd(null);
         if (analysis?.campaign_id) handleAnalyze(analysis.campaign_id);
+        fetch(`${API_URL}/ads/campaigns`, { headers: h }).then((r: any) => r.json()).then((d: any) => setCampaigns(d.campaigns || [])).catch(() => {});
       } else showToast(data.error || 'Error editando');
     } catch { showToast('Error de conexión'); }
     setSavingEdit(false);
@@ -519,7 +542,7 @@ export default function AdsPage() {
                             <span className="text-gray-300 truncate flex-1">{a.name}</span>
                             {a.status === 'DISAPPROVED' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold shrink-0">Rechazado</span>}
                             {a.status === 'WITH_ISSUES' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-bold shrink-0">Problemas</span>}
-                            <button onClick={() => { setEditingAd(a); setEditForm({ headline: '', text: '', description: '', image_url: '' }); }}
+                             <button onClick={() => openEditAd(a)}
                               className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold shrink-0">
                               ✏️ Editar
                             </button>
@@ -1138,7 +1161,7 @@ export default function AdsPage() {
                     {a.status === 'WITH_ISSUES' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-bold shrink-0">Con problemas</span>}
                     <span className="text-gray-400 shrink-0">${(a.spend || 0).toLocaleString()}</span>
                     <span className="text-emerald-400 shrink-0">{a.leads} leads</span>
-                    <button onClick={() => { setEditingAd(a); setEditForm({ headline: '', text: '', description: '', image_url: '' }); }}
+                    <button onClick={() => openEditAd(a)}
                       className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold shrink-0">
                       ✏️
                     </button>
@@ -1153,7 +1176,7 @@ export default function AdsPage() {
       )}
     {editingAd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto py-4" onClick={() => setEditingAd(null)}>
-          <div className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-5 w-full max-w-md mx-4 my-auto" onClick={(e: any) => e.stopPropagation()}>
+          <div className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-5 w-full max-w-lg mx-4 my-auto max-h-[90vh] overflow-y-auto" onClick={(e: any) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold">✏️ Editar anuncio</h3>
               <button onClick={() => setEditingAd(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
@@ -1164,57 +1187,78 @@ export default function AdsPage() {
                 <p className="text-[10px] text-red-400 font-bold">⚠️ Este anuncio fue rechazado por Meta. Edita la imagen o el texto y se enviará a revisión nuevamente.</p>
               </div>
             )}
-            <div className="space-y-3">
-              <div>
-                <label className="text-[9px] text-gray-500 mb-1 block">Título (dejar vacío = no cambiar)</label>
-                <input value={editForm.headline} onChange={(e: any) => setEditForm({...editForm, headline: e.target.value})} placeholder="Nuevo título..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+            {loadingPreview ? (
+              <div className="text-center py-6">
+                <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <p className="text-[10px] text-gray-500">Cargando anuncio...</p>
               </div>
-              <div>
-                <label className="text-[9px] text-gray-500 mb-1 block">Texto principal</label>
-                <textarea value={editForm.text} onChange={(e: any) => setEditForm({...editForm, text: e.target.value})} placeholder="Nuevo texto..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white resize-none h-24" />
-              </div>
-              <div>
-                <label className="text-[9px] text-gray-500 mb-1 block">Descripción</label>
-                <input value={editForm.description} onChange={(e: any) => setEditForm({...editForm, description: e.target.value})} placeholder="Nueva descripción..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
-              </div>
-              <div>
-                <label className="text-[9px] text-gray-500 mb-1 block">Imagen</label>
-                <div className="flex gap-2">
-                  <input value={editForm.image_url} onChange={(e: any) => setEditForm({...editForm, image_url: e.target.value})} placeholder="URL de nueva imagen..."
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
-                  <label className="text-[9px] px-3 py-2 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 font-bold cursor-pointer flex items-center">
-                    📷
-                    <input type="file" accept="image/*" className="hidden" onChange={async (e: any) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const r = await fetch(`${API_URL}/upload-url?file_name=${encodeURIComponent(file.name)}&folder=ads`, { headers: h });
-                      const d = await r.json();
-                      if (d.upload_url) {
-                        await fetch(d.upload_url, { method: 'PUT', headers: { 'Content-Type': d.content_type }, body: file });
-                        setEditForm({...editForm, image_url: d.public_url});
-                        showToast('✅ Imagen subida');
-                      }
-                    }} />
-                  </label>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Preview actual */}
+                {adPreview && (
+                  <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                    <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Vista previa actual</p>
+                    {adPreview.image_url && (
+                      <img src={adPreview.image_url} className="w-full h-32 object-cover rounded-lg mb-2" />
+                    )}
+                    <p className="text-xs font-bold text-white mb-1">{adPreview.headline || 'Sin título'}</p>
+                    <p className="text-[10px] text-gray-300 mb-1 line-clamp-3">{adPreview.text || 'Sin texto'}</p>
+                    <p className="text-[9px] text-gray-500">{adPreview.description || ''}</p>
+                  </div>
+                )}
+                {/* Formulario de edición */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[9px] text-gray-500 mb-1 block">Título</label>
+                    <input value={editForm.headline} onChange={(e: any) => setEditForm({...editForm, headline: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-gray-500 mb-1 block">Texto principal</label>
+                    <textarea value={editForm.text} onChange={(e: any) => setEditForm({...editForm, text: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white resize-none h-24" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-gray-500 mb-1 block">Descripción</label>
+                    <input value={editForm.description} onChange={(e: any) => setEditForm({...editForm, description: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-gray-500 mb-1 block">Imagen</label>
+                    {editForm.image_url && <img src={editForm.image_url} className="w-full h-24 object-cover rounded-lg mb-2" />}
+                    <div className="flex gap-2">
+                      <label className="flex-1 text-[9px] px-3 py-2 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 font-bold cursor-pointer text-center">
+                        📷 Cambiar imagen
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e: any) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const r = await fetch(`${API_URL}/upload-url?file_name=${encodeURIComponent(file.name)}&folder=ads`, { headers: h });
+                          const d = await r.json();
+                          if (d.upload_url) {
+                            await fetch(d.upload_url, { method: 'PUT', headers: { 'Content-Type': d.content_type }, body: file });
+                          setEditForm({...editForm, image_url: d.public_url});
+                          showToast('✅ Imagen subida');
+                        }
+                      }} />
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="flex gap-2 mt-4">
-              <button onClick={() => setEditingAd(null)} className="flex-1 border border-white/10 py-2.5 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">
-                Cancelar
-              </button>
-              <button onClick={handleEditAd} disabled={savingEdit || (!editForm.headline && !editForm.text && !editForm.description && !editForm.image_url)}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-30">
-                {savingEdit ? '⏳ Guardando...' : '💾 Guardar cambios'}
-              </button>
-            </div>
-            <p className="text-[9px] text-gray-600 text-center mt-2">Meta revisará los cambios (~30 min)</p>
+          )}
+          <div className="flex gap-2 mt-4">
+            <button onClick={() => setEditingAd(null)} className="flex-1 border border-white/10 py-2.5 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">
+              Cancelar
+            </button>
+            <button onClick={handleEditAd} disabled={savingEdit}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-30">
+              {savingEdit ? '⏳ Guardando...' : '💾 Guardar cambios'}
+            </button>
           </div>
+          <p className="text-[9px] text-gray-600 text-center mt-2">Meta revisará los cambios (~30 min)</p>
         </div>
-      )}
+      </div>
+    )}
     {previewImg && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setPreviewImg(null)}>
           <div className="relative max-w-2xl max-h-[80vh] mx-4" onClick={e => e.stopPropagation()}>
