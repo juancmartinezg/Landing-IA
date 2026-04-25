@@ -380,7 +380,7 @@ export default function LandingPage() {
           </div>
 
           <p className="text-gray-600 text-[10px] uppercase tracking-[0.3em] font-medium font-sans">
-            © 2026 Clientes.bot. Todos los derechos reservados.
+            © 2026 SGC TECHNOLOGY. Todos los derechos reservados.
           </p>
 
           <div className="flex gap-8 text-gray-500 text-xs font-bold uppercase tracking-widest font-sans">
