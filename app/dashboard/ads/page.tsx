@@ -58,8 +58,22 @@ export default function AdsPage() {
       fetch(`${API_URL}/ads/accounts`, { headers: h }).then(r => r.json()).catch(() => ({ accounts: [] })),
       fetch(`${API_URL}/ads/pages`, { headers: h }).then(r => r.json()).catch(() => ({ pages: [] })),
       fetch(`${API_URL}/ads/instagram`, { headers: h }).then(r => r.json()).catch(() => ({ instagram_accounts: [] })),
-    ]).then(([dash, a, s, ac, pg, ig]) => {
-      setDashboard(dash); setMetrics(dash.global || {}); setCampaigns(dash.campaigns || []); setAudiences(a.audiences || []); setServices(s.services || []); setIgAccounts(ig.instagram_accounts || []);
+      fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).catch(() => ({ campaigns: [] })),
+    ]).then(([dash, a, s, ac, pg, ig, camps]) => {
+      setDashboard(dash); setMetrics(dash.global || {}); setAudiences(a.audiences || []); setServices(s.services || []); setIgAccounts(ig.instagram_accounts || []);
+      // Usar campañas de /ads/campaigns (tiene ads + rejected_count) en vez de dashboard
+      const fullCamps = camps.campaigns || [];
+      if (fullCamps.length > 0) {
+        // Merge metrics del dashboard con ads info de campaigns
+        const dashCamps = dash.campaigns || [];
+        const merged = fullCamps.map((c: any) => {
+          const dc = dashCamps.find((d: any) => d.campaign_id === c.campaign_id);
+          return dc ? { ...c, metrics: dc.metrics, rendimiento: dc.rendimiento, status_human: dc.status_human } : c;
+        });
+        setCampaigns(merged);
+      } else {
+        setCampaigns(dash.campaigns || []);
+      }
       const accs = ac.accounts || [];
       setAccounts(accs);
       setPages(pg.pages || []);
