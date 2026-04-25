@@ -473,10 +473,17 @@ export default function AdsPage() {
             </div>
             <div className="space-y-3">
               {campaigns.filter((c: any) => campFilter === 'all' || c.status === campFilter).map((c: any, i: number) => (
-                <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+                <div key={i} className={`bg-white/[0.03] border rounded-xl p-4 ${c.rejected_count > 0 ? 'border-red-500/30' : 'border-white/5'}`}>
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm truncate">{c.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-sm truncate">{c.name}</p>
+                        {c.rejected_count > 0 && (
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold animate-pulse">
+                            🚫 {c.rejected_count} rechazado{c.rejected_count > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex gap-3 text-[10px] text-gray-500 mt-1">
                         <span>{c.ad_count || c.ad_ids?.length || 0} anuncios</span>
                         {c.budget_daily > 0 && <span>${c.budget_daily.toLocaleString()}/día</span>}
@@ -499,6 +506,28 @@ export default function AdsPage() {
                       </button>
                     </div>
                   </div>
+                  {(c.ads || []).length > 0 && (
+                    <details className="mt-3 group">
+                      <summary className="text-[10px] text-gray-500 cursor-pointer hover:text-gray-300 flex items-center gap-1">
+                        📋 {c.ads.length} anuncios {c.rejected_count > 0 && `(${c.rejected_count} rechazados)`}
+                        <span className="text-[8px] group-open:rotate-180 transition-transform">▼</span>
+                      </summary>
+                      <div className="mt-2 space-y-1">
+                        {c.ads.map((a: any, ai: number) => (
+                          <div key={ai} className={`flex items-center text-[10px] py-1.5 px-2 rounded-lg gap-2 ${a.status === 'DISAPPROVED' ? 'bg-red-500/10 border border-red-500/20' : a.status === 'WITH_ISSUES' ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-white/[0.02]'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${a.status === 'DISAPPROVED' ? 'bg-red-500' : a.status === 'WITH_ISSUES' ? 'bg-yellow-500' : a.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-gray-500'}`} />
+                            <span className="text-gray-300 truncate flex-1">{a.name}</span>
+                            {a.status === 'DISAPPROVED' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold shrink-0">Rechazado</span>}
+                            {a.status === 'WITH_ISSUES' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-bold shrink-0">Problemas</span>}
+                            <button onClick={() => { setEditingAd(a); setEditForm({ headline: '', text: '', description: '', image_url: '' }); }}
+                              className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold shrink-0">
+                              ✏️ Editar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                 </div>
               ))}
             </div>
