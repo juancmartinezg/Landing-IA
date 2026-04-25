@@ -38,6 +38,9 @@ export default function AdsPage() {
   const [dashboardCampFilter, setDashboardCampFilter] = useState<string>('all');
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<any>(null);
+  const [editingAd, setEditingAd] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ headline: '', text: '', description: '', image_url: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
   const [citySearch, setCitySearch] = useState('');
   const [cityResults, setCityResults] = useState<any[]>([]);
   const [interestSearch, setInterestSearch] = useState('');
@@ -110,7 +113,7 @@ export default function AdsPage() {
       const budgetDaily = Math.max(5000, parseInt(wiz.budget_daily || '15000'));
       const res = await fetch(`${API_URL}/ads/campaigns/publish`, {
         method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: campName, objective: 'OUTCOME_ENGAGEMENT', budget_daily: budgetDaily, variants, country: wiz.country, city: wiz.city, radius: wiz.radius, duration: wiz.duration, service_slug: wiz.service_slug, age_min: parseInt(wiz.age_min || '18'), age_max: parseInt(wiz.age_max || '65'), gender: wiz.gender, cities: wiz.cities, interests: wiz.interests })
+        body: JSON.stringify({ name: campName, objective: 'OUTCOME_LEADS', budget_daily: budgetDaily, variants, country: wiz.country, city: wiz.city, radius: wiz.radius, duration: wiz.duration, service_slug: wiz.service_slug, age_min: parseInt(wiz.age_min || '18'), age_max: parseInt(wiz.age_max || '65'), gender: wiz.gender, cities: wiz.cities, interests: wiz.interests })
       });
       const data = await res.json();
       if (res.ok) {
@@ -163,6 +166,23 @@ export default function AdsPage() {
       setAnalysis(data);
     } catch { showToast('Error analizando'); }
     setAnalyzing(null);
+  };
+  const handleEditAd = async () => {
+    if (!editingAd) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/edit-ad`, {
+        method: 'PUT', headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ad_id: editingAd.id, ...editForm }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('✅ ' + (data.message || 'Anuncio actualizado'));
+        setEditingAd(null);
+        if (analysis?.campaign_id) handleAnalyze(analysis.campaign_id);
+      } else showToast(data.error || 'Error editando');
+    } catch { showToast('Error de conexión'); }
+    setSavingEdit(false);
   };
   const handleApplyAction = async (action: string, targetId: string) => {
     const res = await fetch(`${API_URL}/ads/apply-action`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ action, target_id: targetId }) });
@@ -1083,16 +1103,86 @@ export default function AdsPage() {
               <div>
                 <p className="text-[10px] text-gray-400 font-bold mb-2">📋 Anuncios</p>
                 {analysis.ads.map((a: any, ai: number) => (
-                  <div key={ai} className="flex justify-between items-center text-[10px] py-1 border-b border-white/5">
+                  <div key={ai} className="flex items-center text-[10px] py-2 border-b border-white/5 gap-2">
                     <span className="text-gray-300 truncate flex-1">{a.name}</span>
-                    <span className="text-gray-400 mx-2">${(a.spend || 0).toLocaleString()}</span>
-                    <span className="text-emerald-400">{a.leads} leads</span>
+                    {a.status === 'DISAPPROVED' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold shrink-0">Rechazado</span>}
+                    {a.status === 'WITH_ISSUES' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-bold shrink-0">Con problemas</span>}
+                    <span className="text-gray-400 shrink-0">${(a.spend || 0).toLocaleString()}</span>
+                    <span className="text-emerald-400 shrink-0">{a.leads} leads</span>
+                    <button onClick={() => { setEditingAd(a); setEditForm({ headline: '', text: '', description: '', image_url: '' }); }}
+                      className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold shrink-0">
+                      ✏️
+                    </button>
                   </div>
                 ))}
                 {analysis.best_ad && <p className="text-[9px] text-emerald-400 mt-2">🏆 Mejor: {analysis.best_ad}</p>}
                 {analysis.worst_ad && <p className="text-[9px] text-red-400">💀 Peor: {analysis.worst_ad}</p>}
               </div>
             )}
+          </div>
+        </div>
+      )}
+    {editingAd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto py-4" onClick={() => setEditingAd(null)}>
+          <div className="bg-[#1a1f2e] border border-white/10 rounded-2xl p-5 w-full max-w-md mx-4 my-auto" onClick={(e: any) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold">✏️ Editar anuncio</h3>
+              <button onClick={() => setEditingAd(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
+            </div>
+            <p className="text-[10px] text-gray-500 mb-3 truncate">{editingAd.name}</p>
+            {editingAd.status === 'DISAPPROVED' && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-4">
+                <p className="text-[10px] text-red-400 font-bold">⚠️ Este anuncio fue rechazado por Meta. Edita la imagen o el texto y se enviará a revisión nuevamente.</p>
+              </div>
+            )}
+            <div className="space-y-3">
+              <div>
+                <label className="text-[9px] text-gray-500 mb-1 block">Título (dejar vacío = no cambiar)</label>
+                <input value={editForm.headline} onChange={(e: any) => setEditForm({...editForm, headline: e.target.value})} placeholder="Nuevo título..."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+              </div>
+              <div>
+                <label className="text-[9px] text-gray-500 mb-1 block">Texto principal</label>
+                <textarea value={editForm.text} onChange={(e: any) => setEditForm({...editForm, text: e.target.value})} placeholder="Nuevo texto..."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white resize-none h-24" />
+              </div>
+              <div>
+                <label className="text-[9px] text-gray-500 mb-1 block">Descripción</label>
+                <input value={editForm.description} onChange={(e: any) => setEditForm({...editForm, description: e.target.value})} placeholder="Nueva descripción..."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+              </div>
+              <div>
+                <label className="text-[9px] text-gray-500 mb-1 block">Imagen</label>
+                <div className="flex gap-2">
+                  <input value={editForm.image_url} onChange={(e: any) => setEditForm({...editForm, image_url: e.target.value})} placeholder="URL de nueva imagen..."
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 text-white" />
+                  <label className="text-[9px] px-3 py-2 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 font-bold cursor-pointer flex items-center">
+                    📷
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e: any) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const r = await fetch(`${API_URL}/upload-url?file_name=${encodeURIComponent(file.name)}&folder=ads`, { headers: h });
+                      const d = await r.json();
+                      if (d.upload_url) {
+                        await fetch(d.upload_url, { method: 'PUT', headers: { 'Content-Type': d.content_type }, body: file });
+                        setEditForm({...editForm, image_url: d.public_url});
+                        showToast('✅ Imagen subida');
+                      }
+                    }} />
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => setEditingAd(null)} className="flex-1 border border-white/10 py-2.5 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">
+                Cancelar
+              </button>
+              <button onClick={handleEditAd} disabled={savingEdit || (!editForm.headline && !editForm.text && !editForm.description && !editForm.image_url)}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-30">
+                {savingEdit ? '⏳ Guardando...' : '💾 Guardar cambios'}
+              </button>
+            </div>
+            <p className="text-[9px] text-gray-600 text-center mt-2">Meta revisará los cambios (~30 min)</p>
           </div>
         </div>
       )}
