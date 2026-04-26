@@ -326,6 +326,24 @@ aws lambda update-function-code --function-name NOMBRE --zip-file fileb://functi
 sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX: descripción" --query '[Version,Description]' --output table --no-cli-pager
 ```
 ---
+## 📊 PROGRESO GLOBAL
+████████████████████░░░░░░░░░░ 69%
+
+| Categoría | % |
+|---|---|
+| ✅ Hecho | **69%** |
+| 🔧 En cierre (Sprint actual) | 4% |
+| 🟡 Planeado (Sprints 1-7) | 29% |
+**Última medición:** 26 abril 2026
+### Hitos de moral 🦁
+- [x] **0% → 25%** — Bot WhatsApp + API SaaS base
+- [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
+- [x] **50% → 69%** — Multi-agente + Landing + Embedded Signup ⭐ ESTÁS AQUÍ
+- [ ] **69% → 80%** — Stripe billing + Multicanal real
+- [ ] **80% → 90%** — IA superpoderes + Crecimiento
+- [ ] **90% → 100%** — Premium + Rugido global 🦁
+> *"Cada % se gana con café. Cada café se gana con un commit."*
+---
 ## 📞 CONTACTO
 - Email: soporte@clientes.bot
 - WhatsApp: +57 XXX
