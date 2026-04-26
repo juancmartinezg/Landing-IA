@@ -164,7 +164,7 @@
 - [ ] Advantage+ creative enhancements (Meta deprecó standard)
 ### Auth / Onboarding
 - [x] **SES → Resend** (AWS denegó producción) — gratis 3000/mes
-- [ ] PWA caching: abre landing en vez de dashboard al reabrir
+- [x] PWA caching: abre landing en vez de dashboard al reabrir
 - [ ] Advanced Access en Meta (espera 7-30 días, no es trabajo nuestro)
 - [ ] Popup Embedded Signup error "Sorry something went wrong" (bug Meta)
 ### Multi-agente — cerrar 100% ✅
