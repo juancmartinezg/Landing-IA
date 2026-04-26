@@ -9,10 +9,14 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#0B0F1A] text-white selection:bg-indigo-500/30 scroll-smooth">
       {/* NAVBAR */}
       <nav className="fixed top-0 w-full z-50 bg-[#0B0F1A]/80 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <img src="/cb-logo.webp" alt="Logo" className="w-8 h-8 object-contain" />
-            <span className="text-lg font-bold tracking-tighter">clientes.bot</span>
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-20 flex justify-between items-center gap-2">
+          <div className="flex flex-col md:flex-row items-center gap-0 md:gap-2 shrink-0">
+            <img
+              src="/cb-logo.webp"
+              alt="Logo"
+              className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]"
+            />
+            <span className="text-[9px] md:text-xl font-bold tracking-tighter">clientes.bot</span>
           </div>
           <div className="hidden md:flex gap-8 text-sm text-gray-400">
             <a href="#features" className="hover:text-white transition-colors">Funciones</a>
@@ -20,14 +24,26 @@ export default function LandingPage() {
             <a href="#para-quien" className="hover:text-white transition-colors">Para quién</a>
             <a href="#planes" className="hover:text-white transition-colors">Planes</a>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/auth/login" className="hidden sm:inline-flex border border-white/10 hover:border-indigo-500/50 px-4 py-2 rounded-xl text-xs font-bold transition-all">
+          <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            <Link
+              href="/auth/login"
+              className="border border-white/10 hover:border-indigo-500/50 hover:bg-white/5 px-2.5 py-2 md:px-6 md:py-2.5 rounded-xl text-[10px] md:text-sm font-bold transition-all whitespace-nowrap"
+            >
               Iniciar sesión
             </Link>
-            <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20">
-              Prueba gratis 7 días
+            <Link
+              href="/auth/login"
+              className="bg-indigo-600 hover:bg-indigo-500 px-2.5 py-2 md:px-6 md:py-2.5 rounded-xl text-[10px] md:text-sm font-bold transition-all shadow-lg shadow-indigo-600/20 whitespace-nowrap"
+            >
+              Prueba gratis
             </Link>
-            <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-gray-400 text-2xl ml-2">☰</button>
+            <button
+              onClick={() => setMobileMenu(!mobileMenu)}
+              className="md:hidden text-gray-400 text-xl ml-1"
+              aria-label="Menu"
+            >
+              ☰
+            </button>
           </div>
         </div>
         {mobileMenu && (
