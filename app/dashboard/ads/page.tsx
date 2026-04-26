@@ -88,10 +88,12 @@ export default function AdsPage() {
     const pg = data.pages || {};
     const ig = data.instagram || {};
     const aud = data.audiences || {};
+    const sav = data.saved_audiences || {};
     const camps = data.campaigns || {};
     setDashboard(dash);
     setMetrics(dash.global || {});
-    setAudiences(aud.audiences || []);
+    etAudiences(aud.audiences || []);
+    setSavedAudiences(sav.audiences || []);
     setIgAccounts(ig.instagram_accounts || []);
     // Mergear campañas full con métricas del dashboard
     const fullCamps = camps.campaigns || [];
@@ -213,6 +215,9 @@ export default function AdsPage() {
   const [adPreview, setAdPreview] = useState<any>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [viewingAd, setViewingAd] = useState<any>(null);
+  const [savedAudiences, setSavedAudiences] = useState<any[]>([]);
+  const [savingAudience, setSavingAudience] = useState(false);
+  const [audienceName, setAudienceName] = useState('');
   const openEditAd = async (ad: any) => {
     setEditingAd(ad);
     setEditForm({ headline: '', text: '', description: '', image_url: '' });
@@ -300,6 +305,65 @@ export default function AdsPage() {
   const removeInterest = (id: string) => {
     setWiz((prev: any) => ({...prev, interests: prev.interests.filter((i: any) => i.id !== id)}));
   };  
+  // Guardar audiencia actual del wizard como favorita
+  const handleSaveAudience = async () => {
+    if (!audienceName.trim()) {
+      showToast('Ponle un nombre a la audiencia');
+      return;
+    }
+    setSavingAudience(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/saved-audiences`, {
+        method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: audienceName.trim(),
+          country: wiz.country,
+          cities: wiz.cities,
+          interests: wiz.interests,
+          age_min: parseInt(wiz.age_min || '18'),
+          age_max: parseInt(wiz.age_max || '65'),
+          gender: wiz.gender,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('✅ Audiencia guardada');
+        setSavedAudiences((prev) => [...prev, data.audience]);
+        setAudienceName('');
+      } else {
+        showToast(data.error || 'Error guardando');
+      }
+    } catch { showToast('Error de conexión'); }
+    setSavingAudience(false);
+  };
+  // Cargar audiencia guardada en el wizard
+  const handleLoadAudience = (aud: any) => {
+    setWiz((prev: any) => ({
+      ...prev,
+      country: aud.country || 'CO',
+      cities: aud.cities || [],
+      interests: aud.interests || [],
+      age_min: String(aud.age_min || 18),
+      age_max: String(aud.age_max || 65),
+      gender: aud.gender || 'all',
+    }));
+    showToast(`✅ Audiencia "${aud.name}" cargada`);
+  };
+  // Eliminar audiencia guardada
+  const handleDeleteAudience = async (id: string, name: string) => {
+    if (!confirm(`¿Eliminar la audiencia "${name}"?`)) return;
+    try {
+      const res = await fetch(`${API_URL}/ads/saved-audiences?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE', headers: h,
+      });
+      if (res.ok) {
+        showToast('🗑️ Audiencia eliminada');
+        setSavedAudiences((prev) => prev.filter((a) => a.id !== id));
+      } else {
+        showToast('Error eliminando');
+      }
+    } catch { showToast('Error de conexión'); }
+  };
   useEffect(() => {
     localStorage.setItem('ads_wiz_step', String(wizStep));
     localStorage.setItem('ads_wiz_data', JSON.stringify(wiz));
@@ -797,6 +861,29 @@ export default function AdsPage() {
               <div>
                 <h3 className="font-bold text-lg mb-2">¿A quién quieres llegar?</h3>
                 <p className="text-xs text-gray-400 mb-4">La IA optimizará automáticamente. Ajusta si quieres.</p>
+                {savedAudiences.length > 0 && (
+                  <div className="mb-4 bg-purple-500/5 border border-purple-500/20 rounded-xl p-3">
+                    <p className="text-[10px] text-purple-400 font-bold uppercase tracking-widest mb-2">
+                      💾 Tus audiencias guardadas
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {savedAudiences.map((aud: any, i: number) => (
+                        <div key={aud.id || i} className="flex items-center gap-1 bg-purple-500/10 border border-purple-500/30 rounded-full pl-2.5 pr-1 py-0.5 hover:bg-purple-500/20 transition-all">
+                          <button onClick={() => handleLoadAudience(aud)}
+                            className="text-[10px] text-purple-300 font-bold">
+                            ⚡ {aud.name}
+                          </button>
+                          <button onClick={() => handleDeleteAudience(aud.id, aud.name)}
+                            className="text-red-400 hover:text-red-300 text-xs w-4 h-4 flex items-center justify-center"
+                            title={`Eliminar "${aud.name}"`}>
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[8px] text-gray-500 mt-2">Click para cargar la configuración</p>
+                  </div>
+                )}
                 <div className="space-y-4 mb-4">
                   <div>
                     <label className="text-xs text-gray-400 mb-1 block">País</label>
@@ -887,6 +974,31 @@ export default function AdsPage() {
                       </div>
                     )}
                     <p className="text-[8px] text-gray-600 mt-1">Sin intereses = la IA de Meta decide (Advantage+)</p>
+                  </div>
+                </div>
+                <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-3 mb-4">
+                  <p className="text-[10px] text-purple-400 font-bold uppercase tracking-widest mb-2">
+                    💾 ¿Vas a usar esta audiencia con frecuencia?
+                  </p>
+                  <p className="text-[9px] text-gray-500 mb-2">
+                    Guárdala con un nombre y reutilízala en próximas campañas con un solo click.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={audienceName}
+                      onChange={(e) => setAudienceName(e.target.value)}
+                      placeholder="Ej: Mujeres 25-45 Bogotá - Productos labiales"
+                      maxLength={60}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white"
+                    />
+                    <button
+                      onClick={handleSaveAudience}
+                      disabled={savingAudience || !audienceName.trim()}
+                      className="bg-purple-600 hover:bg-purple-500 disabled:opacity-30 disabled:cursor-not-allowed px-3 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap"
+                    >
+                      {savingAudience ? '⏳' : '💾 Guardar'}
+                    </button>
                   </div>
                 </div>
                 <div className="flex gap-2">
