@@ -212,6 +212,7 @@ export default function AdsPage() {
   };
   const [adPreview, setAdPreview] = useState<any>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [viewingAd, setViewingAd] = useState<any>(null);
   const openEditAd = async (ad: any) => {
     setEditingAd(ad);
     setEditForm({ headline: '', text: '', description: '', image_url: '' });
@@ -588,22 +589,81 @@ export default function AdsPage() {
                         <span className="text-[8px] group-open:rotate-180 transition-transform">▼</span>
                       </summary>
                       {(c.ads || []).length > 0 ? (
-                      <div className="mt-2 space-y-1">
+                      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                         {c.ads.map((a: any, ai: number) => (
-                          <div key={ai} className={`flex items-center text-[10px] py-1.5 px-2 rounded-lg gap-2 ${a.status === 'DISAPPROVED' ? 'bg-red-500/10 border border-red-500/20' : a.status === 'WITH_ISSUES' ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-white/[0.02]'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${a.status === 'DISAPPROVED' ? 'bg-red-500' : a.status === 'WITH_ISSUES' ? 'bg-yellow-500' : a.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-gray-500'}`} />
-                            <span className="text-gray-300 truncate flex-1">{a.name}</span>
-                            {a.status === 'DISAPPROVED' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold shrink-0">Rechazado</span>}
-                            {a.status === 'WITH_ISSUES' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-bold shrink-0">Problemas</span>}
-                             <button onClick={() => openEditAd(a)}
-                              className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold shrink-0">
-                              ✏️ Editar
-                            </button>
+                          <div key={ai}
+                            className={`rounded-xl overflow-hidden border transition-all hover:scale-[1.01] ${
+                              a.status === 'DISAPPROVED' ? 'bg-red-500/5 border-red-500/30'
+                              : a.status === 'WITH_ISSUES' ? 'bg-yellow-500/5 border-yellow-500/30'
+                              : 'bg-white/[0.02] border-white/5 hover:border-indigo-500/30'
+                            }`}>
+                            <div className="flex gap-2.5 p-2.5">
+                              {a.image_url ? (
+                                <img src={a.image_url} alt={a.name}
+                                  className="w-16 h-16 md:w-20 md:h-20 rounded-lg object-cover shrink-0 cursor-pointer hover:opacity-80"
+                                  onClick={() => setPreviewImg(a.image_url)} />
+                              ) : (
+                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-white/5 flex items-center justify-center text-gray-600 text-[10px] shrink-0">
+                                  Sin img
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${a.status === 'DISAPPROVED' ? 'bg-red-500' : a.status === 'WITH_ISSUES' ? 'bg-yellow-500' : a.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-gray-500'}`} />
+                                  {a.status === 'DISAPPROVED' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold">🚫 Rechazado</span>}
+                                  {a.status === 'WITH_ISSUES' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-bold">⚠️ Problemas</span>}
+                                  {a.status === 'ACTIVE' && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">🟢 Activo</span>}
+                                </div>
+                                <p className="text-[11px] font-bold text-white truncate" title={a.headline || a.name}>
+                                  {a.headline || a.name}
+                                </p>
+                                <p className="text-[10px] text-gray-400 line-clamp-2 leading-snug" title={a.text}>
+                                  {a.text || a.name}
+                                </p>
+                              </div>
+                            </div>
+                            {a.disapproval_reason && (
+                              <div className="bg-red-500/10 border-t border-red-500/20 px-2.5 py-1.5">
+                                <p className="text-[9px] text-red-400">
+                                  <span className="font-bold">Razón:</span> {a.disapproval_reason}
+                                </p>
+                              </div>
+                            )}
+                            {(a.metrics?.spend > 0 || a.metrics?.impressions > 0) && (
+                              <div className="grid grid-cols-4 gap-1 px-2.5 py-1.5 bg-white/[0.02] border-t border-white/5">
+                                <div className="text-center">
+                                  <p className="text-[8px] text-gray-500">Gasto</p>
+                                  <p className="text-[9px] font-bold">${(a.metrics.spend || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-[8px] text-gray-500">Alcance</p>
+                                  <p className="text-[9px] font-bold text-indigo-400">{(a.metrics.reach || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-[8px] text-gray-500">Leads</p>
+                                  <p className="text-[9px] font-bold text-emerald-400">{a.metrics.leads || 0}</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-[8px] text-gray-500">CPL</p>
+                                  <p className="text-[9px] font-bold text-purple-400">${(a.metrics.cpl || 0).toLocaleString()}</p>
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex gap-1 px-2.5 py-1.5 bg-white/[0.02] border-t border-white/5">
+                              <button onClick={(ev) => { ev.stopPropagation(); setViewingAd(a); }}
+                                className="flex-1 text-[9px] px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all">
+                                👁️ Ver completo
+                              </button>
+                              <button onClick={(ev) => { ev.stopPropagation(); openEditAd(a); }}
+                                className="flex-1 text-[9px] px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all">
+                                ✏️ Editar
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
                       ) : (
-                        <div className="mt-2 text-center py-2">
+                        <div className="mt-2 text-center py-3">
                           <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
                           <p className="text-[9px] text-gray-500 mt-1">Cargando anuncios...</p>
                         </div>
@@ -1336,11 +1396,86 @@ export default function AdsPage() {
         </div>
       </div>
     )}
-    {previewImg && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setPreviewImg(null)}>
-          <div className="relative max-w-2xl max-h-[80vh] mx-4" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setPreviewImg(null)} className="absolute -top-3 -right-3 w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white text-lg z-10 transition-all">✕</button>
-            <img src={previewImg} className="max-w-full max-h-[80vh] rounded-2xl object-contain" />
+    {viewingAd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 overflow-y-auto py-4 px-3" onClick={() => setViewingAd(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto my-auto overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Header estilo Facebook */}
+            <div className="flex items-center justify-between p-3 border-b border-gray-200">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  {(viewingAd.name || 'A').charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[12px] font-bold text-gray-900 truncate">{viewingAd.headline || viewingAd.name}</p>
+                  <p className="text-[9px] text-gray-500">Patrocinado · 🌎</p>
+                </div>
+              </div>
+              <button onClick={() => setViewingAd(null)} className="text-gray-500 hover:text-gray-900 text-xl shrink-0 ml-2">✕</button>
+            </div>
+            {/* Texto principal */}
+            {viewingAd.text && (
+              <div className="px-3 py-2.5">
+                <p className="text-[12px] text-gray-800 whitespace-pre-wrap leading-snug">{viewingAd.text}</p>
+              </div>
+            )}
+            {/* Imagen grande */}
+            {viewingAd.image_url ? (
+              <div className="bg-gray-100">
+                <img src={viewingAd.image_url} alt="" className="w-full max-h-[60vh] object-contain" />
+              </div>
+            ) : (
+              <div className="bg-gray-100 h-48 flex items-center justify-center text-gray-400 text-xs">Sin imagen</div>
+            )}
+            {/* Footer estilo CTA */}
+            <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 border-t border-gray-200">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">WA.ME</p>
+                <p className="text-[11px] font-bold text-gray-900 truncate">{viewingAd.description || 'Escribir por WhatsApp'}</p>
+              </div>
+              <div className="bg-gray-200 hover:bg-gray-300 text-gray-900 text-[11px] font-bold px-3 py-1.5 rounded-md whitespace-nowrap shrink-0 ml-2">
+                Enviar mensaje
+              </div>
+            </div>
+            {/* Status + razón rechazo si aplica */}
+            {viewingAd.status === 'DISAPPROVED' && viewingAd.disapproval_reason && (
+              <div className="px-3 py-2 bg-red-50 border-t border-red-200">
+                <p className="text-[10px] text-red-700">
+                  <span className="font-bold">🚫 Rechazado por Meta:</span> {viewingAd.disapproval_reason}
+                </p>
+              </div>
+            )}
+            {/* Métricas */}
+            {(viewingAd.metrics?.spend > 0 || viewingAd.metrics?.impressions > 0) && (
+              <div className="grid grid-cols-4 gap-1 p-2.5 bg-gray-50 border-t border-gray-200">
+                <div className="text-center">
+                  <p className="text-[8px] text-gray-500 uppercase">Gasto</p>
+                  <p className="text-[11px] font-bold text-gray-900">${(viewingAd.metrics.spend || 0).toLocaleString()}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[8px] text-gray-500 uppercase">Alcance</p>
+                  <p className="text-[11px] font-bold text-indigo-600">{(viewingAd.metrics.reach || 0).toLocaleString()}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[8px] text-gray-500 uppercase">Leads</p>
+                  <p className="text-[11px] font-bold text-emerald-600">{viewingAd.metrics.leads || 0}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[8px] text-gray-500 uppercase">CPL</p>
+                  <p className="text-[11px] font-bold text-purple-600">${(viewingAd.metrics.cpl || 0).toLocaleString()}</p>
+                </div>
+              </div>
+            )}
+            {/* Acciones */}
+            <div className="flex gap-2 p-3 bg-white border-t border-gray-200">
+              <button onClick={() => setViewingAd(null)}
+                className="flex-1 text-[11px] font-bold text-gray-600 hover:text-gray-900 py-2">
+                Cerrar
+              </button>
+              <button onClick={() => { setViewingAd(null); openEditAd(viewingAd); }}
+                className="flex-1 text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg transition-all">
+                ✏️ Editar
+              </button>
+            </div>
           </div>
         </div>
       )}
