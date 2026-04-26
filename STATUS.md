@@ -8,6 +8,30 @@
 **Producción:** https://clientes.bot (Amplify)
 **API:** https://2xlne7i7p5kykfcaioqeasaaoq0laqoe.lambda-url.us-east-1.on.aws
 ---
+## 🦁 FILOSOFÍA LEÓN
+> *"El león no anuncia su llegada. Cuando la presa lo ve, ya es tarde."*
+**Modo de construcción:**
+- 🤫 **No promoción pública** hasta tener el producto completo.
+- 🐺 Solo clientes beta cercanos (con contexto de "en construcción").
+- 🦁 **Cuando rugimos, rugimos con TODO**: multicanal completo, IA superpoderes, white label, marketplace, voz, video.
+- 💰 **Costo cero hasta cobrar**: usar free tiers, pago por uso, evitar SaaS con minimum mensual.
+- ⏱️ **Sin fechas, sin presión**: cuando esté listo, está listo. Mejor tarde y perfecto, que rápido y mediocre.
+- 🎯 **Ambición clara**: ser la plataforma #1 mundial en CRM + Multicanal + IA + Ads.
+---
+## 🌍 VISIÓN — Plataforma #1 Mundial
+**Posicionamiento:** la única plataforma que combina TODO en una sola:
+| Categoría | Competidores top | Su debilidad | Nuestra ventaja |
+|---|---|---|---|
+| **Multicanal IA** | Manychat, Tidio, Intercom | Solo 1-2 canales fuertes | 6+ canales con misma IA |
+| **WhatsApp Bot** | Wati, Respond.io | Sin IA real, sin Ads | IA Gemini + neuroventas + memoria |
+| **Facebook Ads IA** | AdEspresso, Madgicx | Caros, complejos | Wizard 5 pasos + IA + cron diario |
+| **CRM + Multi-agente** | HubSpot, Pipedrive | Caros, sin WhatsApp nativo | Kanban + IA + multi-rol |
+| **Pagos en chat** | Walletly, Tapwallet | Limitado a 1 pasarela | 7+ pasarelas + custom integration |
+| **Voz IA** | Bland, Vapi (sin plataforma) | Solo voz, sin CRM | Voz + chat + CRM + Ads |
+| **Video IA** | HeyGen (sin chat) | Solo video, sin contexto | Video personalizado por lead |
+| **White label** | GoHighLevel | $297/mes minimum | Plan agencia con margen alto |
+**Meta:** 1,000 clientes pagando en 12 meses post-lanzamiento. ARR $2M+.
+---
 ## 🏗️ STACK
 - **Frontend:** Next.js 14 + Tailwind + Amplify
 - **Backend:** AWS Lambda (Python) + Lambda URLs
@@ -119,8 +143,8 @@
 - [x] Página `/politica-de-privacidad` (con sección Cookies + Habeas Data)
 - [x] Página `/terminos`
 ---
-## 🔧 EN PROCESO — Sprint actual
-### Frontend / Landing (~100%) ✅
+## 🔧 SPRINT ACTUAL — Cierre de pendientes
+### Frontend / Landing ✅ 100%
 - [x] Estructura legal (Términos + Privacidad + Cookies)
 - [x] Footer con enlaces legales reales
 - [x] Botón "Ver demo en vivo" abre ChatWidget
@@ -128,9 +152,9 @@
 - [x] Demos genéricos (Inmobiliaria Aurora)
 - [x] Dashboard mockup neutro (USD)
 - [x] Ad preview neutro
-- [ ] Testimonios reales (depende de marketing, no de código)
----
-## 🔴 PENDIENTE — Cierre de módulos abiertos
+- [x] Multi-moneda y pasarelas globales (con custom gateway)
+- [ ] Sección "Multicanal" en landing (al rugir, no antes)
+- [ ] Testimonios reales (depende de marketing)
 ### Ads Pro — pulir pendientes
 - [ ] Frontend público guardado (UI botones wizard paso 2)
 - [ ] Probar resize-image desde frontend (botón 📐 3 formatos)
@@ -139,109 +163,147 @@
 - [ ] Re-vincular IG Business Account en página Facebook
 - [ ] Advantage+ creative enhancements (Meta deprecó standard)
 ### Auth / Onboarding
-- [ ] **SES → Resend** (AWS denegó producción)
+- [ ] **SES → Resend** (AWS denegó producción) — gratis 3000/mes
 - [ ] PWA caching: abre landing en vez de dashboard al reabrir
 - [ ] Advanced Access en Meta (espera 7-30 días, no es trabajo nuestro)
 - [ ] Popup Embedded Signup error "Sorry something went wrong" (bug Meta)
 ### Multi-agente — cerrar 100%
-- [ ] WebSocket en vivo (o polling cada 10s como alternativa simple)
-## Seguridad básica (cerrar antes de cobrar)
+- [ ] Polling cada 10s como WebSocket simple ($0)
+- [ ] WebSocket real (cuando ya tengamos clientes pagando)
+### Seguridad básica (cerrar antes de cobrar)
 - [ ] Audit log de cambios sensibles
 - [ ] Backups automáticos DynamoDB
 - [ ] Verificar logs CloudWatch en todas las Lambdas
-### Pasarelas de pago — pendientes de integrar
-> Estas son las pasarelas que **el cliente final usa** para cobrar a sus compradores
-> (no es lo mismo que el billing de Stripe del SaaS — eso está en Fase 28).
-- [ ] **Stripe** (crítico para US/EU/UK)
+- [ ] 2FA TOTP (librería gratis)
+### Pasarelas de pago — pendientes
+> Estas son pasarelas que **el cliente final usa** para cobrar a sus compradores
+> (no es Stripe billing del SaaS — eso es Sprint 1 abajo).
+- [ ] **Stripe** (crítico para US/EU/UK) — pago por transacción
 - [ ] Pasarela personalizada bajo demanda (proceso documentado para integrar nuevas en <48h)
 ---
-## 🟡 PRÓXIMO — Después de cerrar lo abierto
-### Fase 28 — Stripe + Billing ⭐ CRÍTICO PARA COBRAR
-- [ ] Trial 7 días automático
-- [ ] Feature flags por plan (Starter / Growth / Enterprise)
-- [ ] Límites por plan (conversaciones, leads, agentes)
-- [ ] Stripe Checkout + webhooks
-- [ ] Página `/pricing` pública (la sección de planes en landing ya existe)
-- [ ] Upgrade/downgrade desde dashboard
-- [ ] Email de confirmación de cobro / fallo de cobro
-### i18n — Internacionalización
-- [ ] `next-intl` con detección de `Accept-Language`
-- [ ] Locales: `es`, `en`, `fr`, `pt`
-- [ ] Selector manual en navbar 🌐
-- [ ] Traducir landing
-- [ ] Traducir dashboard
-- [ ] Traducir emails
-### Fase 18 — CRM Pro
-- [ ] Historial de cambios por lead
-- [ ] Deal value (valor monetario)
-- [ ] Detección de duplicados
-- [ ] Funnel analytics (conversión por etapa)
-- [ ] Actividades (llamadas, emails, reuniones registradas)
+## 🟡 SPRINTS PLANEADOS — Orden de ejecución (sin fechas)
+### 🥇 Sprint 1 — Foundation: empezar a cobrar
+> Costo: **$0** (Stripe es comisión por transacción, sin minimum)
+- [ ] **Stripe billing del SaaS** (Fase 28)
+  - Trial 7 días automático
+  - Feature flags por plan (Starter / Growth / Enterprise)
+  - Límites por plan (conversaciones, leads, agentes)
+  - Stripe Checkout + webhooks
+  - Página `/pricing` pública
+  - Upgrade/downgrade desde dashboard
+  - Email confirmación cobro / fallo de cobro
+### 🥈 Sprint 2 — Multicanal real (el rugido principal)
+> Costo: **$0** (todas las APIs son gratis)
+- [ ] **Web Chat Widget embebible** — `<script src="clientes.bot/widget/{company_id}.js">`
+- [ ] **Instagram DM** — webhook Meta + lógica del bot
+- [ ] **Facebook Messenger** — webhook Meta + lógica del bot
+- [ ] **Telegram** — Bot API gratis
+- [ ] **Email transaccional** (Resend, gratis 3000/mes)
+- [ ] **Bandeja unificada** — todas las conversaciones en 1 pantalla, con filtro por canal
+- [ ] **SMS Twilio** (opcional, pago por SMS al cliente final)
+### 🥉 Sprint 3 — IA superpoderes
+> Costo: **$0** (todo usa Gemini Flash gratis hasta 1500 req/día)
+- [ ] **A/B testing automático** de mensajes (la IA prueba 3 versiones, escala el ganador)
+- [ ] **Predicción de churn** (modelo ML detecta lead frío y dispara secuencia de rescate)
+- [ ] **Generación de posts IG/FB** con IA (1 pregunta → post listo)
+- [ ] **Sentiment + Cultural awareness** (adapta tono por país/cultura)
+- [ ] **Predictive scheduling** (agenda en hora con mayor probabilidad estadística de cierre)
+- [ ] **Wizard 60 segundos** (cliente sube screenshot IG → Gemini Vision configura todo)
+- [ ] **Modo "competidor"** (cliente pega URL de competencia → IA analiza y sugiere mejoras)
+### 🏅 Sprint 4 — Crecimiento + Comunidad
+> Costo: **$0**
+- [ ] **Reseñas con IA** — bot pide reseña post-venta y publica en Google Maps/FB
+- [ ] **Funnel builder visual** — drag & drop con `react-flow` (gratis)
+- [ ] **Marketplace de bots** — clientes suben/descargan personalidades (bienes raíces, clínica, etc.)
+- [ ] **Comisiones de afiliados** — sistema de referidos con tracking automático
+- [ ] **White label / Agencia** — multi-cliente dashboard + branding personalizado
+- [ ] **API pública con docs** (`swagger-ui` gratis)
+### 🎖️ Sprint 5 — Globalización
+> Costo: **$0**
+- [ ] **i18n (es / en / fr / pt)** con `next-intl`
+  - Detección automática `Accept-Language`
+  - Selector manual 🌐 en navbar
+  - Traducir landing + dashboard + emails (Gemini traduce gratis)
+- [ ] **Onboarding video con ARIA** (ya tenemos voz, falta script)
+- [ ] **Day-zero compliance** — Habeas Data / GDPR / CCPA automáticos por país detectado
+- [ ] **Marketing automation / Drip campaigns** — secuencias de email/WA programadas
+- [ ] **n8n self-hosted** en una Lambda (reemplaza Zapier, $0)
+### 🏆 Sprint 6 — Diferenciadores premium (con HeyGen)
+> Costo: HeyGen ya está pago, ElevenLabs después
+- [ ] **Video respuestas con IA (HeyGen)** — avatar del cliente envía videos personalizados a leads
+- [ ] **Live shopping** — durante un live de IG/FB, el bot responde DMs y cierra ventas
+- [ ] **Asistente de cierre por video llamada** — VAPI + visión IA, el cliente comparte pantalla y la IA lo guía
+- [ ] **Analytics avanzado** — Cohorts, LTV, Churn prediction
+- [ ] **Detección de duplicados de leads** + Deal value + Historial de cambios (Fase 18 CRM Pro)
+- [ ] **Cotizaciones + Facturas electrónicas** + Upsells automáticos (Ventas)
+- [ ] **NPS surveys + Loyalty + Gamificación** (Retención)
+- [ ] **Tour interactivo + Tutoriales en video + Centro de ayuda** (Educación)
+### 🦁 Sprint 7 — RUGIDO FINAL (cuando ya esté generando ingresos)
+> Costo: **$$ aceptable porque ya cobras**
+- [ ] **Voice Cloning con ElevenLabs** — solo plan Enterprise
+- [ ] **WhatsApp Pay nativo** (cuando Meta lo libere por país)
+- [ ] **PWA en Google Play** (TWA) + **App Store** (PWAbuilder)
+- [ ] **WebSocket real** para multi-agente (mejorar polling 10s)
+- [ ] **SOC2 compliance** (cuando tengas $1M+ ARR)
+- [ ] **Lanzamiento público** — landing pública, marketing, ads, PR
+- [ ] **Sección "Multicanal" visible** en landing
+- [ ] **Testimonios reales** de clientes beta
 ---
-## 🟢 BACKLOG — Por demanda real de clientes
-### Multicanal
-- [ ] Instagram DM
-- [ ] Messenger
-- [ ] Telegram
-- [ ] Email transaccional (drip)
-- [ ] SMS (Twilio)
-### Reputación
-- [ ] Solicitud automática de reseñas post-venta
-- [ ] Respuestas con IA a reseñas Google
-- [ ] Score de reputación
-### Funnels / Landing builder
-- [ ] Editor drag & drop
-- [ ] Plantillas
-- [ ] A/B testing
-### Marketing automation
-- [ ] Workflows visuales
-- [ ] Secuencias / drip campaigns
-- [ ] Segmentación dinámica
-### Ventas
-- [ ] Cotizaciones
-- [ ] Facturas electrónicas
-- [ ] Upsells automáticos
-### Analytics avanzado
-- [ ] Cohorts
-- [ ] LTV
-- [ ] Churn prediction
-### Educación / Onboarding
-- [ ] Tour interactivo (primer login)
-- [ ] Tutoriales en video
-- [ ] Centro de ayuda
-### Retención
-- [ ] NPS surveys
-- [ ] Loyalty / recompra automática
-- [ ] Gamificación
-### Agencia / White label
-- [ ] Multi-cliente dashboard
-- [ ] White label completo
-- [ ] Branding personalizado por agencia
-### Integraciones
-- [ ] API pública con docs
-- [ ] Zapier
-- [ ] Make / n8n
-### Seguridad avanzada
-- [ ] 2FA (TOTP)
-- [ ] GDPR compliance completo
-- [ ] SOC2 (cuando crezcamos)
-### PWA Stores
-- [ ] Listar PWA en Google Play (TWA)
-- [ ] Listar PWA en App Store (PWAbuilder)
+## 💰 COSTOS $0 — Filosofía y Proyección
+### 🟢 Servicios "pago por uso" (cero compromiso mensual)
+| Servicio | Free tier | Después |
+|---|---|---|
+| AWS Lambda | 1M req/mes siempre | $0.20 / 1M req |
+| DynamoDB | 25 GB siempre | centavos por GB |
+| Cognito | 50,000 MAU siempre | $0.0055 / MAU |
+| S3 | 5 GB primeros 12 meses | $0.023 / GB/mes |
+| EventBridge | 14M eventos siempre | $1 / millón |
+| Amplify | 1000 min build + 15 GB | mínimo |
+| **Gemini Flash** | 1500 req/día siempre | $0.075 / 1M tokens |
+| **Resend** | 3000 emails/mes | $20/mes (50k emails) |
+| **Stripe** | gratis para ti | 3% + $0.30 al cliente |
+| **Meta APIs** | gratis siempre | — |
+| **Twilio SMS** | sin minimum | $0.0075 / SMS |
+| **VAPI** | sin minimum | $0.05-0.10 / min |
+| **n8n self-hosted** | gratis (en tu Lambda) | $0 |
+### 🔴 Servicios con costo fijo (pospuestos al final)
+| Servicio | Costo | Sprint |
+|---|---|---|
+| **HeyGen** | ya pagado | 6 |
+| **ElevenLabs** | $5-330/mes | 7 |
+| **SOC2 audit** | $20-50k/año | 7 |
+### 📊 Proyección operativa
+| Etapa | Costo mensual | Ingresos | Margen |
+|---|---|---|---|
+| **Sprints 1-3** (construcción, sin clientes) | $0-5 | $0 | — |
+| **Sprint 4-5** (5-10 clientes beta) | $10-25 | $1,000-3,500 | ~99% |
+| **Sprint 6-7** (50-100 clientes) | $200-500 | $10,000-35,000 | 95% |
+| **Post-lanzamiento** (1,000 clientes) | $1k-3k | $200k+ | 85-95% |
 ---
 ## ⚠️ REGLAS INAMOVIBLES
-1. **1 cambio por vez** — verificar antes del siguiente
-2. **Buscar/reemplazar** — no archivos completos salvo necesidad
-3. **`py_compile` obligatorio** antes de subir Lambda
-4. **CloudShell** para parches Python (heredoc falla con UTF-8)
-5. **DynamoDB:** `status` y `source` son reserved keywords → usar `ExpressionAttributeNames`
-6. **Multi-tenant obligatorio** — nada hardcodeado, `config_pro` manda todo
-7. **Comentarios Python en español**
-8. **UX primero** — el cliente no ve JSON
-9. **Frontend:** usar `<Link>` de Next.js (no `<a href>` para rutas internas)
-10. **TypeScript:** callbacks con tipo explícito (`(prev: any)`, `(c: any)`)
-11. **Bucket `certificados-jmc` NO TOCAR**
-12. **PR #5 ROTO** — no usar, no mergear
+### Filosofía
+1. 🦁 **No promoción pública** hasta tener producto completo (modo león)
+2. 💰 **Costo cero** durante construcción — nunca pagar SaaS con minimum mensual
+3. 🐢 **Calidad sobre velocidad** — sin fechas, sin presión
+4. 🤫 **Solo clientes beta** con contexto "en construcción"
+### Código
+5. **1 cambio por vez** — verificar antes del siguiente
+6. **Buscar/reemplazar** — no archivos completos salvo necesidad
+7. **`py_compile` obligatorio** antes de subir Lambda
+8. **CloudShell** para parches Python (heredoc falla con UTF-8)
+9. **DynamoDB:** `status` y `source` son reserved keywords → usar `ExpressionAttributeNames`
+10. **Multi-tenant obligatorio** — nada hardcodeado, `config_pro` manda todo
+11. **Comentarios Python en español**
+12. **UX primero** — el cliente no ve JSON
+13. **Frontend:** usar `<Link>` de Next.js (no `<a href>` para rutas internas)
+14. **TypeScript:** callbacks con tipo explícito (`(prev: any)`, `(c: any)`)
+### Reemplazos de servicios SaaS (filosofía $0)
+15. **n8n self-hosted** en lugar de Zapier
+16. **Resend** en lugar de SES producción (denegado por AWS)
+17. **Polling 10s** en lugar de WebSocket real (hasta tener clientes pagando)
+### Sagrado
+18. **Bucket `certificados-jmc` NO TOCAR**
+19. **PR #5 ROTO** — no usar, no mergear
 ---
 ## 🚀 DEPLOY
 ### Frontend
