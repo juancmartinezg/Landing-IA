@@ -543,12 +543,22 @@ export default function AdsPage() {
                       </button>
                     </div>
                   </div>
-                  {(c.ads || []).length > 0 && (
-                    <details className="mt-3 group">
+                 {c.campaign_id && (
+                    <details className="mt-3 group" onClick={async (e: any) => {
+                      // Cargar ads bajo demanda al expandir (1 sola vez)
+                      if (!c.ads?.length && e.currentTarget.open === false) {
+                        try {
+                          const r = await fetch(`${API_URL}/ads/campaign-ads?campaign_id=${encodeURIComponent(c.campaign_id)}`, { headers: h });
+                          const d = await r.json();
+                          setCampaigns((prev: any[]) => prev.map((p: any) => p.campaign_id === c.campaign_id ? {...p, ads: d.ads || [], rejected_count: d.rejected_count || 0, ad_count: d.total || 0} : p));
+                        } catch {}
+                      }
+                    }}>
                       <summary className="text-[10px] text-gray-500 cursor-pointer hover:text-gray-300 flex items-center gap-1">
-                        📋 {c.ads.length} anuncios {c.rejected_count > 0 && `(${c.rejected_count} rechazados)`}
+                        📋 {c.ad_count || c.ads?.length || c.ad_ids?.length || 0} anuncios {c.rejected_count > 0 && <span className="text-red-400 ml-1">({c.rejected_count} rechazados)</span>}
                         <span className="text-[8px] group-open:rotate-180 transition-transform">▼</span>
                       </summary>
+                      {(c.ads || []).length > 0 ? (
                       <div className="mt-2 space-y-1">
                         {c.ads.map((a: any, ai: number) => (
                           <div key={ai} className={`flex items-center text-[10px] py-1.5 px-2 rounded-lg gap-2 ${a.status === 'DISAPPROVED' ? 'bg-red-500/10 border border-red-500/20' : a.status === 'WITH_ISSUES' ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-white/[0.02]'}`}>
@@ -563,6 +573,12 @@ export default function AdsPage() {
                           </div>
                         ))}
                       </div>
+                      ) : (
+                        <div className="mt-2 text-center py-2">
+                          <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                          <p className="text-[9px] text-gray-500 mt-1">Cargando anuncios...</p>
+                        </div>
+                      )}
                     </details>
                   )}
                 </div>
