@@ -215,19 +215,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-      {/* TODO: Aquí van las siguientes secciones */}
-      <ChatWidget />
-      <style jsx>{`
-        @keyframes bounce-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-bounce-slow { animation: bounce-slow 4s ease-in-out infinite; }
-      `}</style>
-    </div>
-  );
-}
- {/* FEATURES PRINCIPALES */}
+      {/* FEATURES PRINCIPALES */}
       <section id="features" className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -706,3 +694,14 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      <ChatWidget />
+      <style jsx>{`
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-slow { animation: bounce-slow 4s ease-in-out infinite; }
+      `}</style>
+    </div>
+  );
+}
