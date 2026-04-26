@@ -167,9 +167,11 @@
 - [ ] PWA caching: abre landing en vez de dashboard al reabrir
 - [ ] Advanced Access en Meta (espera 7-30 días, no es trabajo nuestro)
 - [ ] Popup Embedded Signup error "Sorry something went wrong" (bug Meta)
-### Multi-agente — cerrar 100%
-- [ ] Polling cada 10s como WebSocket simple ($0)
-- [ ] WebSocket real (cuando ya tengamos clientes pagando)
+### Multi-agente — cerrar 100% ✅
+- [x] Polling cada 6s con pausa automática cuando pestaña oculta (ahorra ~70% requests, alcanza ~30 agentes en free tier)
+- [x] Sonido + vibración + notificación SO + badges en `app/dashboard/chat/page.tsx`
+- [x] Push FCM ⚡ instantáneo (no depende del polling)
+- [ ] WebSocket real (Sprint 7 — cuando ya tengamos clientes pagando)
 ### Seguridad básica (cerrar antes de cobrar)
 - [ ] Audit log de cambios sensibles
 - [ ] Backups automáticos DynamoDB
@@ -327,7 +329,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-████████████████████░░░░░░░░░░ 70%
+████████████████████░░░░░░░░░░ 71%
 
 | Categoría | % |
 |---|---|

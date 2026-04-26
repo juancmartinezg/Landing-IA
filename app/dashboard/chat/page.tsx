@@ -130,7 +130,7 @@ export default function ChatPage() {
       })
       .catch(() => setLoadingCwMsgs(false));
   };
-  // Inicial
+  // Inicial — polling de lista cada 6s, pausado si pestaña oculta (ahorra ~70% requests)
   useEffect(() => {
     // Pedir permiso de notificaciones del navegador
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -138,18 +138,52 @@ export default function ChatPage() {
     }
     loadBotConvs();
     loadCwConvs();
-    const interval = setInterval(() => {
-      loadBotConvs();
-    }, 4000);
-    return () => clearInterval(interval);
+    let interval: any = null;
+    const startPolling = () => {
+      if (interval) return;
+      interval = setInterval(() => {
+        if (!document.hidden) loadBotConvs();
+      }, 6000);
+    };
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+    // Iniciar si la pestaña está visible al montar
+    if (!document.hidden) startPolling();
+    // Reanudar cuando vuelva la pestaña, pausar cuando se oculte
+    const onVisibility = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        loadBotConvs(); // refresca al volver
+        startPolling();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [tab]);
-  // Auto-refresh mensajes
+  // Auto-refresh mensajes — polling cada 6s, pausado si pestaña oculta
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
-    if (selectedPhone) {
-      pollRef.current = setInterval(() => loadBotMessages(selectedPhone, true), 4000);
-    }
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    if (!selectedPhone) return;
+    const tick = () => {
+      if (!document.hidden) loadBotMessages(selectedPhone, true);
+    };
+    pollRef.current = setInterval(tick, 6000);
+    const onVisibility = () => {
+      if (!document.hidden && selectedPhone) loadBotMessages(selectedPhone, true);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [selectedPhone]);
   // Scroll al ultimo mensaje
   useEffect(() => {
