@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import ChatWidget from './components/ChatWidget';
+import InstallPWAPrompt from './components/InstallPWAPrompt';
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   return (
@@ -701,6 +702,7 @@ export default function LandingPage() {
         </div>
       </footer>
       <ChatWidget />
+      <InstallPWAPrompt variant="landing" />
       <style jsx>{`
         @keyframes bounce-slow {
           0%, 100% { transform: translateY(0); }
