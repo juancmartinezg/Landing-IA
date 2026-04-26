@@ -125,7 +125,7 @@ export default function LandingPage() {
                   {/* Header */}
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <p className="text-sm font-bold">Bienvenido, Escuela de Tiro JMC 👋</p>
+                      <p className="text-sm font-bold">Bienvenido, Constructora Riverside 👋</p>
                       <p className="text-[9px] text-gray-500">Últimos 30 días</p>
                     </div>
                     <div className="flex gap-1">
@@ -138,10 +138,10 @@ export default function LandingPage() {
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
                     {[
                       { label: 'Leads', value: '284', color: 'text-indigo-400' },
-                      { label: 'Ventas', value: '$8.4M', color: 'text-emerald-400' },
+                      { label: 'Ventas', value: '$2.1M', color: 'text-emerald-400' },
                       { label: 'Conversión', value: '24%', color: 'text-purple-400' },
                       { label: 'Te escribieron', value: '1,847', color: 'text-sky-400' },
-                      { label: 'CPL Ads', value: '$3,200', color: 'text-yellow-400' },
+                      { label: 'CPL Ads', value: '$58', color: 'text-yellow-400' },
                     ].map((m, i) => (
                       <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5 text-center">
                         <p className="text-[8px] text-gray-500 uppercase tracking-widest">{m.label}</p>
@@ -181,10 +181,10 @@ export default function LandingPage() {
                         </span>
                       </div>
                       <div className="space-y-1.5">
-                        <div className="bg-[#005c4b]/30 rounded-lg p-2"><p className="text-[9px]">👤 Hola, quiero info del plan de parejas</p></div>
-                        <div className="bg-[#1a1f2e] rounded-lg p-2"><p className="text-[8px] text-emerald-400 mb-0.5">🤖 Bot</p><p className="text-[9px]">¡Hola! El Plan de Parejas incluye instrucción + práctica para 2 personas. ¿Te envío el link de pago?</p></div>
-                        <div className="bg-[#005c4b]/30 rounded-lg p-2"><p className="text-[9px]">👤 Sí porfa!</p></div>
-                        <div className="bg-[#1a1f2e] rounded-lg p-2"><p className="text-[8px] text-emerald-400 mb-0.5">🤖 Bot</p><p className="text-[9px]">Aquí tienes tu link de pago seguro: 💳 $180,000 COP 🔒</p></div>
+                        <div className="bg-[#005c4b]/30 rounded-lg p-2"><p className="text-[9px]">👤 ¿Info del apto de 2 habitaciones?</p></div>
+                        <div className="bg-[#1a1f2e] rounded-lg p-2"><p className="text-[8px] text-emerald-400 mb-0.5">🤖 Bot</p><p className="text-[9px]">¡Hola! El de 2 habitaciones (62 m²) desde $145.000 USD con 10% de reserva. ¿Te envío el link de pago?</p></div>
+                        <div className="bg-[#005c4b]/30 rounded-lg p-2"><p className="text-[9px]">👤 ¡Sí, por favor!</p></div>
+                        <div className="bg-[#1a1f2e] rounded-lg p-2"><p className="text-[8px] text-emerald-400 mb-0.5">🤖 Bot</p><p className="text-[9px]">Aquí tienes tu link de pago seguro: 💳 $14.500 USD reserva 🔒</p></div>
                       </div>
                     </div>
                   </div>
@@ -193,12 +193,12 @@ export default function LandingPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                        <p className="text-[10px] font-bold">📢 Campaña activa: Seminario de Tiro 9mm</p>
+                        <p className="text-[10px] font-bold">📢 Campaña activa: Riverside Park — Fase 2</p>
                       </div>
                       <div className="flex gap-3 text-[9px] text-gray-400">
-                        <span>$2.8M invertido</span>
+                        <span>$2.800 invertido</span>
                         <span className="text-emerald-400">48 leads</span>
-                        <span className="text-purple-400">CPL $3,200</span>
+                        <span className="text-purple-400">CPL $58</span>
                       </div>
                     </div>
                   </div>
@@ -253,10 +253,10 @@ export default function LandingPage() {
             </div>
             <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/0 border border-emerald-500/10 rounded-3xl p-8 relative">
               <div className="space-y-3">
-                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">Hola, quiero info del seminario de tiro 🎯</p></div></div>
-                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">¡Hola! 😊 Tenemos el Seminario de Tiro con pistola 9mm. Incluye instrucción, munición y práctica. ¿Te cuento los detalles y precios?</p></div></div>
-                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">Sí, cuánto vale?</p></div></div>
-                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">El seminario tiene un valor de $280,000 COP. Incluye todo el material. ¿Quieres que te envíe el link de pago seguro? 💳</p></div></div>
+                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">Hola, vi un anuncio de los apartamentos nuevos 🏢</p></div></div>
+                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">¡Hola! 😊 Tenemos disponibles apartamentos de 2 y 3 alcobas en el proyecto Reserva del Bosque. ¿Te interesa más el de 2 o de 3 alcobas?</p></div></div>
+                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">El de 3, ¿cuánto vale y cuándo entregan?</p></div></div>
+                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">El de 3 alcobas tiene 78m² y desde $385.000.000. Entrega en marzo 2027. 🏗️ ¿Te agendo una cita virtual con un asesor para ver planos y separar?</p></div></div>
               </div>
             </div>
           </div>
@@ -338,11 +338,11 @@ export default function LandingPage() {
                 <div className="flex gap-1 mb-4">{[1,2,3,4,5].map(s => <div key={s} className={`flex-1 h-1.5 rounded-full ${s <= 5 ? 'bg-purple-500' : 'bg-white/10'}`} />)}</div>
                 <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Vista previa del anuncio</p>
                 <div className="bg-white/[0.03] rounded-xl p-4 border border-white/5">
-                  <p className="text-xs font-bold mb-2">🎯 ¿Buscas una experiencia única?</p>
-                  <p className="text-[10px] text-gray-400 mb-3">Vive el Seminario de Tiro en nuestra sede de Guarne. Cupos limitados esta semana. ¡Escríbenos por WhatsApp!</p>
+                  <p className="text-xs font-bold mb-2">🏢 ¿Buscas el hogar de tus sueños?</p>
+                  <p className="text-[10px] text-gray-400 mb-3">Descubre Riverside Park — apartamentos de 2 y 3 habitaciones con vista panorámica. Unidades limitadas. ¡Escríbenos por WhatsApp!</p>
                   <div className="flex gap-2">
-                    <span className="text-[8px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">Medellín 25km</span>
-                    <span className="text-[8px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">25-55 años</span>
+                    <span className="text-[8px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">Radio 25 km</span>
+                    <span className="text-[8px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">28-55 años</span>
                     <span className="text-[8px] px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">CTW WhatsApp</span>
                   </div>
                 </div>
