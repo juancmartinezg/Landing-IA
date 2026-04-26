@@ -47,6 +47,7 @@
 ### 🤖 Bot WhatsApp
 - [x] IA conversacional Gemini + neuroventas + memory hint
 - [x] Multi-pasarela pagos (Wompi, PayPal, MercadoPago, OpenPay, PayU, Bold)
+- [ ] **Integrar Stripe** (crítico para mercados US/EU)
 - [x] Carrusel visual + fallback lista (template del tenant)
 - [x] Google Calendar + WhatsApp Flows
 - [x] VAPI llamadas IA
@@ -119,15 +120,15 @@
 - [x] Página `/terminos`
 ---
 ## 🔧 EN PROCESO — Sprint actual
-### Frontend / Landing (~95%)
+### Frontend / Landing (~100%) ✅
 - [x] Estructura legal (Términos + Privacidad + Cookies)
 - [x] Footer con enlaces legales reales
 - [x] Botón "Ver demo en vivo" abre ChatWidget
 - [x] `rel="noopener noreferrer"` en links externos
-- [ ] BLOQUE G: Conversación demo Feature 1 → constructora genérica
-- [ ] BLOQUE H: Dashboard mockup → constructora genérica (USD)
-- [ ] BLOQUE I: Ad preview → apartamentos
-- [ ] Testimonios reales (cuando tengas)
+- [x] Demos genéricos (Inmobiliaria Aurora)
+- [x] Dashboard mockup neutro (USD)
+- [x] Ad preview neutro
+- [ ] Testimonios reales (depende de marketing, no de código)
 ---
 ## 🔴 PENDIENTE — Cierre de módulos abiertos
 ### Ads Pro — pulir pendientes
@@ -144,10 +145,15 @@
 - [ ] Popup Embedded Signup error "Sorry something went wrong" (bug Meta)
 ### Multi-agente — cerrar 100%
 - [ ] WebSocket en vivo (o polling cada 10s como alternativa simple)
-### Seguridad básica (cerrar antes de cobrar)
+## Seguridad básica (cerrar antes de cobrar)
 - [ ] Audit log de cambios sensibles
 - [ ] Backups automáticos DynamoDB
 - [ ] Verificar logs CloudWatch en todas las Lambdas
+### Pasarelas de pago — pendientes de integrar
+> Estas son las pasarelas que **el cliente final usa** para cobrar a sus compradores
+> (no es lo mismo que el billing de Stripe del SaaS — eso está en Fase 28).
+- [ ] **Stripe** (crítico para US/EU/UK)
+- [ ] Pasarela personalizada bajo demanda (proceso documentado para integrar nuevas en <48h)
 ---
 ## 🟡 PRÓXIMO — Después de cerrar lo abierto
 ### Fase 28 — Stripe + Billing ⭐ CRÍTICO PARA COBRAR
@@ -262,3 +268,4 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - Email: soporte@clientes.bot
 - WhatsApp: +57 XXX
 - Empresa: SGC Technology S.A.S.
+- Juan Martinez

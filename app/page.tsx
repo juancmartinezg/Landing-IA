@@ -359,7 +359,7 @@ export default function LandingPage() {
             <div className="order-2 md:order-1 bg-gradient-to-br from-yellow-500/5 to-yellow-500/0 border border-yellow-500/10 rounded-3xl p-8 text-center">
               <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Pasarelas disponibles</p>
               <div className="grid grid-cols-3 gap-4">
-                {['Bold', 'Wompi', 'PayPal', 'MercadoPago', 'OpenPay', 'PayU'].map((g, i) => (
+                {['Stripe', 'PayPal', 'Bold', 'Wompi', 'MercadoPago', 'OpenPay'].map((g, i) => (
                   <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-3 text-center hover:border-yellow-500/30 transition-all">
                     <p className="text-xs font-bold">{g}</p>
                   </div>
@@ -376,15 +376,16 @@ export default function LandingPage() {
                 <span className="text-[10px] text-yellow-400 font-bold uppercase tracking-widest">Pagos integrados</span>
               </div>
               <h3 className="text-2xl md:text-3xl font-black mb-4">Cobra en el chat.<br />Sin fricciones.</h3>
-              <p className="text-gray-400 mb-6 leading-relaxed">Genera links de pago desde el dashboard o deja que el bot los envíe automáticamente. 6 pasarelas disponibles para toda Latinoamérica.</p>
+              <p className="text-gray-400 mb-6 leading-relaxed">Genera links de pago desde el dashboard o deja que el bot los envíe automáticamente. Pasarelas globales y locales según tu mercado.</p>
               <ul className="space-y-3">
                 {[
-                  'Bold, Wompi, PayPal, MercadoPago, OpenPay, PayU',
+                  'Stripe, Bold, Wompi, PayPal, MercadoPago, OpenPay, PayU y más',
                   'Link de pago directo en la conversación de WhatsApp',
                   'Webhook automático: el bot confirma el pago al cliente',
                   'Dashboard de pagos con estado en tiempo real',
-                  'Multi-moneda: COP, MXN, USD, ARS, CLP, PEN',
+                  'Multi-moneda global: USD, EUR, GBP, CAD y +30 monedas más',
                   'Genera links desde el CRM con 1 clic',
+                  '¿Tu pasarela no está? Te la integramos sin costo',
                 ].map((f, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
                     <span className="text-yellow-400 mt-0.5">✓</span>{f}
@@ -612,10 +613,11 @@ export default function LandingPage() {
               { q: '¿Necesito un número de WhatsApp nuevo?', a: 'Puedes usar tu número actual o crear uno nuevo. Al conectar, tu número se convierte en WhatsApp Business API y el bot empieza a responder automáticamente.' },
               { q: '¿Pierdo acceso a mi WhatsApp personal?', a: 'Si usas tu número personal, se convertirá en Business API y ya no podrás usar la app normal de WhatsApp con ese número. Recomendamos usar una línea dedicada.' },
               { q: '¿Qué pasa si el bot no sabe responder?', a: 'El bot transfiere automáticamente la conversación a un agente humano de tu equipo, quien recibe notificación por email y push en su celular.' },
-              { q: '¿Funciona en mi país?', a: 'Sí. Funcionamos en toda Latinoamérica y España. Soportamos pasarelas de pago locales (Bold, Wompi para Colombia; OpenPay para México; MercadoPago para Argentina, etc).' },
+              { q: '¿Funciona en mi país?', a: 'Sí. Funcionamos a nivel global. Integramos pasarelas internacionales (Stripe, PayPal) y locales según tu mercado (Bold, Wompi, MercadoPago, OpenPay, PayU y más).' },
               { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, sin penalidad. Los 7 días de prueba son completamente gratis y no pedimos tarjeta de crédito para empezar.' },
               { q: '¿Necesito conocimientos técnicos?', a: 'No. Todo se configura con clicks. El wizard te guía paso a paso. Si necesitas ayuda, nuestro equipo te asiste por WhatsApp.' },
               { q: '¿Puedo gestionar varios negocios?', a: 'Sí, con el plan Enterprise puedes gestionar múltiples líneas de WhatsApp y cuentas publicitarias desde un solo dashboard.' },
+              { q: '¿Qué pasa si mi pasarela de pagos no está en la lista?', a: 'Sin problema. Si usas una pasarela que no tenemos integrada, escríbenos a soporte@clientes.bot y la integramos sin costo adicional para tu cuenta. Solo necesitamos las credenciales de su API.' },
             ].map((faq, i) => (
               <details key={i} className="group bg-white/[0.03] border border-white/5 rounded-2xl overflow-hidden">
                 <summary className="flex items-center justify-between p-5 cursor-pointer list-none hover:bg-white/[0.02] transition-all">
