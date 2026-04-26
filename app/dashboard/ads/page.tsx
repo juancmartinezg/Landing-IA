@@ -92,7 +92,7 @@ export default function AdsPage() {
     const camps = data.campaigns || {};
     setDashboard(dash);
     setMetrics(dash.global || {});
-    etAudiences(aud.audiences || []);
+    setAudiences(aud.audiences || []);
     setSavedAudiences(sav.audiences || []);
     setIgAccounts(ig.instagram_accounts || []);
     // Mergear campañas full con métricas del dashboard
