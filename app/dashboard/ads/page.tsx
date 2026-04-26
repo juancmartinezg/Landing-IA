@@ -1022,10 +1022,28 @@ export default function AdsPage() {
                                   if (d.upload_url) {
                                     await fetch(d.upload_url, { method: 'PUT', headers: { 'Content-Type': d.content_type }, body: file });
                                     const nv = [...variants]; nv[i] = {...nv[i], image_url: d.public_url}; setVariants(nv);
-                                    showToast('✅ Imagen subida');
+                                    showToast('✅ Imagen subida. Usa 📐 para generar los 3 formatos.');
                                   }
                                 }} />
                               </label>
+                              {v.image_url && (
+                                <button onClick={async () => {
+                                  showToast('📐 Generando 3 formatos...');
+                                  const r = await fetch(`${API_URL}/ads/resize-image`, {
+                                    method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ image_url: v.image_url }),
+                                  });
+                                  const d = await r.json();
+                                  if (r.ok && d.images) {
+                                    const nv = [...variants];
+                                    nv[i] = {...nv[i], image_url: d.square, image_vertical: d.vertical, image_horizontal: d.horizontal};
+                                    setVariants(nv);
+                                    showToast('✅ 3 formatos generados (1:1, 9:16, 16:9)');
+                                  } else showToast(d.error || 'Error generando formatos');
+                                }} className="text-[9px] px-2 py-1 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/40 font-bold transition-all">
+                                  📐 3 formatos
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
