@@ -60,9 +60,13 @@ export default function LandingPage() {
               <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 hover:scale-105 px-8 py-4 rounded-2xl font-bold text-base transition-all shadow-xl shadow-indigo-600/25 inline-flex items-center justify-center gap-2">
                 🚀 Comenzar gratis — 7 días
               </Link>
-              <a href="#demo" className="bg-white/5 hover:bg-white/10 border border-white/10 px-8 py-4 rounded-2xl font-bold text-base transition-all inline-flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-chat-widget'))}
+                className="bg-white/5 hover:bg-white/10 border border-white/10 px-8 py-4 rounded-2xl font-bold text-base transition-all inline-flex items-center justify-center gap-2"
+              >
                 💬 Ver demo en vivo
-              </a>
+              </button>
             </div>
             <p className="text-[11px] text-gray-600">Sin tarjeta de crédito • Configuración en 2 minutos • Cancela cuando quieras</p>
           </div>
@@ -234,7 +238,7 @@ export default function LandingPage() {
               <p className="text-gray-400 mb-6 leading-relaxed">Responde preguntas, muestra el catálogo, agenda citas, cobra pagos y cierra ventas — todo automáticamente por WhatsApp. Con memoria inteligente que recuerda cada cliente.</p>
               <ul className="space-y-3">
                 {[
-                  'IA conversacional con Gemini 2.5 (no suena a robot)',
+                  'IA conversacional (no suena a robot)',
                   'Memoria proactiva: recuerda clientes anteriores',
                   'Catálogo visual con carrusel de productos',
                   'Neuroventas: detecta intención de compra',
@@ -396,11 +400,11 @@ export default function LandingPage() {
                 <span className="text-sm">📅</span>
                 <span className="text-[10px] text-sky-400 font-bold uppercase tracking-widest">Agendamiento inteligente</span>
               </div>
-              <h3 className="text-2xl md:text-3xl font-black mb-4">Citas que se agendan solas.<br />Directo en Google Calendar.</h3>
+              <h3 className="text-2xl md:text-3xl font-black mb-4">Citas que se agendan solas.<br />Directo en el Calendario.</h3>
               <p className="text-gray-400 mb-6 leading-relaxed">El bot muestra fechas disponibles, el cliente elige y la cita se crea automáticamente en tu calendario. Sin llamadas, sin WhatsApp manual.</p>
               <ul className="space-y-3">
                 {[
-                  'Integración directa con Google Calendar',
+                  'Integración directa de Calendario',
                   'WhatsApp Flows: el cliente elige fecha y hora en el chat',
                   'Detección de festivos y días cerrados',
                   'Recordatorios automáticos antes de la cita',
@@ -566,7 +570,7 @@ export default function LandingPage() {
                 <li className="flex gap-2"><span>✓</span>Todo lo de Starter +</li>
                 <li className="flex gap-2"><span>✓</span>2,000 conversaciones/mes</li>
                 <li className="flex gap-2"><span>✓</span>Memoria proactiva IA</li>
-                <li className="flex gap-2"><span>✓</span>Agendamiento + Google Calendar</li>
+                <li className="flex gap-2"><span>✓</span>Agendamiento + Calendario</li>
                 <li className="flex gap-2"><span>✓</span>CRM completo + Kanban</li>
                 <li className="flex gap-2"><span>✓</span>6 pasarelas de pago</li>
                 <li className="flex gap-2"><span>✓</span>Facebook Ads con IA</li>
@@ -637,7 +641,7 @@ export default function LandingPage() {
               <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 hover:scale-105 px-8 py-4 rounded-2xl font-bold transition-all shadow-xl shadow-indigo-600/25 inline-flex items-center justify-center gap-2">
                 🚀 Comenzar gratis — 7 días
               </Link>
-              <a href="https://wa.me/573022205845?text=Hola%2C%20quiero%20info%20de%20clientes.bot" target="_blank" className="bg-[#25D366] hover:bg-[#1da851] px-8 py-4 rounded-2xl font-bold transition-all inline-flex items-center justify-center gap-2">
+              <a href="https://wa.me/573022205845?text=Hola%2C%20quiero%20info%20de%20clientes.bot" target="_blank" rel="noopener noreferrer" className="bg-[#25D366] hover:bg-[#1da851] px-8 py-4 rounded-2xl font-bold transition-all inline-flex items-center justify-center gap-2">
                 💬 Hablar por WhatsApp
               </a>
             </div>
@@ -678,18 +682,18 @@ export default function LandingPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Legal</p>
               <div className="space-y-2">
-                <a href="#" className="block text-xs text-gray-500 hover:text-white transition-colors">Términos de servicio</a>
-                <a href="#" className="block text-xs text-gray-500 hover:text-white transition-colors">Política de privacidad</a>
-                <a href="#" className="block text-xs text-gray-500 hover:text-white transition-colors">Política de cookies</a>
+                <Link href="/terminos" className="block text-xs text-gray-500 hover:text-white transition-colors">Términos de servicio</Link>
+                <Link href="/politica-de-privacidad" className="block text-xs text-gray-500 hover:text-white transition-colors">Política de privacidad</Link>
+                <Link href="/politica-de-privacidad#cookies" className="block text-xs text-gray-500 hover:text-white transition-colors">Política de cookies</Link>
               </div>
             </div>
           </div>
           <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-[10px] text-gray-600">© 2026 SGC Technology S.A.S. Todos los derechos reservados.</p>
             <div className="flex gap-4">
-              <a href="https://wa.me/573022205845" target="_blank" className="text-gray-500 hover:text-emerald-400 transition-colors text-lg">💬</a>
-              <a href="https://instagram.com/clientes.bot" target="_blank" className="text-gray-500 hover:text-pink-400 transition-colors text-lg">📸</a>
-              <a href="https://facebook.com/clientesbot" target="_blank" className="text-gray-500 hover:text-blue-400 transition-colors text-lg">👤</a>
+              <a href="https://wa.me/573022205845" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-emerald-400 transition-colors text-lg">💬</a>
+              <a href="https://instagram.com/clientes.bot" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-pink-400 transition-colors text-lg">📸</a>
+              <a href="https://facebook.com/clientesbot" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-blue-400 transition-colors text-lg">👤</a>
             </div>
           </div>
         </div>

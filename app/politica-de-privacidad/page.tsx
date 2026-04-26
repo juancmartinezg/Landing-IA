@@ -114,7 +114,59 @@ export default function PoliticaPrivacidad() {
               clientes.bot actúa como una herramienta de automatización. Aunque nuestra IA busca optimizar el rendimiento, el usuario es el único responsable de establecer los límites de gasto diario y total en sus cuentas de anuncios de Meta. clientes.bot no se hace responsable por fluctuaciones en los costos de pauta decididos por los algoritmos de subasta de Meta ni por gastos derivados de configuraciones de presupuesto erróneas realizadas por el usuario.
             </p>
           </div>
-
+          {/* 7. Cookies y tecnologías similares */}
+          <div id="cookies">
+            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+              <span className="text-indigo-500">07.</span> Política de Cookies y Tecnologías Similares
+            </h2>
+            <p className="mb-4">
+              Utilizamos cookies y tecnologías similares (localStorage, sessionStorage, tokens de autenticación) para garantizar el funcionamiento de la plataforma y mejorar tu experiencia. Las clasificamos en:
+            </p>
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <li className="bg-white/5 p-4 rounded-xl border border-white/5">
+                <strong className="text-white block mb-1">Esenciales (obligatorias)</strong>
+                Permiten iniciar sesión, mantener tu sesión activa y proteger contra fraude. Sin estas, la plataforma no funciona. Ejemplos: tokens de Cognito, cookies de sesión.
+              </li>
+              <li className="bg-white/5 p-4 rounded-xl border border-white/5">
+                <strong className="text-white block mb-1">Funcionales</strong>
+                Recuerdan tus preferencias (tema, idioma, último tenant activo) para personalizar tu experiencia.
+              </li>
+              <li className="bg-white/5 p-4 rounded-xl border border-white/5">
+                <strong className="text-white block mb-1">Analíticas</strong>
+                Nos ayudan a entender cómo se usa la plataforma de forma agregada y anónima (páginas más visitadas, errores frecuentes). No identifican individualmente al usuario.
+              </li>
+              <li className="bg-white/5 p-4 rounded-xl border border-white/5">
+                <strong className="text-white block mb-1">De terceros</strong>
+                Servicios integrados (Meta Pixel, Firebase Cloud Messaging, AWS Amplify) pueden colocar sus propias cookies, regidas por sus respectivas políticas.
+              </li>
+            </ul>
+            <p className="mb-4">
+              Puedes configurar tu navegador para rechazar cookies no esenciales, pero algunas funciones de la plataforma podrían dejar de funcionar (especialmente el inicio de sesión y las notificaciones push).
+            </p>
+            <p className="italic bg-indigo-500/5 p-4 rounded-lg border border-indigo-500/10">
+              Al continuar usando clientes.bot aceptas el uso de cookies descritas en esta sección. Puedes revocar tu consentimiento en cualquier momento borrando las cookies desde tu navegador.
+            </p>
+          </div>
+          {/* 8. Derechos del titular (Habeas Data) */}
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+              <span className="text-indigo-500">08.</span> Derechos del Titular de los Datos
+            </h2>
+            <p className="mb-4">
+              De acuerdo con la <strong>Ley 1581 de 2012</strong> de Colombia (Habeas Data) y normas concordantes, como titular de tus datos personales tienes derecho a:
+            </p>
+            <ul className="list-disc ml-6 space-y-2">
+              <li><strong>Conocer:</strong> saber qué datos tuyos almacenamos y con qué finalidad.</li>
+              <li><strong>Actualizar y rectificar:</strong> corregir información inexacta o incompleta.</li>
+              <li><strong>Suprimir:</strong> solicitar la eliminación de tus datos cuando ya no sean necesarios.</li>
+              <li><strong>Revocar la autorización:</strong> retirar el consentimiento otorgado en cualquier momento.</li>
+              <li><strong>Acceder gratuitamente:</strong> a los datos objeto del tratamiento al menos una vez al mes.</li>
+              <li><strong>Presentar quejas:</strong> ante la Superintendencia de Industria y Comercio (SIC) por infracciones a la ley.</li>
+            </ul>
+            <p className="mt-4">
+              Para ejercer cualquiera de estos derechos escríbenos a <strong>soporte@clientes.bot</strong>. Responderemos en un plazo máximo de <strong>15 días hábiles</strong>.
+            </p>
+          </div>
         </section>
 
         <footer className="mt-16 pt-8 border-t border-white/5 text-center">

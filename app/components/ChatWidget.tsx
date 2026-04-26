@@ -20,6 +20,13 @@ export default function ChatWidget() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+  // Permite abrir el widget desde cualquier botón de la landing
+  // disparando window.dispatchEvent(new CustomEvent('open-chat-widget'))
+  useEffect(() => {
+    const handler = () => setIsOpen(true);
+    window.addEventListener('open-chat-widget', handler);
+    return () => window.removeEventListener('open-chat-widget', handler);
+  }, []);
   const handleCreateDemo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formEmail || !formBusiness || !formSell) return;
