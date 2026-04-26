@@ -50,47 +50,76 @@ export default function AdsPage() {
   const [toolLoading, setToolLoading] = useState('');
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
   const h = { 'client-id': user?.companyId || '' };
-  useEffect(() => {
+  // Cache en localStorage (5 min) para evitar refetches al cambiar de tab
+  const ADS_INIT_CACHE_KEY = 'cb_ads_init';
+  const ADS_INIT_TTL_MS = 5 * 60 * 1000;
+  const loadAdsInit = (force = false) => {
+    // Intentar cache primero
+    if (!force && typeof window !== 'undefined') {
+      try {
+        const cached = JSON.parse(localStorage.getItem(ADS_INIT_CACHE_KEY) || 'null');
+        if (cached && Date.now() - cached.ts < ADS_INIT_TTL_MS) {
+          applyAdsInit(cached.data);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+    }
+    // Sin cache válido → 1 sola llamada al endpoint unificado
     Promise.all([
-      fetch(`${API_URL}/ads/dashboard?period=last_30d`, { headers: h }).then(r => r.json()).catch(() => ({ global: {}, campaigns: [], alerts: [] })),
-      fetch(`${API_URL}/ads/audiences`, { headers: h }).then(r => r.json()).catch(() => ({ audiences: [] })),
+      fetch(`${API_URL}/ads/init?period=last_30d`, { headers: h }).then(r => r.json()).catch(() => null),
       fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).catch(() => ({ services: [] })),
-      fetch(`${API_URL}/ads/accounts`, { headers: h }).then(r => r.json()).catch(() => ({ accounts: [] })),
-      fetch(`${API_URL}/ads/pages`, { headers: h }).then(r => r.json()).catch(() => ({ pages: [] })),
-      fetch(`${API_URL}/ads/instagram`, { headers: h }).then(r => r.json()).catch(() => ({ instagram_accounts: [] })),
-      fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).catch(() => ({ campaigns: [] })),
-    ]).then(([dash, a, s, ac, pg, ig, camps]) => {
-      setDashboard(dash); setMetrics(dash.global || {}); setAudiences(a.audiences || []); setServices(s.services || []); setIgAccounts(ig.instagram_accounts || []);
-      // Usar campañas de /ads/campaigns (tiene ads + rejected_count) en vez de dashboard
-      const fullCamps = camps.campaigns || [];
-      if (fullCamps.length > 0) {
-        // Merge metrics del dashboard con ads info de campaigns
-        const dashCamps = dash.campaigns || [];
-        const merged = fullCamps.map((c: any) => {
-          const dc = dashCamps.find((d: any) => d.campaign_id === c.campaign_id);
-          return dc ? { ...c, metrics: dc.metrics, rendimiento: dc.rendimiento, status_human: dc.status_human } : c;
-        });
-        setCampaigns(merged);
-      } else {
-        setCampaigns(dash.campaigns || []);
-      }
-      const accs = ac.accounts || [];
-      setAccounts(accs);
-      setPages(pg.pages || []);
-      const selAcc = accs.find((x: any) => x.selected);
-      if (selAcc) {
-        setWiz((prev: any) => ({...prev, ad_account_id: selAcc.id}));
-        setSelectedAccountId(selAcc.id);
-      } else if (accs.length > 0) {
-        setSelectedAccountId(accs[0].id);
-      }
-      const selPage = (pg.pages || []).find((x: any) => x.selected);
-      if (selPage) setWiz((prev: any) => ({...prev, page_id: selPage.id, page_name: selPage.name}));
-      fetch(`${API_URL}/config`, { headers: h }).then(r => r.json()).then(cfg => {
-        setBusinessType(cfg.business_type || 'servicios');
-      }).catch(() => {});
+      fetch(`${API_URL}/config`, { headers: h }).then(r => r.json()).catch(() => ({})),
+    ]).then(([initData, svcData, cfg]) => {
+      if (!initData) { setLoading(false); return; }
+      // Guardar en cache
+      try {
+        localStorage.setItem(ADS_INIT_CACHE_KEY, JSON.stringify({ data: initData, ts: Date.now() }));
+      } catch {}
+      applyAdsInit(initData);
+      setServices(svcData.services || []);
+      setBusinessType(cfg.business_type || 'servicios');
       setLoading(false);
     });
+  };
+  const applyAdsInit = (data: any) => {
+    const dash = data.dashboard || {};
+    const ac = data.accounts || {};
+    const pg = data.pages || {};
+    const ig = data.instagram || {};
+    const aud = data.audiences || {};
+    const camps = data.campaigns || {};
+    setDashboard(dash);
+    setMetrics(dash.global || {});
+    setAudiences(aud.audiences || []);
+    setIgAccounts(ig.instagram_accounts || []);
+    // Mergear campañas full con métricas del dashboard
+    const fullCamps = camps.campaigns || [];
+    if (fullCamps.length > 0) {
+      const dashCamps = dash.campaigns || [];
+      const merged = fullCamps.map((c: any) => {
+        const dc = dashCamps.find((d: any) => d.campaign_id === c.campaign_id);
+        return dc ? { ...c, metrics: dc.metrics, rendimiento: dc.rendimiento, status_human: dc.status_human } : c;
+      });
+      setCampaigns(merged);
+    } else {
+      setCampaigns(dash.campaigns || []);
+    }
+    const accs = ac.accounts || [];
+    setAccounts(accs);
+    setPages(pg.pages || []);
+    const selAcc = accs.find((x: any) => x.selected);
+    if (selAcc) {
+      setWiz((prev: any) => ({ ...prev, ad_account_id: selAcc.id }));
+      setSelectedAccountId(selAcc.id);
+    } else if (accs.length > 0) {
+      setSelectedAccountId(accs[0].id);
+    }
+    const selPage = (pg.pages || []).find((x: any) => x.selected);
+    if (selPage) setWiz((prev: any) => ({ ...prev, page_id: selPage.id, page_name: selPage.name }));
+  };
+  useEffect(() => {
+    loadAdsInit();
   }, []);
   const handleGenerate = async () => {
     setCreating(true); setVariants([]);
@@ -362,7 +391,7 @@ export default function AdsPage() {
                     {p.l}
                   </button>
                 ))}
-                <button onClick={() => reloadDashboard()}
+                <button onClick={() => { localStorage.removeItem('cb_ads_init'); loadAdsInit(true); reloadDashboard(); }}
                   className="ml-auto px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all">
                   🔄 Actualizar
                 </button>
