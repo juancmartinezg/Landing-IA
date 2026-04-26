@@ -163,7 +163,7 @@
 - [ ] Re-vincular IG Business Account en página Facebook
 - [ ] Advantage+ creative enhancements (Meta deprecó standard)
 ### Auth / Onboarding
-- [ ] **SES → Resend** (AWS denegó producción) — gratis 3000/mes
+- [x] **SES → Resend** (AWS denegó producción) — gratis 3000/mes
 - [ ] PWA caching: abre landing en vez de dashboard al reabrir
 - [ ] Advanced Access en Meta (espera 7-30 días, no es trabajo nuestro)
 - [ ] Popup Embedded Signup error "Sorry something went wrong" (bug Meta)
@@ -327,7 +327,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-████████████████████░░░░░░░░░░ 69%
+████████████████████░░░░░░░░░░ 70%
 
 | Categoría | % |
 |---|---|
@@ -338,8 +338,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
-- [x] **50% → 69%** — Multi-agente + Landing + Embedded Signup ⭐ ESTÁS AQUÍ
-- [ ] **69% → 80%** — Stripe billing + Multicanal real
+- [x] **50% → 69%** — Multi-agente + Landing + Embedded Signup
+- [ ] **69% → 80%** — Stripe billing + Multicanal real ⭐ ESTÁS AQUÍ (70% — SES→Resend listo)
 - [ ] **80% → 90%** — IA superpoderes + Crecimiento
 - [ ] **90% → 100%** — Premium + Rugido global 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
