@@ -80,20 +80,136 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          {/* Dashboard Preview */}
-          <div className="relative max-w-5xl mx-auto group">
-            <div className="relative aspect-[16/10] bg-[#1A2333] border-4 border-[#2A3942] rounded-2xl shadow-2xl overflow-hidden">
-              <img src="/dashboard-preview.webp" alt="Dashboard clientes.bot" className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F1A]/60 to-transparent" />
+          {/* Dashboard Preview - Mockup con código */}
+          <div className="relative max-w-5xl mx-auto">
+            <div className="bg-[#0B0F1A] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+              {/* Barra superior del "navegador" */}
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-[#080B14] border-b border-white/5">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
+                </div>
+                <div className="flex-1 flex justify-center">
+                  <div className="bg-white/5 rounded-lg px-4 py-1 text-[10px] text-gray-500">clientes.bot/dashboard</div>
+                </div>
+              </div>
+              {/* Contenido del dashboard */}
+              <div className="flex">
+                {/* Sidebar mini */}
+                <div className="hidden md:flex w-44 bg-[#080B14] border-r border-white/5 flex-col p-3 gap-1">
+                  {[
+                    { icon: '📊', label: 'Métricas', active: true },
+                    { icon: '👥', label: 'CRM / Leads' },
+                    { icon: '🧑‍💼', label: 'Mi equipo' },
+                    { icon: '💬', label: 'Conversaciones' },
+                    { icon: '🛍️', label: 'Catálogo' },
+                    { icon: '📅', label: 'Citas' },
+                    { icon: '💳', label: 'Pagos' },
+                    { icon: '📢', label: 'Facebook Ads' },
+                    { icon: '🧠', label: 'Memoria IA' },
+                    { icon: '⚙️', label: 'Configuración' },
+                  ].map((item, i) => (
+                    <div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] ${item.active ? 'bg-indigo-600/20 text-indigo-400' : 'text-gray-500'}`}>
+                      <span className="text-xs">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Main content */}
+                <div className="flex-1 p-4 md:p-6">
+                  {/* Header */}
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <p className="text-sm font-bold">Bienvenido, Escuela de Tiro JMC 👋</p>
+                      <p className="text-[9px] text-gray-500">Últimos 30 días</p>
+                    </div>
+                    <div className="flex gap-1">
+                      {['Hoy', '7d', '30d'].map((p, i) => (
+                        <span key={i} className={`text-[8px] px-2 py-0.5 rounded ${i === 2 ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-500'}`}>{p}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Métricas */}
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+                    {[
+                      { label: 'Leads', value: '284', color: 'text-indigo-400' },
+                      { label: 'Ventas', value: '$8.4M', color: 'text-emerald-400' },
+                      { label: 'Conversión', value: '24%', color: 'text-purple-400' },
+                      { label: 'Te escribieron', value: '1,847', color: 'text-sky-400' },
+                      { label: 'CPL Ads', value: '$3,200', color: 'text-yellow-400' },
+                    ].map((m, i) => (
+                      <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5 text-center">
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">{m.label}</p>
+                        <p className={`text-sm md:text-base font-black ${m.color}`}>{m.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Dos columnas */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Leads recientes */}
+                    <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Leads recientes</p>
+                      <div className="space-y-1.5">
+                        {[
+                          { name: 'Carlos M.', status: '🔥 Interesado', time: '2m', agent: 'María' },
+                          { name: 'Ana López', status: '💳 Pagó', time: '15m', agent: 'Juan' },
+                          { name: 'Pedro R.', status: '🆕 Nuevo', time: '1h', agent: 'Bot IA' },
+                          { name: 'Laura T.', status: '📅 Agendó', time: '3h', agent: 'María' },
+                        ].map((l, i) => (
+                          <div key={i} className="flex items-center gap-2 py-1">
+                            <div className="w-5 h-5 bg-indigo-600/20 rounded-full flex items-center justify-center text-[8px] font-bold text-indigo-400">{l.name.charAt(0)}</div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-bold truncate">{l.name}</p>
+                              <p className="text-[8px] text-gray-500">{l.status} • 🧑‍💼 {l.agent}</p>
+                            </div>
+                            <span className="text-[8px] text-gray-600">{l.time}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Chat en vivo */}
+                    <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[9px] text-gray-500 uppercase tracking-widest">Chat en vivo</p>
+                        <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />3 activos
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="bg-[#005c4b]/30 rounded-lg p-2"><p className="text-[9px]">👤 Hola, quiero info del plan de parejas</p></div>
+                        <div className="bg-[#1a1f2e] rounded-lg p-2"><p className="text-[8px] text-emerald-400 mb-0.5">🤖 Bot</p><p className="text-[9px]">¡Hola! El Plan de Parejas incluye instrucción + práctica para 2 personas. ¿Te envío el link de pago?</p></div>
+                        <div className="bg-[#005c4b]/30 rounded-lg p-2"><p className="text-[9px]">👤 Sí porfa!</p></div>
+                        <div className="bg-[#1a1f2e] rounded-lg p-2"><p className="text-[8px] text-emerald-400 mb-0.5">🤖 Bot</p><p className="text-[9px]">Aquí tienes tu link de pago seguro: 💳 $180,000 COP 🔒</p></div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Campaña activa */}
+                  <div className="mt-3 bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                        <p className="text-[10px] font-bold">📢 Campaña activa: Seminario de Tiro 9mm</p>
+                      </div>
+                      <div className="flex gap-3 text-[9px] text-gray-400">
+                        <span>$2.8M invertido</span>
+                        <span className="text-emerald-400">48 leads</span>
+                        <span className="text-purple-400">CPL $3,200</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="absolute -top-4 -right-4 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl shadow-2xl hidden md:block z-20 animate-bounce-slow">
-              <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-1">Leads hoy</p>
-              <p className="text-xl font-black text-emerald-400">+12 nuevos</p>
+            {/* Floating widgets */}
+            <div className="absolute -top-4 -right-4 bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-2xl shadow-2xl hidden md:block z-20 animate-bounce-slow">
+              <p className="text-[8px] text-gray-400 uppercase tracking-widest mb-0.5">Leads hoy</p>
+              <p className="text-lg font-black text-emerald-400">+12</p>
             </div>
-            <div className="absolute -bottom-4 -left-4 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl shadow-2xl hidden md:block z-20">
+            <div className="absolute -bottom-4 -left-4 bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-2xl shadow-2xl hidden md:block z-20">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <p className="text-xs font-bold">Bot respondiendo en WhatsApp</p>
+                <p className="text-[10px] font-bold">Bot respondiendo 24/7</p>
               </div>
             </div>
           </div>
