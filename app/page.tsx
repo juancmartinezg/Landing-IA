@@ -1,408 +1,592 @@
 'use client';
-import React from 'react';
-import MockupCelular from './components/MockupCelular'; 
+import React, { useState } from 'react';
+import Link from 'next/link';
 import ChatWidget from './components/ChatWidget';
-
 export default function LandingPage() {
+  const [mobileMenu, setMobileMenu] = useState(false);
   return (
-    <div className="min-h-screen bg-[#0B0F1A] text-white selection:bg-indigo-500/30 font-sans scroll-smooth">
-      
-      {/* 1. NAVBAR (Cambia solo esto) */}
+    <div className="min-h-screen bg-[#0B0F1A] text-white selection:bg-indigo-500/30 scroll-smooth">
+      {/* NAVBAR */}
       <nav className="fixed top-0 w-full z-50 bg-[#0B0F1A]/80 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center text-white">
-          <div className="flex flex-col md:flex-row items-center gap-0 md:gap-2">
-            <img 
-              src="/cb-logo.webp" 
-              alt="C.B. Logo" 
-              className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]"
-            />
-            <span className="text-[9px] md:text-xl font-bold tracking-tighter text-white font-sans">clientes.bot</span>
+        <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <img src="/cb-logo.webp" alt="Logo" className="w-8 h-8 object-contain" />
+            <span className="text-lg font-bold tracking-tighter">clientes.bot</span>
           </div>
-          <div className="hidden md:flex gap-8 text-sm font-medium text-gray-400 font-sans">
-            <a href="#beneficios" className="hover:text-white transition-colors">Beneficios</a>
-            <a href="#dashboard" className="hover:text-white transition-colors">Dashboard</a>
+          <div className="hidden md:flex gap-8 text-sm text-gray-400">
+            <a href="#features" className="hover:text-white transition-colors">Funciones</a>
+            <a href="#como-funciona" className="hover:text-white transition-colors">Cómo funciona</a>
+            <a href="#para-quien" className="hover:text-white transition-colors">Para quién</a>
             <a href="#planes" className="hover:text-white transition-colors">Planes</a>
-            <a href="#contacto" className="hover:text-white transition-colors">Contacto</a>
           </div>
-         <div className="flex items-center gap-2">
-            <a href="/auth/login" className="border border-white/10 hover:border-indigo-500/50 hover:bg-white/5 px-3 py-2 md:px-6 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold transition-all text-white font-sans whitespace-nowrap">
-              Iniciar sesion
-            </a>
-            <a href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 md:px-6 md:py-2.5 rounded-xl text-[11px] md:text-sm font-bold transition-all shadow-lg shadow-indigo-600/20 text-white font-sans whitespace-nowrap">
-              Prueba gratis
-            </a>
+          <div className="flex items-center gap-2">
+            <Link href="/auth/login" className="hidden sm:inline-flex border border-white/10 hover:border-indigo-500/50 px-4 py-2 rounded-xl text-xs font-bold transition-all">
+              Iniciar sesión
+            </Link>
+            <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20">
+              Prueba gratis 7 días
+            </Link>
+            <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-gray-400 text-2xl ml-2">☰</button>
           </div>
         </div>
+        {mobileMenu && (
+          <div className="md:hidden bg-[#0B0F1A] border-t border-white/5 px-6 py-4 space-y-3">
+            <a href="#features" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">Funciones</a>
+            <a href="#como-funciona" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">Cómo funciona</a>
+            <a href="#para-quien" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">Para quién</a>
+            <a href="#planes" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">Planes</a>
+          </div>
+        )}
       </nav>
-
-      {/* 2. HERO SECTION */}
-      <section className="pt-32 pb-20 px-6">
-        <div className="max-w-5xl mx-auto text-center flex flex-col items-center">
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1] mb-8 text-white">
-            Todo lo que tu negocio necesita, <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-400 to-emerald-400">
-              en una sola plataforma
-            </span>
-          </h1>
-          <p className="text-gray-400 text-lg md:text-xl max-w-2xl mb-12 leading-relaxed">
-            Somos el único SaaS que combina WhatsApp, CRM, pagos locales y campañas. 
-            Ahorra tiempo y vende más con clientes.bot.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 mb-16 relative z-10">
-            <a href="/auth/login" className="bg-indigo-600 hover:scale-105 px-10 py-5 rounded-2xl font-black text-lg transition-all shadow-xl shadow-indigo-600/25 text-white inline-block">
-              Comenzar prueba gratuita →
-            </a>
-            <a href="#dashboard" className="bg-white/5 hover:bg-white/10 border border-white/10 px-10 py-5 rounded-2xl font-bold text-lg transition-all text-white flex items-center justify-center">
-              Ver Dashboard
-            </a>
+      {/* HERO */}
+      <section className="pt-28 pb-16 px-6 relative overflow-hidden">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-indigo-600/10 blur-[200px] -z-10" />
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-indigo-600/10 border border-indigo-500/20 rounded-full px-4 py-1.5 mb-8">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[11px] text-indigo-300 font-bold">Más de 50 negocios ya automatizan sus ventas</span>
+            </div>
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-6">
+              Tu negocio en
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-emerald-400"> piloto automático</span>
+            </h1>
+            <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-3xl mx-auto mb-10 leading-relaxed">
+              Bot de WhatsApp con IA + CRM + Pagos + Publicidad en Facebook.
+              <br className="hidden sm:block" />
+              Todo en una sola plataforma. Sin código. Sin complicaciones.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
+              <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 hover:scale-105 px-8 py-4 rounded-2xl font-bold text-base transition-all shadow-xl shadow-indigo-600/25 inline-flex items-center justify-center gap-2">
+                🚀 Comenzar gratis — 7 días
+              </Link>
+              <a href="#demo" className="bg-white/5 hover:bg-white/10 border border-white/10 px-8 py-4 rounded-2xl font-bold text-base transition-all inline-flex items-center justify-center gap-2">
+                💬 Ver demo en vivo
+              </a>
+            </div>
+            <p className="text-[11px] text-gray-600">Sin tarjeta de crédito • Configuración en 2 minutos • Cancela cuando quieras</p>
           </div>
-
-          <div className="mt-16 mb-24 relative z-10 scale-100 md:scale-110">
-            <MockupCelular />
-            <div className="absolute inset-0 bg-indigo-500/20 blur-[100px] -z-10"></div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. BENEFICIOS RÁPIDOS */}
-      <section id="beneficios" className="py-20 px-6 bg-white/[0.02]">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold mb-12 text-center text-white uppercase tracking-widest text-sm opacity-50">Por qué elegirnos</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto mb-12">
             {[
-              { t: "+40% conversiones", d: "Aumenta tus ventas con IA", i: "📈" },
-              { t: "Ahorra 20 h/semana", d: "Automatiza tareas repetitivas", i: "⏳" },
-              { t: "Cobros al instante", d: "Pagos locales integrados", i: "💰" },
-            ].map((b, i) => (
-              <div key={i} className="p-8 rounded-3xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all group text-center">
-                <div className="text-3xl mb-4 grayscale group-hover:grayscale-0 transition-all">{b.i}</div>
-                <h3 className="text-xl font-bold mb-2 text-white">{b.t}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{b.d}</p>
+              { v: '24/7', l: 'Bot IA activo', c: 'text-indigo-400' },
+              { v: '6', l: 'Pasarelas de pago', c: 'text-emerald-400' },
+              { v: '+40%', l: 'Más conversiones', c: 'text-purple-400' },
+              { v: '20h', l: 'Ahorradas por semana', c: 'text-yellow-400' },
+            ].map((s, i) => (
+              <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-center">
+                <p className={`text-2xl font-black ${s.c}`}>{s.v}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{s.l}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* 4. DASHBOARD INTERACTIVO (Corregido y Fotorrealista) */}
-      <section id="dashboard" className="py-24 px-6 relative overflow-hidden">
-        {/* Glow Effects */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/10 blur-[150px] -z-10"></div>
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-600/10 blur-[150px] -z-10"></div>
-
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-black mb-6">Tu Centro de <br/><span className="text-sky-400">Comando Inteligente</span></h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">Controla cada conversación, pago y métrica desde una interfaz diseñada para la claridad y el crecimiento de tu negocio.</p>
-          </div>
-
-          <div className="relative group max-w-5xl mx-auto">
-            {/* Contenedor del Mockup con la imagen local */}
-            <div className="relative aspect-[16/9] bg-[#1A2333] border-[8px] border-[#2A3942] rounded-[2.5rem] shadow-2xl overflow-hidden transition-all duration-700 hover:shadow-indigo-500/10">
-              
-              {/* Imagen del Dashboard (Usando tu archivo local) */}
-              <div 
-                className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 group-hover:scale-105"
-                style={{ 
-                  backgroundImage: "url('/dashboard-preview.webp')",
-                  backgroundColor: '#0B0F1A' // Color de carga
-                }}
-              ></div>
-
-              {/* Overlay para dar profundidad */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F1A]/40 to-transparent z-10"></div>
+          {/* Dashboard Preview */}
+          <div className="relative max-w-5xl mx-auto group">
+            <div className="relative aspect-[16/10] bg-[#1A2333] border-4 border-[#2A3942] rounded-2xl shadow-2xl overflow-hidden">
+              <img src="/dashboard-preview.webp" alt="Dashboard clientes.bot" className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F1A]/60 to-transparent" />
             </div>
-
-            {/* Widgets Flotantes (Estos se mantienen igual porque dan mucho estilo) */}
-            <div className="absolute -top-6 -right-6 bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-3xl shadow-2xl hidden md:block z-20 animate-bounce-slow">
-              <p className="text-[10px] text-gray-400 mb-1 uppercase font-black tracking-widest">Ingresos Hoy</p>
-              <p className="text-2xl font-black text-emerald-400">$2,450.00</p>
+            <div className="absolute -top-4 -right-4 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl shadow-2xl hidden md:block z-20 animate-bounce-slow">
+              <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-1">Leads hoy</p>
+              <p className="text-xl font-black text-emerald-400">+12 nuevos</p>
             </div>
-
-            <div className="absolute -bottom-10 -left-10 bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-3xl shadow-2xl hidden md:block z-20">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]"></div>
-                <p className="text-sm font-bold text-white tracking-tight">IA Analizando Leads...</p>
+            <div className="absolute -bottom-4 -left-4 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl shadow-2xl hidden md:block z-20">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <p className="text-xs font-bold">Bot respondiendo en WhatsApp</p>
               </div>
-              <p className="text-[10px] text-gray-400 mt-2 font-medium italic">"84% de probabilidad de cierre en el chat #492"</p>
-            </div>
-          </div>
-
-          {/* Métricas inferiores */}
-          <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
-              {[
-                { l: "Leads Generados", v: "1,284", c: "text-indigo-400" },
-                { l: "Tasa de Cierre", v: "24.5%", c: "text-emerald-400" },
-                { l: "Tiempo Ahorrado", v: "158 hrs", c: "text-sky-400" },
-                { l: "Ventas por IA", v: "82%", c: "text-purple-400" }
-              ].map((m, idx) => (
-                <div key={idx} className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] text-center backdrop-blur-sm">
-                  <p className="text-[9px] uppercase font-black text-gray-500 mb-1 tracking-widest">{m.l}</p>
-                  <p className={`text-2xl font-black ${m.c}`}>{m.v}</p>
-                </div>
-              ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 5. FUNCIONALIDADES DETALLADAS */}
-      <section id="funcionalidades" className="py-24 px-6 relative overflow-hidden bg-white/[0.01]">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-black mb-6">Poderosa tecnología <br/><span className="text-indigo-500">al alcance de tu mano</span></h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">Diseñado para escalar. Olvídate de configuraciones complejas y empieza a vender en minutos.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              { i: "🤖", t: "IA con Memoria Proactiva", d: "Nuestra IA no solo responde, recuerda preferencias de clientes previos para cerrar ventas de forma personalizada." },
-              { i: "🔗", t: "Integración CRM Nativa", d: "Sincroniza automáticamente cada chat con tu base de datos. Sin hojas de cálculo, sin procesos manuales." },
-              { i: "💳", t: "Pagos en un Clic", d: "Genera links de pago de Stripe o PayPal directamente en la conversación de WhatsApp. Vende mientras duermes." },
-              { i: "📊", t: "Dashboards en Tiempo Real", d: "Mide la tasa de conversión, el tiempo de respuesta y tus ingresos totales desde un panel de control intuitivo." },
-              { i: "🌍", t: "Multi-idioma Inteligente", d: "Detecta el idioma del cliente y responde automáticamente en más de 50 idiomas con fluidez natural." },
-              { i: "🔐", t: "Seguridad Bancaria", d: "Tus datos y los de tus clientes están protegidos con encriptación de grado militar y cumplimiento GDPR." }
-            ].map((f, i) => (
-              <div key={i} className="group p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:border-indigo-500/50 transition-all duration-500">
-                <div className="w-12 h-12 bg-indigo-600/20 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform">{f.i}</div>
-                <h3 className="text-xl font-bold mb-4">{f.t}</h3>
-                <p className="text-sm text-gray-400 leading-relaxed">{f.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 6. CÓMO FUNCIONA (PASOS) */}
-      <section className="py-24 px-6 bg-[#0E121F]">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-3xl font-black mb-16 uppercase tracking-tighter">Tu negocio en piloto automático <br/><span className="text-emerald-400 italic">en 3 pasos</span></h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
-            {[
-              { s: "01", t: "Conecta tu WhatsApp", d: "Escanea el QR y sincroniza tu línea corporativa en segundos." },
-              { s: "02", t: "Entrena a tu IA", d: "Sube tu catálogo o PDF de servicios. La IA aprenderá todo sobre ti." },
-              { s: "03", t: "Empieza a Vender", d: "Mira cómo la plataforma gestiona chats, CRM y pagos sola." }
-            ].map((step, i) => (
-              <div key={i} className="relative group">
-                <div className="text-6xl font-black text-white/5 absolute -top-10 left-1/2 -translate-x-1/2 group-hover:text-indigo-500/10 transition-colors">{step.s}</div>
-                <h3 className="text-xl font-bold mb-4 relative z-10">{step.t}</h3>
-                <p className="text-gray-400 text-sm relative z-10">{step.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 7. PLANES: Estrategia Cero Fricción */}
-      <section id="planes" className="py-20 px-6">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-3xl md:text-5xl font-black mb-16 uppercase tracking-tighter font-sans">
-            Escala tu negocio sin <br/>
-            <span className="text-indigo-500">tocar una sola línea de código</span>
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Plan Starter */}
-            <div className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 flex flex-col text-left hover:border-indigo-500/30 transition-all">
-              <h3 className="text-lg font-bold mb-2 font-sans">Starter Core</h3>
-              <p className="text-gray-500 text-[10px] uppercase font-bold mb-6 tracking-widest">Configuración Express con Facebook</p>
-              <div className="text-4xl font-black mb-8 font-sans">$200<span className="text-sm text-gray-600 font-medium">/mes</span></div>
-              <ul className="space-y-4 mb-10 flex-1 text-sm text-gray-400 font-sans">
-                <li>✅ Autoconfiguración en 30 segundos</li>
-                <li>✅ Motor de Respuesta IA 24/7</li>
-                <li>✅ 1 Línea de WhatsApp Business</li>
-                <li>✅ 500 Conversaciones Inteligentes</li>
-                <li className="text-gray-600">❌ Agendamiento Nativo</li>
-              </ul>
-              <button className="w-full py-4 rounded-2xl bg-indigo-600/10 text-indigo-400 font-bold hover:bg-indigo-600 hover:text-white transition-all font-sans uppercase text-xs tracking-widest">
-                Iniciar ahora
-              </button>
-            </div>
-
-            {/* Plan Growth */}
-            <div className="p-10 rounded-[2.5rem] bg-indigo-600 text-white flex flex-col text-left shadow-2xl shadow-indigo-600/40 scale-105 z-10 relative overflow-hidden group">
-              <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Recomendado</div>
-              <h3 className="text-lg font-bold mb-2 font-sans">Growth Engine</h3>
-              <p className="text-indigo-100 text-[10px] uppercase font-bold mb-6 tracking-widest">Ventas en Piloto Automático</p>
-              <div className="text-4xl font-black mb-8 font-sans">$350<span className="text-sm opacity-70 font-medium">/mes</span></div>
-              <ul className="space-y-4 mb-10 flex-1 text-sm font-sans">
-                <li>✅ 2.000 Chats con Memoria Proactiva</li>
-                <li>✅ Agendamiento en Calendario</li>
-                <li>✅ Control de CRM y Leads</li>
-                <li>✅ Generación de Enlaces de Pago</li>
-                <li>✅ Detección de Intención de Compra</li>
-              </ul>
-              <button className="w-full py-4 rounded-2xl bg-white text-indigo-600 font-black hover:bg-gray-100 transition-all shadow-lg font-sans uppercase text-xs tracking-widest">
-                Activar Growth
-              </button>
-            </div>
-
-            {/* Plan Enterprise */}
-            <div className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 flex flex-col text-left hover:border-indigo-500/30 transition-all">
-              <h3 className="text-lg font-bold mb-2 font-sans">Enterprise Ultra</h3>
-              <p className="text-gray-500 text-[10px] uppercase font-bold mb-6 tracking-widest">Omnicanalidad de Élite</p>
-              <div className="text-4xl font-black mb-8 font-sans">Custom</div>
-              <ul className="space-y-4 mb-10 flex-1 text-sm text-gray-400 font-sans">
-                <li>✅ Motor de Voz para Llamadas IA</li>
-                <li>✅ Entrenamiento con Documentación Privada</li>
-                <li>✅ Líneas y Sucursales Ilimitadas</li>
-                <li>✅ Panel de Supervisión Multicanal</li>
-                <li>✅ Soporte Prioritario 24/7</li>
-              </ul>
-              <button className="w-full py-4 rounded-2xl bg-indigo-600/10 text-indigo-400 font-bold hover:bg-indigo-600 hover:text-white transition-all font-sans uppercase text-xs tracking-widest">
-                Hablar con Experto
-              </button>
             </div>
           </div>
         </div>
       </section>
-
-      {/* 8. TESTIMONIOS (Ricardo Real de /public) */}
-      <section className="py-24 px-6 relative overflow-hidden bg-white/[0.01]">
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          
-          {/* Estrellas con Brillo */}
-          <div className="flex justify-center gap-1.5 mb-10">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <span key={star} className="text-emerald-400 text-xl drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">⭐</span>
-            ))}
-          </div>
-
-          <h2 className="text-2xl md:text-4xl font-medium italic mb-14 text-gray-200 leading-tight tracking-tight">
-            "Desde que implementamos <span className="text-white font-bold not-italic">clientes.bot</span>, mi equipo de ventas ya no pierde tiempo en dudas básicas. La IA cierra las ventas solo, nosotros solo entregamos. ¡Cambio total!"
-          </h2>
-
-          <div className="flex flex-col items-center">
-            {/* FOTO DE RICARDO LOCAL */}
-            <div className="relative group">
-              {/* Efecto de halo detrás de la foto */}
-              <div className="absolute inset-0 bg-indigo-600 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
-              
-              <div className="relative w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-indigo-500 to-emerald-400 shadow-2xl">
-                <img 
-                  src="/ricardo.jpg" 
-                  alt="Ricardo S. - CEO FastDelivery" 
-                  className="w-full h-full rounded-full object-cover border-2 border-[#0B0F1A]"
-                />
-              </div>
-
-              {/* Badge de Verificado */}
-              <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white w-7 h-7 rounded-full flex items-center justify-center border-4 border-[#0B0F1A] text-[10px] shadow-lg">
-                ✓
-              </div>
-            </div>
-
-            <div className="mt-6 text-center">
-              <p className="text-xl font-black text-white tracking-tight">Ricardo S.</p>
-              <p className="text-[11px] text-indigo-400 font-black uppercase tracking-[0.25em] mt-1">CEO @ FastDelivery</p>
-            </div>
-          </div>
-        </div>
-      </section>      
-      
-      {/* 9. CONTACTO / CTA FINAL */}
-      <section id="contacto" className="py-20 px-6">
-        <div className="max-w-3xl mx-auto bg-gradient-to-br from-indigo-900/40 to-indigo-600/10 border border-white/10 p-12 rounded-[3rem] text-center text-white relative shadow-2xl">
-          <div className="absolute -top-6 -left-6 w-20 h-20 bg-indigo-500/20 blur-3xl"></div>
-          
-          <h2 className="text-4xl font-black mb-4">Únete a la revolución</h2>
-          <p className="text-gray-400 mb-10">Deja de perder clientes por tiempos de respuesta largos. Automatiza hoy.</p>
-
-          {/* Reemplaza "TU_ID_AQUÍ" por el ID que te de Formspree */}
-          <form 
-            action="https://formspree.io/f/TU_ID_AQUÍ" 
-            method="POST"
-            className="space-y-4 text-left"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest font-sans">Nombre</label>
-                <input 
-                  type="text" 
-                  name="nombre" 
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white font-sans" 
-                  placeholder="Camilo Pérez" 
-                  required 
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest font-sans">Empresa</label>
-                <input 
-                  type="text" 
-                  name="empresa" 
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white font-sans" 
-                  placeholder="Bot S.A." 
-                  required 
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 mb-2 uppercase ml-2 tracking-widest font-sans">Email Corporativo</label>
-              <input 
-                type="email" 
-                name="email" 
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-white font-sans" 
-                placeholder="Camilo@empresa.com" 
-                required 
-              />
-            </div>
-
-            {/* Campo oculto para evitar SPAM (Honeypot) */}
-            <input type="text" name="_gotcha" style={{ display: 'none' }} />
-
-            <button 
-              type="submit" 
-              className="w-full py-6 rounded-2xl bg-indigo-600 font-black text-xl shadow-xl shadow-indigo-600/20 hover:bg-indigo-500 transition-all mt-6 text-white uppercase tracking-widest font-sans"
-            >
-              Obtener Acceso Inmediato
-            </button>
-          </form>
-
-          <p className="mt-6 text-[10px] text-gray-500 uppercase tracking-tighter font-sans">
-            Al enviar, aceptas recibir una propuesta personalizada vía email o WhatsApp.
-          </p>
-        </div>
-      </section>
-
-      {/* 10. FOOTER (Copia y pega este bloque sobre el anterior) */}
-      <footer className="py-12 text-center border-t border-white/5 bg-[#080B14]">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
-          
-          {/* LOGO EN EL FOOTER (Igual al del Navbar) */}
-          <div className="flex items-center gap-2 font-bold">
-            <img 
-              src="/cb-logo.webp" 
-              className="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(99,102,241,0.4)]" 
-              alt="Logo Footer" 
-            />
-            <span className="tracking-tighter text-lg font-sans">clientes.bot</span>
-          </div>
-
-          <p className="text-gray-600 text-[10px] uppercase tracking-[0.3em] font-medium font-sans">
-            © 2026 SGC TECHNOLOGY. Todos los derechos reservados.
-          </p>
-
-          <div className="flex gap-8 text-gray-500 text-xs font-bold uppercase tracking-widest font-sans">
-            <a href="#" className="hover:text-white transition-colors">Términos</a>
-            <a href="#" className="hover:text-white transition-colors">Privacidad</a>
-          </div>
-        </div>
-      </footer>
-
-      {/* CSS Extra para animaciones (Añadir en global.css si es posible) */}
+      {/* TODO: Aquí van las siguientes secciones */}
+      <ChatWidget />
       <style jsx>{`
         @keyframes bounce-slow {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-15px); }
+          50% { transform: translateY(-10px); }
         }
-        .animate-bounce-slow {
-          animation: bounce-slow 4s ease-in-out infinite;
-        }
+        .animate-bounce-slow { animation: bounce-slow 4s ease-in-out infinite; }
       `}</style>
-      
-      <ChatWidget />
-
     </div>
   );
 }
+ {/* FEATURES PRINCIPALES */}
+      <section id="features" className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-[11px] text-indigo-400 uppercase tracking-[0.3em] font-bold mb-4">Todo incluido</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">6 herramientas poderosas.<br /><span className="text-indigo-400">1 sola plataforma.</span></h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">Deja de pagar por 6 apps diferentes. clientes.bot integra todo lo que necesitas para vender más y atender mejor.</p>
+          </div>
+          {/* Feature 1: Bot WhatsApp */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1 mb-4">
+                <span className="text-sm">🤖</span>
+                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Bot de WhatsApp con IA</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-black mb-4">Tu mejor vendedor.<br />Nunca duerme. Nunca falla.</h3>
+              <p className="text-gray-400 mb-6 leading-relaxed">Responde preguntas, muestra el catálogo, agenda citas, cobra pagos y cierra ventas — todo automáticamente por WhatsApp. Con memoria inteligente que recuerda cada cliente.</p>
+              <ul className="space-y-3">
+                {[
+                  'IA conversacional con Gemini 2.5 (no suena a robot)',
+                  'Memoria proactiva: recuerda clientes anteriores',
+                  'Catálogo visual con carrusel de productos',
+                  'Neuroventas: detecta intención de compra',
+                  'Handoff inteligente a agente humano cuando se necesita',
+                  'Funciona 24/7 en cualquier idioma',
+                ].map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
+                    <span className="text-emerald-400 mt-0.5">✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/0 border border-emerald-500/10 rounded-3xl p-8 relative">
+              <div className="space-y-3">
+                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">Hola, quiero info del seminario de tiro 🎯</p></div></div>
+                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">¡Hola! 😊 Tenemos el Seminario de Tiro con pistola 9mm. Incluye instrucción, munición y práctica. ¿Te cuento los detalles y precios?</p></div></div>
+                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">Sí, cuánto vale?</p></div></div>
+                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">El seminario tiene un valor de $280,000 COP. Incluye todo el material. ¿Quieres que te envíe el link de pago seguro? 💳</p></div></div>
+              </div>
+            </div>
+          </div>
+          {/* Feature 2: CRM + Multi-agente */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
+            <div className="order-2 md:order-1 bg-gradient-to-br from-indigo-500/5 to-indigo-500/0 border border-indigo-500/10 rounded-3xl p-6">
+              <div className="space-y-2">
+                {[
+                  { name: 'Carlos Pérez', status: '🔥 Interesado', score: 85, agent: 'María G.' },
+                  { name: 'Ana López', status: '🤝 Negociación', score: 72, agent: 'Juan M.' },
+                  { name: 'Pedro Ruiz', status: '✅ Ganado', score: 95, agent: 'María G.' },
+                  { name: 'Laura Torres', status: '🆕 Nuevo', score: 30, agent: 'Sin asignar' },
+                ].map((l, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-white/[0.03] rounded-xl p-3">
+                    <div className="w-8 h-8 bg-indigo-600/20 rounded-full flex items-center justify-center text-xs font-bold text-indigo-400">{l.name.charAt(0)}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold truncate">{l.name}</p>
+                      <p className="text-[9px] text-gray-500">{l.status} • 🧑‍💼 {l.agent}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="w-10 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${l.score >= 70 ? 'bg-emerald-500' : l.score >= 40 ? 'bg-yellow-500' : 'bg-gray-500'}`} style={{width: `${l.score}%`}} />
+                      </div>
+                      <p className="text-[8px] text-gray-500 mt-0.5">{l.score}%</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="order-1 md:order-2">
+              <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1 mb-4">
+                <span className="text-sm">👥</span>
+                <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">CRM + Multi-agente</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-black mb-4">Cada lead en su lugar.<br />Cada agente con su trabajo.</h3>
+              <p className="text-gray-400 mb-6 leading-relaxed">CRM visual tipo Kanban con arrastrar y soltar. Asigna leads a tu equipo automáticamente. Notas privadas, historial completo y análisis IA de cada contacto.</p>
+              <ul className="space-y-3">
+                {[
+                  'Kanban drag & drop (Nuevo → Interesado → Negociación → Ganado)',
+                  'Multi-agente: asignación automática round-robin',
+                  'Notas privadas entre agentes (el cliente no las ve)',
+                  'Lead scoring con IA (probabilidad de cierre)',
+                  'Ranking de performance por agente',
+                  'Permisos por rol: owner, admin, agente, viewer',
+                ].map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
+                    <span className="text-indigo-400 mt-0.5">✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          {/* Feature 3: Facebook Ads IA */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-3 py-1 mb-4">
+                <span className="text-sm">📢</span>
+                <span className="text-[10px] text-purple-400 font-bold uppercase tracking-widest">Facebook & Instagram Ads</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-black mb-4">Publicidad que vende.<br />Sin tocar Ads Manager.</h3>
+              <p className="text-gray-400 mb-6 leading-relaxed">La IA crea anuncios Click-to-WhatsApp optimizados. Elige servicio, público y presupuesto — nosotros hacemos el resto. Monitoreo 24/7 y optimización automática.</p>
+              <ul className="space-y-3">
+                {[
+                  'Wizard de 5 pasos (cualquiera puede crear campañas)',
+                  'IA genera 4+ variantes de copy automáticamente',
+                  'Click-to-WhatsApp: el cliente te escribe directo al bot',
+                  'Targeting pro: ciudades con radio, intereses, edad, género',
+                  'Monitoreo diario: pausa automática si no hay resultados',
+                  'Notificación push si Meta rechaza un anuncio',
+                ].map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
+                    <span className="text-purple-400 mt-0.5">✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-gradient-to-br from-purple-500/5 to-purple-500/0 border border-purple-500/10 rounded-3xl p-6">
+              <div className="space-y-3">
+                <div className="flex gap-1 mb-4">{[1,2,3,4,5].map(s => <div key={s} className={`flex-1 h-1.5 rounded-full ${s <= 5 ? 'bg-purple-500' : 'bg-white/10'}`} />)}</div>
+                <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Vista previa del anuncio</p>
+                <div className="bg-white/[0.03] rounded-xl p-4 border border-white/5">
+                  <p className="text-xs font-bold mb-2">🎯 ¿Buscas una experiencia única?</p>
+                  <p className="text-[10px] text-gray-400 mb-3">Vive el Seminario de Tiro en nuestra sede de Guarne. Cupos limitados esta semana. ¡Escríbenos por WhatsApp!</p>
+                  <div className="flex gap-2">
+                    <span className="text-[8px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">Medellín 25km</span>
+                    <span className="text-[8px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">25-55 años</span>
+                    <span className="text-[8px] px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">CTW WhatsApp</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  <div className="bg-white/[0.02] rounded-lg p-2 text-center"><p className="text-[8px] text-gray-500">Alcance</p><p className="text-xs font-bold text-purple-400">12,400</p></div>
+                  <div className="bg-white/[0.02] rounded-lg p-2 text-center"><p className="text-[8px] text-gray-500">Te escribieron</p><p className="text-xs font-bold text-emerald-400">48</p></div>
+                  <div className="bg-white/[0.02] rounded-lg p-2 text-center"><p className="text-[8px] text-gray-500">Costo/lead</p><p className="text-xs font-bold text-yellow-400">$3,200</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Feature 4: Pagos */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
+            <div className="order-2 md:order-1 bg-gradient-to-br from-yellow-500/5 to-yellow-500/0 border border-yellow-500/10 rounded-3xl p-8 text-center">
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Pasarelas disponibles</p>
+              <div className="grid grid-cols-3 gap-4">
+                {['Bold', 'Wompi', 'PayPal', 'MercadoPago', 'OpenPay', 'PayU'].map((g, i) => (
+                  <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-3 text-center hover:border-yellow-500/30 transition-all">
+                    <p className="text-xs font-bold">{g}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                <p className="text-[10px] text-emerald-400 font-bold">💳 Link de pago enviado por WhatsApp</p>
+                <p className="text-xs text-gray-400 mt-1">El cliente paga sin salir del chat</p>
+              </div>
+            </div>
+            <div className="order-1 md:order-2">
+              <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-3 py-1 mb-4">
+                <span className="text-sm">💳</span>
+                <span className="text-[10px] text-yellow-400 font-bold uppercase tracking-widest">Pagos integrados</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-black mb-4">Cobra en el chat.<br />Sin fricciones.</h3>
+              <p className="text-gray-400 mb-6 leading-relaxed">Genera links de pago desde el dashboard o deja que el bot los envíe automáticamente. 6 pasarelas disponibles para toda Latinoamérica.</p>
+              <ul className="space-y-3">
+                {[
+                  'Bold, Wompi, PayPal, MercadoPago, OpenPay, PayU',
+                  'Link de pago directo en la conversación de WhatsApp',
+                  'Webhook automático: el bot confirma el pago al cliente',
+                  'Dashboard de pagos con estado en tiempo real',
+                  'Multi-moneda: COP, MXN, USD, ARS, CLP, PEN',
+                  'Genera links desde el CRM con 1 clic',
+                ].map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
+                    <span className="text-yellow-400 mt-0.5">✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          {/* Feature 5: Agendamiento */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-sky-500/10 border border-sky-500/20 rounded-full px-3 py-1 mb-4">
+                <span className="text-sm">📅</span>
+                <span className="text-[10px] text-sky-400 font-bold uppercase tracking-widest">Agendamiento inteligente</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-black mb-4">Citas que se agendan solas.<br />Directo en Google Calendar.</h3>
+              <p className="text-gray-400 mb-6 leading-relaxed">El bot muestra fechas disponibles, el cliente elige y la cita se crea automáticamente en tu calendario. Sin llamadas, sin WhatsApp manual.</p>
+              <ul className="space-y-3">
+                {[
+                  'Integración directa con Google Calendar',
+                  'WhatsApp Flows: el cliente elige fecha y hora en el chat',
+                  'Detección de festivos y días cerrados',
+                  'Recordatorios automáticos antes de la cita',
+                  'Gestión de citas desde el dashboard',
+                  'Citas manuales desde el panel del agente',
+                ].map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
+                    <span className="text-sky-400 mt-0.5">✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-gradient-to-br from-sky-500/5 to-sky-500/0 border border-sky-500/10 rounded-3xl p-6">
+              <div className="space-y-2">
+                {['Lun 28 Abr — 10:00 AM', 'Mar 29 Abr — 2:00 PM', 'Mié 30 Abr — 10:00 AM', 'Jue 1 May — 4:00 PM'].map((d, i) => (
+                  <div key={i} className={`flex items-center justify-between p-3 rounded-xl transition-all ${i === 1 ? 'bg-sky-500/10 border border-sky-500/30' : 'bg-white/[0.02] border border-white/5 hover:border-sky-500/20'}`}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">📅</span>
+                      <p className="text-xs font-bold">{d}</p>
+                    </div>
+                    {i === 1 ? (
+                      <span className="text-[9px] px-2 py-1 rounded-full bg-sky-500 text-white font-bold">Seleccionado</span>
+                    ) : (
+                      <span className="text-[9px] px-2 py-1 rounded-full bg-white/5 text-gray-400">Disponible</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          {/* Feature 6: Dashboard + PWA */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="order-2 md:order-1 bg-gradient-to-br from-rose-500/5 to-rose-500/0 border border-rose-500/10 rounded-3xl p-6">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { icon: '📊', label: 'Métricas', desc: 'Revenue, leads, conversión' },
+                  { icon: '💬', label: 'Chat en vivo', desc: 'Responde desde el dashboard' },
+                  { icon: '🔔', label: 'Push notifications', desc: 'Alertas en tu celular' },
+                  { icon: '🧠', label: 'Memoria IA', desc: 'El bot aprende solo' },
+                  { icon: '🎓', label: 'Entrenar bot', desc: 'Preguntas y respuestas' },
+                  { icon: '📱', label: 'PWA instalable', desc: 'Como app nativa' },
+                ].map((d, i) => (
+                  <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-3 hover:border-rose-500/20 transition-all">
+                    <p className="text-lg mb-1">{d.icon}</p>
+                    <p className="text-[10px] font-bold">{d.label}</p>
+                    <p className="text-[8px] text-gray-500">{d.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="order-1 md:order-2">
+              <div className="inline-flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 rounded-full px-3 py-1 mb-4">
+                <span className="text-sm">📱</span>
+                <span className="text-[10px] text-rose-400 font-bold uppercase tracking-widest">Dashboard + App móvil</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-black mb-4">Tu negocio completo<br />en tu bolsillo.</h3>
+              <p className="text-gray-400 mb-6 leading-relaxed">Dashboard web + PWA instalable. Métricas en tiempo real, chat en vivo con tus clientes, notificaciones push cuando un lead pide hablar con un humano. Todo desde tu celular.</p>
+              <ul className="space-y-3">
+                {[
+                  '19+ páginas: CRM, chat, citas, pagos, ads, inventario...',
+                  'Push notifications (FCM) cuando hay handoff a humano',
+                  'Email automático al agente cuando se le asigna un lead',
+                  'Sonido + vibración cuando llega mensaje nuevo',
+                  'Instala como app desde Chrome (PWA)',
+                  'Funciona en PC, tablet y celular',
+                ].map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
+                    <span className="text-rose-400 mt-0.5">✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* TODO: Cómo funciona + Para quién + Planes + Testimonios + FAQ + CTA + Footer */}
+      {/* CÓMO FUNCIONA */}
+      <section id="como-funciona" className="py-20 px-6 bg-white/[0.02]">
+        <div className="max-w-5xl mx-auto text-center">
+          <p className="text-[11px] text-emerald-400 uppercase tracking-[0.3em] font-bold mb-4">Simple y rápido</p>
+          <h2 className="text-3xl md:text-5xl font-black mb-16">Activo en <span className="text-emerald-400">3 pasos</span></h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { n: '01', icon: '📱', t: 'Conecta tu WhatsApp', d: 'Haz clic en "Conectar con Facebook", selecciona tu número y listo. Sin QR, sin configuraciones técnicas. 30 segundos.' },
+              { n: '02', icon: '🎨', t: 'Personaliza tu bot', d: 'Sube tu catálogo, ajusta el tono de la IA, configura horarios y pasarela de pago. El wizard te guía paso a paso.' },
+              { n: '03', icon: '🚀', t: 'Empieza a vender', d: 'Tu bot responde 24/7, agenda citas, cobra pagos y tú ves todo desde el dashboard. Crea campañas de Ads con IA.' },
+            ].map((step, i) => (
+              <div key={i} className="relative group">
+                <div className="text-7xl font-black text-white/[0.03] absolute -top-8 left-1/2 -translate-x-1/2 group-hover:text-indigo-500/10 transition-colors">{step.n}</div>
+                <div className="relative z-10 bg-white/[0.03] border border-white/5 rounded-3xl p-8 hover:border-indigo-500/30 transition-all h-full">
+                  <p className="text-3xl mb-4">{step.icon}</p>
+                  <h3 className="text-lg font-bold mb-3">{step.t}</h3>
+                  <p className="text-sm text-gray-400 leading-relaxed">{step.d}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* PARA QUIÉN */}
+      <section id="para-quien" className="py-20 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-[11px] text-purple-400 uppercase tracking-[0.3em] font-bold mb-4">Para todo tipo de negocio</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">¿Es para mí?</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">Si vendes productos o servicios y atiendes clientes por WhatsApp, clientes.bot es para ti.</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { icon: '🏥', name: 'Clínicas y consultorios', desc: 'Agendar citas + recordatorios' },
+              { icon: '🍽️', name: 'Restaurantes', desc: 'Pedidos + reservas + delivery' },
+              { icon: '🎯', name: 'Escuelas y academias', desc: 'Inscripciones + pagos + info' },
+              { icon: '🛍️', name: 'Tiendas online', desc: 'Catálogo + pagos + envíos' },
+              { icon: '💇', name: 'Salones de belleza', desc: 'Citas + productos + fidelización' },
+              { icon: '🏋️', name: 'Gimnasios', desc: 'Membresías + clases + pagos' },
+              { icon: '🏢', name: 'Agencias', desc: 'Multi-cliente + white label' },
+              { icon: '🔧', name: 'Servicios profesionales', desc: 'Cotizaciones + seguimiento' },
+            ].map((b, i) => (
+              <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 hover:border-purple-500/30 transition-all group text-center">
+                <p className="text-2xl mb-2 group-hover:scale-110 transition-transform">{b.icon}</p>
+                <p className="text-xs font-bold mb-1">{b.name}</p>
+                <p className="text-[9px] text-gray-500">{b.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* PLANES */}
+      <section id="planes" className="py-20 px-6 bg-white/[0.02]">
+        <div className="max-w-6xl mx-auto text-center">
+          <p className="text-[11px] text-indigo-400 uppercase tracking-[0.3em] font-bold mb-4">Precios transparentes</p>
+          <h2 className="text-3xl md:text-5xl font-black mb-4">Elige tu plan</h2>
+          <p className="text-gray-400 max-w-2xl mx-auto mb-12">Todos incluyen 7 días gratis. Sin tarjeta de crédito. Cancela cuando quieras.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {/* Starter */}
+            <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-8 flex flex-col text-left hover:border-indigo-500/30 transition-all">
+              <h3 className="text-lg font-bold mb-1">Starter</h3>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-6">Para empezar a automatizar</p>
+              <div className="text-4xl font-black mb-1">$200<span className="text-sm text-gray-600 font-medium">/mes</span></div>
+              <p className="text-[10px] text-gray-600 mb-6">USD • facturación mensual</p>
+              <ul className="space-y-3 mb-8 flex-1 text-sm text-gray-400">
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>Bot IA 24/7</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>1 línea de WhatsApp</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>500 conversaciones/mes</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>CRM básico</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>1 pasarela de pago</li>
+                <li className="flex gap-2 text-gray-600"><span>—</span>Agendamiento</li>
+                <li className="flex gap-2 text-gray-600"><span>—</span>Facebook Ads</li>
+                <li className="flex gap-2 text-gray-600"><span>—</span>Multi-agente</li>
+              </ul>
+              <Link href="/auth/login" className="w-full py-3 rounded-2xl bg-white/5 hover:bg-indigo-600 text-center text-sm font-bold transition-all border border-white/10 hover:border-indigo-500">
+                Comenzar gratis
+              </Link>
+            </div>
+            {/* Growth */}
+            <div className="bg-indigo-600 rounded-3xl p-8 flex flex-col text-left shadow-2xl shadow-indigo-600/30 scale-[1.03] z-10 relative">
+              <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">Más popular</div>
+              <h3 className="text-lg font-bold mb-1">Growth</h3>
+              <p className="text-[10px] text-indigo-200 uppercase tracking-widest mb-6">Ventas en piloto automático</p>
+              <div className="text-4xl font-black mb-1">$350<span className="text-sm opacity-70 font-medium">/mes</span></div>
+              <p className="text-[10px] text-indigo-200 mb-6">USD • facturación mensual</p>
+              <ul className="space-y-3 mb-8 flex-1 text-sm">
+                <li className="flex gap-2"><span>✓</span>Todo lo de Starter +</li>
+                <li className="flex gap-2"><span>✓</span>2,000 conversaciones/mes</li>
+                <li className="flex gap-2"><span>✓</span>Memoria proactiva IA</li>
+                <li className="flex gap-2"><span>✓</span>Agendamiento + Google Calendar</li>
+                <li className="flex gap-2"><span>✓</span>CRM completo + Kanban</li>
+                <li className="flex gap-2"><span>✓</span>6 pasarelas de pago</li>
+                <li className="flex gap-2"><span>✓</span>Facebook Ads con IA</li>
+                <li className="flex gap-2"><span>✓</span>3 agentes incluidos</li>
+              </ul>
+              <Link href="/auth/login" className="w-full py-3 rounded-2xl bg-white text-indigo-600 text-center text-sm font-black transition-all hover:bg-gray-100 shadow-lg">
+                Activar Growth
+              </Link>
+            </div>
+            {/* Enterprise */}
+            <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-8 flex flex-col text-left hover:border-indigo-500/30 transition-all">
+              <h3 className="text-lg font-bold mb-1">Enterprise</h3>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-6">Para agencias y equipos grandes</p>
+              <div className="text-4xl font-black mb-1">Custom</div>
+              <p className="text-[10px] text-gray-600 mb-6">Cotización personalizada</p>
+              <ul className="space-y-3 mb-8 flex-1 text-sm text-gray-400">
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>Todo lo de Growth +</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>Conversaciones ilimitadas</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>Llamadas IA (VAPI)</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>Agentes ilimitados</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>Multi-línea WhatsApp</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>API pública</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>Soporte prioritario 24/7</li>
+                <li className="flex gap-2"><span className="text-emerald-400">✓</span>Onboarding personalizado</li>
+              </ul>
+              <Link href="/auth/login" className="w-full py-3 rounded-2xl bg-white/5 hover:bg-indigo-600 text-center text-sm font-bold transition-all border border-white/10 hover:border-indigo-500">
+                Hablar con ventas
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* FAQ */}
+      <section className="py-20 px-6">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-black text-center mb-12">Preguntas frecuentes</h2>
+          <div className="space-y-3">
+            {[
+              { q: '¿Necesito un número de WhatsApp nuevo?', a: 'Puedes usar tu número actual o crear uno nuevo. Al conectar, tu número se convierte en WhatsApp Business API y el bot empieza a responder automáticamente.' },
+              { q: '¿Pierdo acceso a mi WhatsApp personal?', a: 'Si usas tu número personal, se convertirá en Business API y ya no podrás usar la app normal de WhatsApp con ese número. Recomendamos usar una línea dedicada.' },
+              { q: '¿Qué pasa si el bot no sabe responder?', a: 'El bot transfiere automáticamente la conversación a un agente humano de tu equipo, quien recibe notificación por email y push en su celular.' },
+              { q: '¿Funciona en mi país?', a: 'Sí. Funcionamos en toda Latinoamérica y España. Soportamos pasarelas de pago locales (Bold, Wompi para Colombia; OpenPay para México; MercadoPago para Argentina, etc).' },
+              { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, sin penalidad. Los 7 días de prueba son completamente gratis y no pedimos tarjeta de crédito para empezar.' },
+              { q: '¿Necesito conocimientos técnicos?', a: 'No. Todo se configura con clicks. El wizard te guía paso a paso. Si necesitas ayuda, nuestro equipo te asiste por WhatsApp.' },
+              { q: '¿Puedo gestionar varios negocios?', a: 'Sí, con el plan Enterprise puedes gestionar múltiples líneas de WhatsApp y cuentas publicitarias desde un solo dashboard.' },
+            ].map((faq, i) => (
+              <details key={i} className="group bg-white/[0.03] border border-white/5 rounded-2xl overflow-hidden">
+                <summary className="flex items-center justify-between p-5 cursor-pointer list-none hover:bg-white/[0.02] transition-all">
+                  <p className="text-sm font-bold pr-4">{faq.q}</p>
+                  <span className="text-gray-500 text-xs group-open:rotate-180 transition-transform shrink-0">▼</span>
+                </summary>
+                <div className="px-5 pb-5">
+                  <p className="text-sm text-gray-400 leading-relaxed">{faq.a}</p>
+                </div>
+                </details>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* CTA FINAL */}
+      <section className="py-20 px-6">
+        <div className="max-w-3xl mx-auto relative">
+          <div className="absolute inset-0 bg-indigo-600/10 blur-[100px] -z-10" />
+          <div className="bg-gradient-to-br from-indigo-900/40 to-indigo-600/10 border border-white/10 p-10 md:p-14 rounded-3xl text-center relative overflow-hidden">
+            <h2 className="text-3xl md:text-4xl font-black mb-4">¿Listo para vender más?</h2>
+            <p className="text-gray-400 mb-8 max-w-lg mx-auto">Únete a los negocios que ya automatizan sus ventas con IA. Configura en 2 minutos, sin código, sin complicaciones.</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
+              <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 hover:scale-105 px-8 py-4 rounded-2xl font-bold transition-all shadow-xl shadow-indigo-600/25 inline-flex items-center justify-center gap-2">
+                🚀 Comenzar gratis — 7 días
+              </Link>
+              <a href="https://wa.me/573022205845?text=Hola%2C%20quiero%20info%20de%20clientes.bot" target="_blank" className="bg-[#25D366] hover:bg-[#1da851] px-8 py-4 rounded-2xl font-bold transition-all inline-flex items-center justify-center gap-2">
+                💬 Hablar por WhatsApp
+              </a>
+            </div>
+            <p className="text-[10px] text-gray-600">Sin tarjeta • 7 días gratis • Soporte incluido</p>
+          </div>
+        </div>
+      </section>
+      {/* FOOTER */}
+      <footer className="py-12 border-t border-white/5 bg-[#080B14]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <img src="/cb-logo.webp" alt="Logo" className="w-8 h-8 object-contain" />
+                <span className="text-lg font-bold tracking-tighter">clientes.bot</span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">La plataforma todo-en-uno para negocios que quieren vender más por WhatsApp con inteligencia artificial.</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Producto</p>
+              <div className="space-y-2">
+                <a href="#features" className="block text-xs text-gray-500 hover:text-white transition-colors">Bot WhatsApp IA</a>
+                <a href="#features" className="block text-xs text-gray-500 hover:text-white transition-colors">CRM + Multi-agente</a>
+                <a href="#features" className="block text-xs text-gray-500 hover:text-white transition-colors">Facebook Ads IA</a>
+                <a href="#features" className="block text-xs text-gray-500 hover:text-white transition-colors">Pagos integrados</a>
+                <a href="#features" className="block text-xs text-gray-500 hover:text-white transition-colors">Agendamiento</a>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Empresa</p>
+              <div className="space-y-2">
+                <a href="#planes" className="block text-xs text-gray-500 hover:text-white transition-colors">Precios</a>
+                <a href="#para-quien" className="block text-xs text-gray-500 hover:text-white transition-colors">Casos de uso</a>
+                <a href="#como-funciona" className="block text-xs text-gray-500 hover:text-white transition-colors">Cómo funciona</a>
+                <a href="https://wa.me/573022205845" className="block text-xs text-gray-500 hover:text-white transition-colors">Contacto</a>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Legal</p>
+              <div className="space-y-2">
+                <a href="#" className="block text-xs text-gray-500 hover:text-white transition-colors">Términos de servicio</a>
+                <a href="#" className="block text-xs text-gray-500 hover:text-white transition-colors">Política de privacidad</a>
+                <a href="#" className="block text-xs text-gray-500 hover:text-white transition-colors">Política de cookies</a>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-[10px] text-gray-600">© 2026 SGC Technology S.A.S. Todos los derechos reservados.</p>
+            <div className="flex gap-4">
+              <a href="https://wa.me/573022205845" target="_blank" className="text-gray-500 hover:text-emerald-400 transition-colors text-lg">💬</a>
+              <a href="https://instagram.com/clientes.bot" target="_blank" className="text-gray-500 hover:text-pink-400 transition-colors text-lg">📸</a>
+              <a href="https://facebook.com/clientesbot" target="_blank" className="text-gray-500 hover:text-blue-400 transition-colors text-lg">👤</a>
+            </div>
+          </div>
+        </div>
+      </footer>
