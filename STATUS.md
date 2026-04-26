@@ -171,6 +171,7 @@
 - [x] Polling cada 6s con pausa automática cuando pestaña oculta (ahorra ~70% requests, alcanza ~30 agentes en free tier)
 - [x] Sonido + vibración + notificación SO + badges en `app/dashboard/chat/page.tsx`
 - [x] Push FCM ⚡ instantáneo (no depende del polling)
+- [x] Refresh inmediato al volver a la pestaña + sonido + vibración + notificación SO + badges
 - [ ] WebSocket real (Sprint 7 — cuando ya tengamos clientes pagando)
 ### Seguridad básica (cerrar antes de cobrar)
 - [ ] Audit log de cambios sensibles
@@ -329,7 +330,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-████████████████████░░░░░░░░░░ 71%
+█████████████████████░░░░░░░░░ 71%
 
 | Categoría | % |
 |---|---|
