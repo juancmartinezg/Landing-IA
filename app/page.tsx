@@ -349,7 +349,7 @@ export default function LandingPage() {
                 <div className="grid grid-cols-3 gap-2 mt-2">
                   <div className="bg-white/[0.02] rounded-lg p-2 text-center"><p className="text-[8px] text-gray-500">Alcance</p><p className="text-xs font-bold text-purple-400">12,400</p></div>
                   <div className="bg-white/[0.02] rounded-lg p-2 text-center"><p className="text-[8px] text-gray-500">Te escribieron</p><p className="text-xs font-bold text-emerald-400">48</p></div>
-                  <div className="bg-white/[0.02] rounded-lg p-2 text-center"><p className="text-[8px] text-gray-500">Costo/lead</p><p className="text-xs font-bold text-yellow-400">$3,200</p></div>
+                  <div className="bg-white/[0.02] rounded-lg p-2 text-center"><p className="text-[8px] text-gray-500">Costo/lead</p><p className="text-xs font-bold text-yellow-400">$58</p></div>
                 </div>
               </div>
             </div>
