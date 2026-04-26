@@ -125,7 +125,7 @@ export default function LandingPage() {
                   {/* Header */}
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <p className="text-sm font-bold">Bienvenido, Constructora Riverside 👋</p>
+                      <p className="text-sm font-bold">Bienvenido, Inmobiliaria Aurora 👋</p>
                       <p className="text-[9px] text-gray-500">Últimos 30 días</p>
                     </div>
                     <div className="flex gap-1">
@@ -193,7 +193,7 @@ export default function LandingPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                        <p className="text-[10px] font-bold">📢 Campaña activa: Riverside Park — Fase 2</p>
+                        <p className="text-[10px] font-bold">📢 Campaña activa: Aurora Park — Fase 2</p>
                       </div>
                       <div className="flex gap-3 text-[9px] text-gray-400">
                         <span>$2.800 invertido</span>
@@ -253,10 +253,10 @@ export default function LandingPage() {
             </div>
             <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/0 border border-emerald-500/10 rounded-3xl p-8 relative">
               <div className="space-y-3">
-                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">Hola, vi un anuncio de los apartamentos nuevos 🏢</p></div></div>
-                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">¡Hola! 😊 Tenemos disponibles apartamentos de 2 y 3 alcobas en el proyecto Reserva del Bosque. ¿Te interesa más el de 2 o de 3 alcobas?</p></div></div>
-                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">El de 3, ¿cuánto vale y cuándo entregan?</p></div></div>
-                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">El de 3 alcobas tiene 78m² y desde $385.000.000. Entrega en marzo 2027. 🏗️ ¿Te agendo una cita virtual con un asesor para ver planos y separar?</p></div></div>
+                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">Hola, vi su anuncio de los apartamentos nuevos 🏢</p></div></div>
+                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">¡Hola! 😊 Tenemos disponibles unidades de 2 y 3 habitaciones en el proyecto Aurora Park. ¿Cuál te interesa más?</p></div></div>
+                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">El de 3 habitaciones, ¿precio y entrega?</p></div></div>
+                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">El de 3 habitaciones (78 m²) desde $185.000 USD. Entrega en marzo de 2027. 🏗️ ¿Te agendo una visita virtual con un asesor para ver planos?</p></div></div>
               </div>
             </div>
           </div>
@@ -339,7 +339,7 @@ export default function LandingPage() {
                 <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Vista previa del anuncio</p>
                 <div className="bg-white/[0.03] rounded-xl p-4 border border-white/5">
                   <p className="text-xs font-bold mb-2">🏢 ¿Buscas el hogar de tus sueños?</p>
-                  <p className="text-[10px] text-gray-400 mb-3">Descubre Riverside Park — apartamentos de 2 y 3 habitaciones con vista panorámica. Unidades limitadas. ¡Escríbenos por WhatsApp!</p>
+                  <p className="text-[10px] text-gray-400 mb-3">Descubre Aurora Park — apartamentos de 2 y 3 habitaciones con vista panorámica. Unidades limitadas. ¡Escríbenos por WhatsApp!</p>
                   <div className="flex gap-2">
                     <span className="text-[8px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">Radio 25 km</span>
                     <span className="text-[8px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">28-55 años</span>
