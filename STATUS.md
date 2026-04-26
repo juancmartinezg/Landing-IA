@@ -155,13 +155,13 @@
 - [x] Multi-moneda y pasarelas globales (con custom gateway)
 - [ ] Sección "Multicanal" en landing (al rugir, no antes)
 - [ ] Testimonios reales (depende de marketing)
-### Ads Pro — pulido ✅ 4/6 cerrados
-- [x] Audiencias guardadas con nombre custom (Bloque 3, Lambda v20-22)
-- [x] Resize-image en frontend (botón 📐 ya estaba, validado)
-- [x] Publish envía 3 formatos a Meta via asset_feed_spec (Bloque 4, Lambda v23)
-- [x] Advantage+ creative enhancements activado (Bloque 4, degrees_of_freedom_spec)
-- [ ] Test manual: editar anuncio rechazado (preview + guardar)
-- [ ] Re-vincular IG Business Account en página Facebook (manual en Meta)
+### Ads Pro ✅ CERRADO 6/6 + bonuses
+- [x] Audiencias guardadas con nombre custom — multi-tenant (Bloque 3)
+- [x] Resize-image en frontend (botón 📐, 3 formatos 1:1 / 9:16 / 16:9)
+- [x] Publish envía 3 formatos a Meta via `asset_feed_spec` (Bloque 4, Lambda v23)
+- [x] Advantage+ creative enhancements activado (`degrees_of_freedom_spec`, v23)
+- [x] Editar anuncio con preview + guardar (con cards visuales del Bloque 2)
+- [x] **IG multi-page** — recorre todas las páginas del usuario y devuelve todos los IGs vinculados con su `page_id` asociado (Lambda v25). Multi-tenant para agencias con múltiples marcas.
 - [x] **BONUS Bloque 1**: `/ads/init` unificado + cache localStorage (70% menos requests Meta)
 - [x] **BONUS Bloque 2**: Cards visuales + modal vista Facebook + cleanup `cron_optimize` duplicada
 ### Auth / Onboarding
@@ -332,7 +332,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-███████████████████████░░░░░░░ 75%
+████████████████████████░░░░░░ 77%
 
 | Categoría | % |
 |---|---|
@@ -344,7 +344,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
 - [x] **50% → 69%** — Multi-agente + Landing + Embedded Signup
-- [ ] **69% → 80%** — Stripe billing + Multicanal real ⭐ ESTÁS AQUÍ (70% — SES→Resend listo)
+- [ ] **69% → 80%** — Stripe billing + Multicanal real ⭐ ESTÁS AQUÍ (77% — Ads Pro CERRADO)
 - [ ] **80% → 90%** — IA superpoderes + Crecimiento
 - [ ] **90% → 100%** — Premium + Rugido global 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
