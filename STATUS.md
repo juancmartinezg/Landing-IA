@@ -155,13 +155,15 @@
 - [x] Multi-moneda y pasarelas globales (con custom gateway)
 - [ ] Sección "Multicanal" en landing (al rugir, no antes)
 - [ ] Testimonios reales (depende de marketing)
-### Ads Pro — pulir pendientes
-- [ ] Frontend público guardado (UI botones wizard paso 2)
-- [ ] Probar resize-image desde frontend (botón 📐 3 formatos)
-- [ ] Publish envía 3 formatos a Meta (square + vertical + 16:9)
-- [ ] Probar editar anuncio rechazado completo (preview + guardar)
-- [ ] Re-vincular IG Business Account en página Facebook
-- [ ] Advantage+ creative enhancements (Meta deprecó standard)
+### Ads Pro — pulido ✅ 4/6 cerrados
+- [x] Audiencias guardadas con nombre custom (Bloque 3, Lambda v20-22)
+- [x] Resize-image en frontend (botón 📐 ya estaba, validado)
+- [x] Publish envía 3 formatos a Meta via asset_feed_spec (Bloque 4, Lambda v23)
+- [x] Advantage+ creative enhancements activado (Bloque 4, degrees_of_freedom_spec)
+- [ ] Test manual: editar anuncio rechazado (preview + guardar)
+- [ ] Re-vincular IG Business Account en página Facebook (manual en Meta)
+- [x] **BONUS Bloque 1**: `/ads/init` unificado + cache localStorage (70% menos requests Meta)
+- [x] **BONUS Bloque 2**: Cards visuales + modal vista Facebook + cleanup `cron_optimize` duplicada
 ### Auth / Onboarding
 - [x] **SES → Resend** (AWS denegó producción) — gratis 3000/mes
 - [x] PWA caching: abre landing en vez de dashboard al reabrir
@@ -330,7 +332,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-█████████████████████░░░░░░░░░ 71%
+███████████████████████░░░░░░░ 75%
 
 | Categoría | % |
 |---|---|
