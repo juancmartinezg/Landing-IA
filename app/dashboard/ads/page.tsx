@@ -27,6 +27,7 @@ export default function AdsPage() {
   });
   const [accounts, setAccounts] = useState<any[]>([]);
   const [pages, setPages] = useState<any[]>([]);
+  const [pagesWarning, setPagesWarning] = useState<string>('');
   const [igAccounts, setIgAccounts] = useState<any[]>([]);
   const [campFilter, setCampFilter] = useState('all');
   const [previewImg, setPreviewImg] = useState<string | null>(null);
@@ -1082,12 +1083,16 @@ export default function AdsPage() {
                             setWiz({...wiz, ad_account_id: acc.id, page_id: '', page_name: '', instagram_id: ''});
                             setIgAccounts([]);
                             setPages([]);
+                            setPagesWarning('');
                             // Recargar paginas filtradas por la cuenta seleccionada
                             try {
                               const r = await fetch(`${API_URL}/ads/pages?ad_account_id=${encodeURIComponent(acc.id)}`, { headers: h });
                               const d = await r.json();
                               setPages(d.pages || []);
-                            } catch {}
+                              setPagesWarning(d.warning || '');
+                            } catch {
+                              setPagesWarning('Error de conexión consultando páginas');
+                            }
                           }}
                             className={`w-full p-3 rounded-xl text-left transition-all border ${wiz.ad_account_id === acc.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
                             <p className="text-sm font-bold">{acc.name}</p>
@@ -1101,7 +1106,15 @@ export default function AdsPage() {
                     <div>
                       <label className="text-xs text-gray-400 mb-2 block">Página de Facebook</label>
                       {pages.length === 0 ? (
-                        <p className="text-xs text-yellow-400 bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3">⚠️ No tienes páginas vinculadas a esta cuenta.</p>
+                        <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3 space-y-2">
+                          <p className="text-xs text-yellow-400 leading-relaxed">
+                            {pagesWarning || '⚠️ No tienes páginas vinculadas a esta cuenta publicitaria.'}
+                          </p>
+                          <a href="https://business.facebook.com/settings/ad-accounts" target="_blank" rel="noopener noreferrer"
+                            className="inline-block text-[10px] px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 font-bold transition-all">
+                            Abrir Business Manager →
+                          </a>
+                        </div>
                       ) : (
                         <div className="space-y-2">
                           {pages.map((pg, i) => (
