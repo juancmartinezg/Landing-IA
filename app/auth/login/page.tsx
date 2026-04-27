@@ -238,83 +238,93 @@ export default function LoginPage() {
           <p className="text-gray-400 text-sm">{mode === 'register' ? 'Crea tu cuenta gratis' : mode === 'confirm' ? 'Confirma tu email' : 'Inicia sesión para acceder'}</p>
         </div>
         <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
-          {/* Botón huella/FaceID — siempre visible, usa el email del form */}
-          {typeof window !== 'undefined' && (window as any).PublicKeyCredential && (
-            <button
-              type="button"
-              onClick={async () => {
-                const targetEmail = email.trim() || localStorage.getItem('cb_last_email') || '';
-                if (!targetEmail) {
-                  setError('Escribe tu email primero abajo, luego usa la huella');
-                  return;
-                }
-                setEmail(targetEmail);
-                setError('');
-                try {
-                  const optRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-options`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: targetEmail }),
-                  });
-                  const optData = await optRes.json();
-                  if (!optData.options) {
-                    setError(optData.error || 'No tienes huella registrada con este email');
-                    return;
-                  }
-                  const opts = optData.options;
-                  opts.challenge = Uint8Array.from(atob(opts.challenge.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0));
-                  opts.allowCredentials = (opts.allowCredentials || []).map((c: any) => ({
-                    ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0)),
-                  }));
-                  const credential = await navigator.credentials.get({ publicKey: opts }) as any;
-                  const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-complete`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      email: targetEmail,
-                      credential: {
-                        id: credential.id,
-                        rawId: credential.id,
-                        type: credential.type,
-                        response: {
-                          clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
-                          authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
-                          signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+          {/* Botón huella — SOLO aparece si ya entraste antes (cb_last_email existe) */}
+          {typeof window !== 'undefined' && (window as any).PublicKeyCredential && localStorage.getItem('cb_last_email') && (
+            <>
+              <button
+                type="button"
+                onClick={async () => {
+                  const targetEmail = localStorage.getItem('cb_last_email') || '';
+                  if (!targetEmail) return;
+                  setError('');
+                  try {
+                    const optRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-options`, {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email: targetEmail }),
+                    });
+                    const optData = await optRes.json();
+                    if (!optData.options) {
+                      // No tiene passkey configurado para este email
+                      setError('No has configurado huella aún. Inicia con email y contraseña.');
+                      return;
+                    }
+                    const opts = optData.options;
+                    opts.challenge = Uint8Array.from(atob(opts.challenge.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0));
+                    opts.allowCredentials = (opts.allowCredentials || []).map((c: any) => ({
+                      ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0)),
+                    }));
+                    const credential = await navigator.credentials.get({ publicKey: opts }) as any;
+                    const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-complete`, {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        email: targetEmail,
+                        credential: {
+                          id: credential.id,
+                          rawId: credential.id,
+                          type: credential.type,
+                          response: {
+                            clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+                            authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+                            signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+                          },
                         },
-                      },
-                    }),
-                  });
-                  const verifyData = await verifyRes.json();
-                  if (verifyData.verified) {
-                    // Cargar /me para obtener companyId/role/agentId
-                    let companyId = '', role = 'owner', agentId = '';
-                    try {
-                      const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/me?email=${encodeURIComponent(targetEmail)}`);
-                      if (meRes.ok) {
-                        const meData = await meRes.json();
-                        companyId = meData.company_id || '';
-                        role = meData.role || 'owner';
-                        agentId = meData.agent_id || '';
-                      }
-                    } catch {}
-                    // Guardar sesión
-                    const userData = { email: targetEmail, name: targetEmail, sub: '', accessToken: '', companyId, role, agentId };
-                    localStorage.setItem('cb_user', JSON.stringify(userData));
-                    localStorage.setItem('cb_last_email', targetEmail);
-                    if (companyId) router.push('/dashboard');
-                    else router.push('/auth/welcome');
-                  } else {
-                    setError(verifyData.error || 'No se pudo verificar la huella');
+                      }),
+                    });
+                    const verifyData = await verifyRes.json();
+                    if (verifyData.verified) {
+                      // Cargar /me para obtener companyId/role/agentId
+                      let companyId = '', role = 'owner', agentId = '';
+                      try {
+                        const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/me?email=${encodeURIComponent(targetEmail)}`);
+                        if (meRes.ok) {
+                          const meData = await meRes.json();
+                          companyId = meData.company_id || '';
+                          role = meData.role || 'owner';
+                          agentId = meData.agent_id || '';
+                        }
+                      } catch {}
+                      const userData = { email: targetEmail, name: targetEmail, sub: '', accessToken: '', companyId, role, agentId };
+                      localStorage.setItem('cb_user', JSON.stringify(userData));
+                      if (companyId) router.push('/dashboard');
+                      else router.push('/auth/welcome');
+                    } else {
+                      setError(verifyData.error || 'No se pudo verificar la huella');
+                    }
+                  } catch (e: any) {
+                    if (e.name !== 'NotAllowedError') {
+                      setError('Error con la huella. Usa email y contraseña.');
+                    }
                   }
-                } catch (e: any) {
-                  if (e.name !== 'NotAllowedError') {
-                    setError('Error con la huella. Usa email y contraseña.');
-                  }
-                }
-              }}
-              className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-2xl transition-all mb-3 shadow-lg shadow-indigo-600/20"
-            >
-              <span className="text-xl">🔐</span>
-              Iniciar con huella / Face ID
-            </button>
+                }}
+                className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-2xl transition-all mb-2 shadow-lg shadow-indigo-600/20"
+              >
+                <span className="text-xl">🔐</span>
+                Continuar como {(localStorage.getItem('cb_last_email') || '').split('@')[0]}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem('cb_last_email');
+                  setEmail('');
+                  setError('');
+                  // Forzar re-render
+                  window.location.reload();
+                }}
+                className="w-full text-center text-xs text-gray-500 hover:text-gray-300 py-2 mb-3 transition-all"
+              >
+                Usar otra cuenta
+              </button>
+            </>
           )}
           <button onClick={loginWithGoogle}
             className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-bold py-4 px-6 rounded-2xl hover:bg-gray-100 transition-all mb-4">
