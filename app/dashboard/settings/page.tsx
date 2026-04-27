@@ -995,9 +995,287 @@ export default function SettingsPage() {
             <a href="/dashboard/gateway" className="ml-auto text-sm text-indigo-400 hover:text-indigo-300 font-bold">
               Configurar pasarela →
             </a>
-          </div>
+         </div>
         </div>
       </div>
+      {/* Sección de Seguridad — 2FA */}
+      <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 mt-6">
+        <h3 className="font-bold mb-4">🔐 Seguridad — Verificación en 2 pasos</h3>
+        <p className="text-xs text-gray-400 mb-6">Protege tu cuenta con un segundo factor de autenticación. Cada vez que inicies sesión, te pediremos un código además de tu contraseña.</p>
+        <SecuritySection email={user?.email || ''} />
+      </div>
+    </div>
+  );
+}
+function SecuritySection({ email }: { email: string }) {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+  const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [setupMode, setSetupMode] = useState<'none' | 'email' | 'totp' | 'passkey'>('none');
+  const [totpSecret, setTotpSecret] = useState('');
+  const [totpQrUrl, setTotpQrUrl] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  useEffect(() => {
+    if (!email) return;
+    fetch(`${API_URL}/me?email=${encodeURIComponent(email)}`)
+      .then((r) => r.json())
+      .then((d) => { setUserInfo(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [email]);
+  if (loading) return <div className="text-center py-4"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>;
+  const hasTotp = userInfo?.totp_enabled;
+  const hasPasskey = userInfo?.passkey_enabled;
+  const passkeys = userInfo?.passkeys || [];
+  // Activar Email 2FA (solo necesita verificar que el email funciona)
+  const handleEnableEmail = async () => {
+    setSubmitting(true); setError(''); setSuccess('');
+    const res = await fetch(`${API_URL}/auth/send-code`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (res.ok) {
+      setSetupMode('email');
+      setSuccess('Código enviado a tu email');
+    } else {
+      setError('Error enviando código');
+    }
+    setSubmitting(false);
+  };
+  // Verificar código email para activar
+  const handleVerifyEmailCode = async () => {
+    if (code.length !== 6) { setError('Ingresa los 6 dígitos'); return; }
+    setSubmitting(true); setError('');
+    const res = await fetch(`${API_URL}/auth/verify-2fa`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    });
+    const data = await res.json();
+    if (data.verified) {
+      setSuccess('✅ Verificación por email activada');
+      setSetupMode('none');
+      setCode('');
+      setUserInfo({ ...userInfo, email_2fa_verified: true });
+    } else {
+      setError(data.error || 'Código incorrecto');
+    }
+    setSubmitting(false);
+  };
+  // Setup TOTP
+  const handleSetupTotp = async () => {
+    setSubmitting(true); setError('');
+    const res = await fetch(`${API_URL}/auth/setup-2fa`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (data.secret) {
+      setTotpSecret(data.secret);
+      setTotpQrUrl(`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data.qr_url)}&size=200x200`);
+      setSetupMode('totp');
+    } else {
+      setError(data.error || 'Error configurando');
+    }
+    setSubmitting(false);
+  };
+  // Verificar TOTP para activar
+  const handleVerifyTotp = async () => {
+    if (code.length !== 6) { setError('Ingresa los 6 dígitos'); return; }
+    setSubmitting(true); setError('');
+    const res = await fetch(`${API_URL}/auth/verify-2fa`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code, setup: true }),
+    });
+    const data = await res.json();
+    if (data.verified) {
+      setSuccess('✅ Authenticator activado');
+      setSetupMode('none');
+      setCode('');
+      setUserInfo({ ...userInfo, totp_enabled: true });
+    } else {
+      setError(data.error || 'Código incorrecto');
+    }
+    setSubmitting(false);
+  };
+  // Desactivar TOTP
+  const handleDisableTotp = async () => {
+    const disableCode = prompt('Ingresa tu código de 6 dígitos para desactivar:');
+    if (!disableCode) return;
+    const res = await fetch(`${API_URL}/auth/disable-2fa`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code: disableCode }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setSuccess('Authenticator desactivado');
+      setUserInfo({ ...userInfo, totp_enabled: false });
+    } else {
+      setError(data.error || 'Código incorrecto');
+    }
+  };
+  // Registrar Passkey
+  const handleRegisterPasskey = async () => {
+    setSubmitting(true); setError('');
+    try {
+      const optRes = await fetch(`${API_URL}/auth/passkey-register-options`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const optData = await optRes.json();
+      if (!optData.options) { setError('Error obteniendo opciones'); setSubmitting(false); return; }
+      const opts = optData.options;
+      opts.challenge = Uint8Array.from(atob(opts.challenge.replace(/-/g, '+').replace(/_/g, '/')), (c: string) => c.charCodeAt(0));
+      opts.user.id = Uint8Array.from(atob(opts.user.id.replace(/-/g, '+').replace(/_/g, '/')), (c: string) => c.charCodeAt(0));
+      const credential = await navigator.credentials.create({ publicKey: opts }) as any;
+      const completeRes = await fetch(`${API_URL}/auth/passkey-register-complete`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          device_name: navigator.userAgent.includes('iPhone') ? 'iPhone' : navigator.userAgent.includes('Android') ? 'Android' : 'PC',
+          credential: {
+            id: credential.id,
+            rawId: credential.id,
+            type: credential.type,
+            response: {
+              attestationObject: btoa(String.fromCharCode(...new Uint8Array(credential.response.attestationObject))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+              clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+            },
+          },
+        }),
+      });
+      const completeData = await completeRes.json();
+      if (completeRes.ok) {
+        setSuccess(`✅ ${completeData.message}`);
+        setUserInfo({ ...userInfo, passkey_enabled: true, passkeys: [...passkeys, { device: 'Nuevo', created_at: Date.now() / 1000 }] });
+      } else {
+        setError(completeData.error || 'Error registrando');
+      }
+    } catch (e: any) {
+      if (e.name === 'NotAllowedError') {
+        setError('Cancelaste la verificación biométrica');
+      } else {
+        setError('Tu dispositivo no soporta esta función');
+      }
+    }
+    setSubmitting(false);
+  };
+  return (
+    <div className="space-y-4">
+      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3"><p className="text-xs text-red-400">{error}</p></div>}
+      {success && <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3"><p className="text-xs text-emerald-400">{success}</p></div>}
+      {/* Método 1: Huella / Face ID */}
+      <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-600/20 rounded-xl flex items-center justify-center text-xl">🔑</div>
+            <div>
+              <p className="text-sm font-bold">Huella / Face ID</p>
+              <p className="text-[10px] text-gray-500">El más rápido y seguro. Usa la biometría de tu dispositivo.</p>
+            </div>
+          </div>
+          {hasPasskey ? (
+            <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">✅ Activo ({passkeys.length})</span>
+          ) : (
+            <button onClick={handleRegisterPasskey} disabled={submitting}
+              className="text-[10px] px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all disabled:opacity-30">
+              {submitting ? '⏳' : 'Activar'}
+            </button>
+          )}
+        </div>
+        {hasPasskey && (
+          <div className="mt-3 space-y-1">
+            {passkeys.map((pk: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 text-[10px] text-gray-400 bg-white/[0.02] rounded-lg px-3 py-1.5">
+                <span>📱 {pk.device || 'Dispositivo'}</span>
+                <span className="text-gray-600">• {new Date((pk.created_at || 0) * 1000).toLocaleDateString()}</span>
+              </div>
+            ))}
+            <button onClick={handleRegisterPasskey} disabled={submitting}
+              className="text-[9px] text-indigo-400 hover:text-indigo-300 font-bold mt-1">
+              + Agregar otro dispositivo
+            </button>
+          </div>
+        )}
+      </div>
+      {/* Método 2: Email */}
+      <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-600/20 rounded-xl flex items-center justify-center text-xl">📧</div>
+            <div>
+              <p className="text-sm font-bold">Código por email</p>
+              <p className="text-[10px] text-gray-500">Recibe un código de 6 dígitos en tu correo cada vez que inicies sesión.</p>
+            </div>
+          </div>
+          <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">✅ Disponible</span>
+        </div>
+        <p className="text-[9px] text-gray-500 mt-2 ml-13">Se envía automáticamente a <strong className="text-white">{email}</strong> cuando no tienes otro método activo.</p>
+      </div>
+      {/* Método 3: Authenticator */}
+      <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-600/20 rounded-xl flex items-center justify-center text-xl">🔐</div>
+            <div>
+              <p className="text-sm font-bold">Google Authenticator</p>
+              <p className="text-[10px] text-gray-500">Usa una app como Google Authenticator o Authy para generar códigos.</p>
+            </div>
+          </div>
+          {hasTotp ? (
+            <div className="flex gap-1">
+              <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">✅ Activo</span>
+              <button onClick={handleDisableTotp} className="text-[9px] px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 font-bold">Desactivar</button>
+            </div>
+          ) : (
+            <button onClick={handleSetupTotp} disabled={submitting}
+              className="text-[10px] px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all disabled:opacity-30">
+              {submitting ? '⏳' : 'Configurar'}
+            </button>
+          )}
+        </div>
+      </div>
+      {/* Setup TOTP — QR */}
+      {setupMode === 'totp' && (
+        <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-5">
+          <h4 className="text-sm font-bold text-purple-400 mb-3">Configurar Authenticator</h4>
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-xs text-gray-400 text-center">Escanea este QR con Google Authenticator o Authy:</p>
+            {totpQrUrl && <img src={totpQrUrl} alt="QR TOTP" className="w-48 h-48 rounded-xl bg-white p-2" />}
+            <p className="text-[9px] text-gray-500 text-center">O ingresa este código manualmente: <strong className="text-white font-mono">{totpSecret}</strong></p>
+            <input
+              type="text" inputMode="numeric" maxLength={6} value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              placeholder="Código de 6 dígitos"
+              className="w-full max-w-xs bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center text-lg font-bold tracking-[0.3em] text-white outline-none focus:border-purple-500"
+            />
+            <button onClick={handleVerifyTotp} disabled={submitting || code.length !== 6}
+              className="bg-purple-600 hover:bg-purple-500 disabled:opacity-30 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all">
+              {submitting ? '⏳' : '✅ Verificar y activar'}
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Setup Email — verificar código */}
+      {setupMode === 'email' && (
+        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-5">
+          <h4 className="text-sm font-bold text-emerald-400 mb-3">Verificar email</h4>
+          <p className="text-xs text-gray-400 mb-3">Ingresa el código que te enviamos a <strong className="text-white">{email}</strong></p>
+          <div className="flex gap-2 max-w-xs">
+            <input
+              type="text" inputMode="numeric" maxLength={6} value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              placeholder="000000"
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center text-lg font-bold tracking-[0.3em] text-white outline-none focus:border-emerald-500"
+            />
+            <button onClick={handleVerifyEmailCode} disabled={submitting || code.length !== 6}
+              className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-all">
+              {submitting ? '⏳' : '✅'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
