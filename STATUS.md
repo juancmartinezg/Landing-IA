@@ -50,7 +50,7 @@
 - `WhatsApp_Remarketing` — Follow-up + renewal (~255 líneas)
 - `promote-memory-candidates` — Auto-promoción memoria (~122 líneas)
 - `knowledge-ingestor` — Ingestión conocimiento
-### Tablas DynamoDB (10)
+### Tablas DynamoDB (11)
 - `KnowledgeBase` (PK: `company_id`, SK: `kb_key`, GSI: `phone_number_id-index`)
 - `TypebotSessions` (PK: `phoneNumber`, TTL 24h)
 - `Leads_CRM` (PK: `phoneNumber`, GSI: `company_id-index`)
