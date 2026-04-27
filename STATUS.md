@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 26 abril 2026
+**Última actualización:** 27 abril 2026
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -39,7 +39,7 @@
 - **Auth:** AWS Cognito + Google OAuth
 - **IA:** Gemini 2.5 Flash + VAPI (voz)
 - **Notificaciones:** Firebase Cloud Messaging (FCM)
-- **Email:** SES (sandbox) → migrar a Resend
+- **Email:** Resend (migrado de SES, gratis 3000/mes)
 - **Storage:** S3 (`clientes-bot-media`)
 - **Cron:** EventBridge
 ---
@@ -60,12 +60,13 @@
 - `UserMapping` (PK: `email`)
 - `Agents`
 - `PushTokens`
+- `AuditLog` (PK: `company_id`, SK: `sk`, TTL 90 días, PITR activo)
 ### Servicios externos
 - **Cognito User Pool:** `us-east-1_kijdadXdl`
 - **Meta App:** `27398458396409385`
 - **WABA:** `948932884157315`
 - **Pixel:** `1102373681952908`
-- **EventBridge cron:** `ads-daily-optimize` (6 AM diario)
+- **EventBridge cron:** `ads-daily-optimize` (6 AM diario), `meta-token-renewal` (domingos 5 AM UTC)
 ---
 ## ✅ MÓDULOS COMPLETADOS
 ### 🤖 Bot WhatsApp
@@ -175,11 +176,13 @@
 - [x] Push FCM ⚡ instantáneo (no depende del polling)
 - [x] Refresh inmediato al volver a la pestaña + sonido + vibración + notificación SO + badges
 - [ ] WebSocket real (Sprint 7 — cuando ya tengamos clientes pagando)
-### Seguridad básica (cerrar antes de cobrar)
-- [ ] Audit log de cambios sensibles
-- [ ] Backups automáticos DynamoDB
-- [ ] Verificar logs CloudWatch en todas las Lambdas
-- [ ] 2FA TOTP (librería gratis)
+### Seguridad básica ✅ CERRADA 4/4
+- [x] Backups DynamoDB PITR en 10/10 tablas (restaurar a cualquier segundo, 35 días)
+- [x] Logs CloudWatch verificados: 5/5 Lambdas limpias
+- [x] Audit log: tabla `AuditLog` con 6 acciones auditadas + TTL 90 días + endpoint `/admin/audit` (Lambda v29)
+- [x] 2FA triple: Passkeys/huella (v33) + Email code Resend (v32) + TOTP Authenticator (v31) — usuario elige. Frontend login flow + Settings UI completos.
+- [x] **BONUS**: Auto-renovación tokens Meta (cron semanal EventBridge + `/meta/refresh-tokens` + `/meta/token-status` + banner expiración en dashboard) (Lambda v28)
+- [x] **BONUS**: Bug `effective_status` campañas corregido (v27) + Pages filtradas por `ad_account_id` con warnings (v26)
 ### Pasarelas de pago — pendientes
 > Estas son pasarelas que **el cliente final usa** para cobrar a sus compradores
 > (no es Stripe billing del SaaS — eso es Sprint 1 abajo).
@@ -332,20 +335,19 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-████████████████████████░░░░░░ 77%
-
+██████████████████████████░░░░ 82%
 | Categoría | % |
 |---|---|
-| ✅ Hecho | **69%** |
-| 🔧 En cierre (Sprint actual) | 4% |
-| 🟡 Planeado (Sprints 1-7) | 29% |
-**Última medición:** 26 abril 2026
+| ✅ Hecho | **82%** |
+| 🔧 En cierre (Sprint actual) | 1% |
+| 🟡 Planeado (Sprints 1-7) | 17% |
+**Última medición:** 27 abril 2026
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
 - [x] **50% → 69%** — Multi-agente + Landing + Embedded Signup
-- [ ] **69% → 80%** — Stripe billing + Multicanal real ⭐ ESTÁS AQUÍ (77% — Ads Pro CERRADO)
-- [ ] **80% → 90%** — IA superpoderes + Crecimiento
+- [x] **69% → 82%** — Seguridad completa + Tokens + Ads Pro + 2FA triple ✅
+- [ ] **82% → 90%** — Admin Panel + Stripe billing + Multicanal ⭐ ESTÁS AQUÍ
 - [ ] **90% → 100%** — Premium + Rugido global 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
