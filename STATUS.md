@@ -268,6 +268,21 @@
 - [ ] **K9** Tax handling + facturación electrónica por país
 - [ ] **K10** LTV (Customer Lifetime Value) calculado en tiempo real
 - [ ] **K11** Upsell suggestions IA ("este tenant pagaría más, está al 80% de su quota")
+### 🎯 Fase L — Meta CAPI completo (Conversions API)
+> CRM events → Meta para entrenar el algoritmo. Diferenciador masivo (HubSpot cobra $890/mes por esto).
+- [ ] **L1** Helper `send_meta_event(event_name, user_data, event_time, event_id)` reusable
+- [ ] **L2** Hashing helper SHA-256 normalizado (phone, email, name, document, city)
+- [ ] **L3** `POST /admin/capi/backfill-leads?company_id=&since=` (lote retroactivo)
+- [ ] **L4** UI botón "📡 Sincronizar 87 leads con Meta" en `/dashboard/crm`
+- [ ] **L5** Auto-sync popup después de CSV import (cliente decide)
+- [ ] **L6** Auto-envío `Lead` event en tiempo real (cada lead nuevo del bot)
+- [ ] **L7** Auto-envío `InitiateCheckout` cuando bot genera payment link
+- [ ] **L8** Recuperar `send_meta_purchase_event` del PR #5 (post-pago) y generalizar
+- [ ] **L9** Auto-envío `CompleteRegistration` (al confirmar email Cognito)
+- [ ] **L10** Test event code mode (validación primeros 5 antes de spammear pixel)
+- [ ] **L11** Dashboard de Match Rate por tenant en `/admin/tenants/{id}`
+- [ ] **L12** Dedupe entre online y offline events (event_id consistente)
+- [ ] **L13** Pixel del tenant (no del SaaS) — usa `feature_overrides` de Fase D
 ---
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-K)
 - `PlatformAdmins` (PK: `email`, SK: `role`) — equipo de la plataforma
@@ -492,7 +507,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **50% → 69%** — Multi-agente + Landing + Embedded Signup
 - [x] **69% → 82%** — Seguridad completa + Tokens + Ads Pro + 2FA triple ✅
 - [x] **82% → 85%** — Admin Panel Fase A (overview + tenants list) ✅ 🦁
-- [ ] **85% → 90%** — Admin Panel Fases B-E (Roles + Tenants + Features + Impersonate) ⭐ ESTÁS AQUÍ
+- [ ] **85% → 90%** — Admin Panel Fases B-E + L (Roles + Tenants + Features + Impersonate + Meta CAPI) ⭐ ESTÁS AQUÍ
 - [ ] **90% → 95%** — Admin Panel Fases F-J (Ticketing + Observabilidad + Comunicación + Compliance)
 - [ ] **95% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
