@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [reminders, setReminders] = useState<any[]>([]);
   const [showReminders, setShowReminders] = useState(false);
   const [unreadChats, setUnreadChats] = useState(0);
-  const [tokenWarning, setTokenWarning] = useState<{status: string, message: string, needs_reconnect: boolean} | null>(null);
+  const [tokenWarning, setTokenWarning] = useState<{status: string, message: string, needs_reconnect: boolean, days_left?: number} | null>(null);
   useEffect(() => {
     if (!loading && !user) {
       const stored = localStorage.getItem('cb_user');
