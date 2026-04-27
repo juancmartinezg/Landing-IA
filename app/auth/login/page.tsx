@@ -166,7 +166,7 @@ export default function LoginPage() {
                 Te enviamos un código de 6 dígitos a <strong className="text-white">{email}</strong>
               </p>
             </div>
-            {error && <p className="text-red-400 text-xs text-center mb-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">{error}</p>}
+           {error && <p className="text-red-400 text-xs text-center mb-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">{error}</p>}
             <input
               type="text"
               inputMode="numeric"
@@ -238,23 +238,26 @@ export default function LoginPage() {
           <p className="text-gray-400 text-sm">{mode === 'register' ? 'Crea tu cuenta gratis' : mode === 'confirm' ? 'Confirma tu email' : 'Inicia sesión para acceder'}</p>
         </div>
         <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
-          {/* Botón "Iniciar con huella" — solo si hay email previo + browser soporta */}
-          {typeof window !== 'undefined' && (window as any).PublicKeyCredential && localStorage.getItem('cb_last_email') && (
+          {/* Botón huella/FaceID — siempre visible, usa el email del form */}
+          {typeof window !== 'undefined' && (window as any).PublicKeyCredential && (
             <button
               type="button"
               onClick={async () => {
-                const lastEmail = localStorage.getItem('cb_last_email') || '';
-                if (!lastEmail) return;
-                setEmail(lastEmail);
+                const targetEmail = email.trim() || localStorage.getItem('cb_last_email') || '';
+                if (!targetEmail) {
+                  setError('Escribe tu email primero abajo, luego usa la huella');
+                  return;
+                }
+                setEmail(targetEmail);
                 setError('');
                 try {
                   const optRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-options`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: lastEmail }),
+                    body: JSON.stringify({ email: targetEmail }),
                   });
                   const optData = await optRes.json();
                   if (!optData.options) {
-                    setError(optData.error || 'No tienes huella registrada en este email');
+                    setError(optData.error || 'No tienes huella registrada con este email');
                     return;
                   }
                   const opts = optData.options;
@@ -266,7 +269,7 @@ export default function LoginPage() {
                   const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-complete`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                      email: lastEmail,
+                      email: targetEmail,
                       credential: {
                         id: credential.id,
                         rawId: credential.id,
@@ -281,16 +284,29 @@ export default function LoginPage() {
                   });
                   const verifyData = await verifyRes.json();
                   if (verifyData.verified) {
-                    const stored2 = localStorage.getItem('cb_user');
-                    const parsed2 = stored2 ? JSON.parse(stored2) : {};
-                    if (parsed2.companyId) router.push('/dashboard');
+                    // Cargar /me para obtener companyId/role/agentId
+                    let companyId = '', role = 'owner', agentId = '';
+                    try {
+                      const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/me?email=${encodeURIComponent(targetEmail)}`);
+                      if (meRes.ok) {
+                        const meData = await meRes.json();
+                        companyId = meData.company_id || '';
+                        role = meData.role || 'owner';
+                        agentId = meData.agent_id || '';
+                      }
+                    } catch {}
+                    // Guardar sesión
+                    const userData = { email: targetEmail, name: targetEmail, sub: '', accessToken: '', companyId, role, agentId };
+                    localStorage.setItem('cb_user', JSON.stringify(userData));
+                    localStorage.setItem('cb_last_email', targetEmail);
+                    if (companyId) router.push('/dashboard');
                     else router.push('/auth/welcome');
                   } else {
                     setError(verifyData.error || 'No se pudo verificar la huella');
                   }
                 } catch (e: any) {
                   if (e.name !== 'NotAllowedError') {
-                    setError('Huella no disponible — usa email + contraseña');
+                    setError('Error con la huella. Usa email y contraseña.');
                   }
                 }
               }}
