@@ -37,9 +37,77 @@ export default function LoginPage() {
       const res = await signUpWithEmail(email, password, name);
       if (res.ok && res.needsConfirm) { setMode('confirm'); }
       else if (res.error) setError(res.error);
-    } else if (mode === 'login') {
+   } else if (mode === 'login') {
       const res = await signInWithEmail(email, password);
       if (res.ok) {
+        // Verificar si tiene 2FA activado
+        try {
+          const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/me?email=${encodeURIComponent(email)}`);
+          const meData = await meRes.json();
+          const has2FA = meData.totp_enabled || meData.passkey_enabled || false;
+          if (has2FA) {
+            // Tiene 2FA — mostrar pantalla de verificación
+            setMode('2fa' as any);
+            // Si tiene passkey, intentar automáticamente
+            if (meData.passkey_enabled && window.PublicKeyCredential) {
+              try {
+                const optRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-options`, {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email }),
+                });
+                const optData = await optRes.json();
+                if (optData.options) {
+                  const opts = optData.options;
+                  opts.challenge = Uint8Array.from(atob(opts.challenge.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0));
+                  opts.allowCredentials = (opts.allowCredentials || []).map((c: any) => ({
+                    ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0)),
+                  }));
+                  const credential = await navigator.credentials.get({ publicKey: opts }) as any;
+                  const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-complete`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      email,
+                      credential: {
+                        id: credential.id,
+                        rawId: credential.id,
+                        type: credential.type,
+                        response: {
+                          clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+                          authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+                          signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+                        },
+                      },
+                    }),
+                  });
+                  const verifyData = await verifyRes.json();
+                  if (verifyData.verified) {
+                    const stored2 = localStorage.getItem('cb_user');
+                    const parsed2 = stored2 ? JSON.parse(stored2) : {};
+                    if (parsed2.companyId) router.push('/dashboard');
+                    else router.push('/auth/welcome');
+                    setSubmitting(false);
+                    return;
+                  }
+                }
+              } catch (pkErr) {
+                // Passkey falló (usuario canceló, no soportado) — fallback a código
+                console.log('Passkey fallback a código:', pkErr);
+              }
+            }
+            // Enviar código por email automáticamente como fallback
+            if (!meData.passkey_enabled || true) {
+              fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/send-code`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+              }).catch(() => {});
+            }
+            setSubmitting(false);
+            return;
+          }
+        } catch (e) {
+          console.log('2FA check failed, proceeding without:', e);
+        }
+        // Sin 2FA — directo al dashboard
         const stored = localStorage.getItem('cb_user');
         const parsed = stored ? JSON.parse(stored) : {};
         if (parsed.companyId) router.push('/dashboard');
@@ -59,6 +127,87 @@ export default function LoginPage() {
     return (
       <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+  // Pantalla de verificación 2FA
+  if ((mode as string) === '2fa') {
+    return (
+      <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-10">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <img src="/cb-logo.webp" alt="Logo" className="w-12 h-12 object-contain" />
+              <span className="text-2xl font-bold text-white tracking-tighter">clientes.bot</span>
+            </div>
+            <p className="text-gray-400 text-sm">Verificación en 2 pasos</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-indigo-600/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">🔐</div>
+              <h2 className="text-lg font-bold text-white mb-2">Ingresa tu código</h2>
+              <p className="text-gray-400 text-xs">
+                Te enviamos un código de 6 dígitos a <strong className="text-white">{email}</strong>
+              </p>
+            </div>
+            {error && <p className="text-red-400 text-xs text-center mb-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">{error}</p>}
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              placeholder="000000"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-center text-2xl font-bold tracking-[0.5em] text-white outline-none focus:border-indigo-500 transition-all mb-4"
+              autoFocus
+            />
+            <button
+              onClick={async () => {
+                if (code.length !== 6) { setError('Ingresa los 6 dígitos'); return; }
+                setSubmitting(true); setError('');
+                try {
+                  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/verify-2fa`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code }),
+                  });
+                  const data = await res.json();
+                  if (data.verified) {
+                    const stored = localStorage.getItem('cb_user');
+                    const parsed = stored ? JSON.parse(stored) : {};
+                    if (parsed.companyId) router.push('/dashboard');
+                    else router.push('/auth/welcome');
+                  } else {
+                    setError(data.error || 'Código incorrecto');
+                  }
+                } catch { setError('Error de conexión'); }
+                setSubmitting(false);
+              }}
+              disabled={submitting || code.length !== 6}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 text-white font-bold py-4 rounded-2xl transition-all mb-3"
+            >
+              {submitting ? '⏳ Verificando...' : '✅ Verificar'}
+            </button>
+            <button
+              onClick={async () => {
+                setError('');
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/send-code`, {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email }),
+                });
+                if (res.ok) setError('');
+              }}
+              className="w-full text-indigo-400 hover:text-indigo-300 text-xs font-medium py-2 transition-all"
+            >
+              📧 Reenviar código
+            </button>
+            <button
+              onClick={() => { setMode('login'); setCode(''); setError(''); }}
+              className="w-full text-gray-500 hover:text-gray-400 text-xs py-2 transition-all mt-1"
+            >
+              ← Volver al login
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
