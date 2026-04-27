@@ -37,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [reminders, setReminders] = useState<any[]>([]);
   const [showReminders, setShowReminders] = useState(false);
   const [unreadChats, setUnreadChats] = useState(0);
+  const [tokenWarning, setTokenWarning] = useState<{status: string, message: string, needs_reconnect: boolean} | null>(null);
   useEffect(() => {
     if (!loading && !user) {
       const stored = localStorage.getItem('cb_user');
@@ -74,6 +75,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .then(data => setReminders(data.reminders || []))
         .catch(() => {});
       // Contar chats que necesitan atencion
+      // Verificar estado del token Meta (1 vez por sesion)
+      if (!sessionStorage.getItem('cb_token_checked')) {
+        fetch(`${API_URL}/meta/token-status`, { headers: { 'client-id': user.companyId } })
+          .then(res => res.json())
+          .then(data => {
+            if (data.needs_reconnect || data.status === 'expired' || data.status === 'unknown') {
+              setTokenWarning(data);
+            } else if (data.days_left && data.days_left <= 7) {
+              setTokenWarning(data);
+            }
+            sessionStorage.setItem('cb_token_checked', '1');
+          })
+          .catch(() => {});
+      }
+      // Contar chats que necesitan atencion      
       fetch(`${API_URL}/conversations/active`, { headers: { 'client-id': user.companyId } })
         .then(res => res.json())
         .then(data => {
@@ -282,6 +298,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
         </header>
+        {/* Banner de token Meta expirado */}
+        {tokenWarning && (
+          <div className={`px-4 py-2.5 flex items-center justify-between gap-3 ${
+            tokenWarning.status === 'expired' || tokenWarning.needs_reconnect
+              ? 'bg-red-500/10 border-b border-red-500/20'
+              : 'bg-yellow-500/10 border-b border-yellow-500/20'
+          }`}>
+            <p className={`text-xs font-medium flex-1 ${
+              tokenWarning.status === 'expired' || tokenWarning.needs_reconnect
+                ? 'text-red-400' : 'text-yellow-400'
+            }`}>
+              {tokenWarning.status === 'expired' || tokenWarning.needs_reconnect
+                ? '🔴 Tu conexión con WhatsApp expiró. El bot no puede responder mensajes.'
+                : `⚠️ Tu conexión con WhatsApp expira en ${tokenWarning.days_left} días.`
+              }
+            </p>
+            <Link href="/dashboard/whatsapp"
+              className={`text-[10px] px-3 py-1.5 rounded-lg font-bold whitespace-nowrap transition-all ${
+                tokenWarning.status === 'expired' || tokenWarning.needs_reconnect
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
+              }`}>
+              {tokenWarning.needs_reconnect ? 'Reconectar ahora' : 'Renovar conexión'}
+            </Link>
+            <button onClick={() => setTokenWarning(null)}
+              className="text-gray-500 hover:text-white text-sm shrink-0">✕</button>
+          </div>
+        )}
         {/* Page Content */}
          <main className="p-3 md:p-6 overflow-x-hidden">
           <ToastProvider>
