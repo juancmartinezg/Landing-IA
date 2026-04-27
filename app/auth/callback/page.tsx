@@ -61,6 +61,30 @@ function CallbackHandler() {
             access_token: data.access_token,
             refresh_token: data.refresh_token,
           }));
+          // 2FA gate: si tiene 2FA activo, ir a verificación antes del dashboard
+          let needs2FA = false;
+          try {
+            const meRes2 = await fetch(`${API_URL}/me?email=${encodeURIComponent(email)}`);
+            if (meRes2.ok) {
+              const meData2 = await meRes2.json();
+              needs2FA = !!(meData2.totp_enabled || meData2.passkey_enabled);
+            }
+          } catch {}
+          if (needs2FA) {
+            // Disparar email code como fallback automático y redirigir al login
+            // que tiene el flujo de 2FA completo (passkey + email code + TOTP)
+            try {
+              await fetch(`${API_URL}/auth/send-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+              });
+            } catch {}
+            // Marcar que viene de Google para que login muestre 2FA directo
+            sessionStorage.setItem('cb_pending_2fa', email);
+            window.location.href = '/auth/login?2fa=1';
+            return;
+          }
           if (!companyId) {
             window.location.href = '/auth/welcome';
           } else {

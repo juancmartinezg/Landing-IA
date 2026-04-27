@@ -19,6 +19,21 @@ export default function LoginPage() {
   useEffect(() => {
     if (checked) return;
     setChecked(true);
+    // Si viene con ?2fa=1 (redirect del callback Google con 2FA pendiente)
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('2fa') === '1') {
+        const pendingEmail = sessionStorage.getItem('cb_pending_2fa') || '';
+        if (pendingEmail) {
+          setEmail(pendingEmail);
+          setMode('2fa' as any);
+          sessionStorage.removeItem('cb_pending_2fa');
+          // Limpiar query string sin recargar
+          window.history.replaceState({}, '', '/auth/login');
+        }
+        return;
+      }
+    }
     const stored = localStorage.getItem('cb_user');
     if (stored) {
       try {
@@ -108,6 +123,7 @@ export default function LoginPage() {
           console.log('2FA check failed, proceeding without:', e);
         }
         // Sin 2FA — directo al dashboard
+        localStorage.setItem('cb_last_email', email);
         const stored = localStorage.getItem('cb_user');
         const parsed = stored ? JSON.parse(stored) : {};
         if (parsed.companyId) router.push('/dashboard');
@@ -222,7 +238,71 @@ export default function LoginPage() {
           <p className="text-gray-400 text-sm">{mode === 'register' ? 'Crea tu cuenta gratis' : mode === 'confirm' ? 'Confirma tu email' : 'Inicia sesión para acceder'}</p>
         </div>
         <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
+          {/* Botón "Iniciar con huella" — solo si hay email previo + browser soporta */}
+          {typeof window !== 'undefined' && (window as any).PublicKeyCredential && localStorage.getItem('cb_last_email') && (
+            <button
+              type="button"
+              onClick={async () => {
+                const lastEmail = localStorage.getItem('cb_last_email') || '';
+                if (!lastEmail) return;
+                setEmail(lastEmail);
+                setError('');
+                try {
+                  const optRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-options`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: lastEmail }),
+                  });
+                  const optData = await optRes.json();
+                  if (!optData.options) {
+                    setError(optData.error || 'No tienes huella registrada en este email');
+                    return;
+                  }
+                  const opts = optData.options;
+                  opts.challenge = Uint8Array.from(atob(opts.challenge.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0));
+                  opts.allowCredentials = (opts.allowCredentials || []).map((c: any) => ({
+                    ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0)),
+                  }));
+                  const credential = await navigator.credentials.get({ publicKey: opts }) as any;
+                  const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-complete`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      email: lastEmail,
+                      credential: {
+                        id: credential.id,
+                        rawId: credential.id,
+                        type: credential.type,
+                        response: {
+                          clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+                          authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+                          signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+                        },
+                      },
+                    }),
+                  });
+                  const verifyData = await verifyRes.json();
+                  if (verifyData.verified) {
+                    const stored2 = localStorage.getItem('cb_user');
+                    const parsed2 = stored2 ? JSON.parse(stored2) : {};
+                    if (parsed2.companyId) router.push('/dashboard');
+                    else router.push('/auth/welcome');
+                  } else {
+                    setError(verifyData.error || 'No se pudo verificar la huella');
+                  }
+                } catch (e: any) {
+                  if (e.name !== 'NotAllowedError') {
+                    setError('Huella no disponible — usa email + contraseña');
+                  }
+                }
+              }}
+              className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-2xl transition-all mb-3 shadow-lg shadow-indigo-600/20"
+            >
+              <span className="text-xl">🔐</span>
+              Iniciar con huella / Face ID
+            </button>
+          )}
           <button onClick={loginWithGoogle}
+            className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-bold py-4 px-6 rounded-2xl hover:bg-gray-100 transition-all mb-4">
+            <svg className="w-5 h-5" viewBox="0 0 24 24"></svg>
             className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-bold py-4 px-6 rounded-2xl hover:bg-gray-100 transition-all mb-4">
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
