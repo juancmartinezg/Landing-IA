@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 27 abril 2026
+**Última actualización:** 27 abril 2026 (cierre Bloque A — Admin Panel Fase A)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -46,11 +46,11 @@
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (5 activas)
 - `WhatsApp_Typebot_Bridge` — Bot WhatsApp (~4900 líneas)
-- `SaaS_API_Handler` — API dashboard + ARIA + Ads (~4700 líneas, ~80 endpoints)
+- `SaaS_API_Handler` — API dashboard + ARIA + Ads + Admin Panel (~5500 líneas, ~83 endpoints, **v39**)
 - `WhatsApp_Remarketing` — Follow-up + renewal (~255 líneas)
 - `promote-memory-candidates` — Auto-promoción memoria (~122 líneas)
 - `knowledge-ingestor` — Ingestión conocimiento
-### Tablas DynamoDB (9)
+### Tablas DynamoDB (10)
 - `KnowledgeBase` (PK: `company_id`, SK: `kb_key`, GSI: `phone_number_id-index`)
 - `TypebotSessions` (PK: `phoneNumber`, TTL 24h)
 - `Leads_CRM` (PK: `phoneNumber`, GSI: `company_id-index`)
@@ -61,6 +61,7 @@
 - `Agents`
 - `PushTokens`
 - `AuditLog` (PK: `company_id`, SK: `sk`, TTL 90 días, PITR activo)
+- `ErrorLog` (PK: `service`, SK: `sk`, TTL 30 días, PITR activo) — todo error 500 del Lambda
 ### Servicios externos
 - **Cognito User Pool:** `us-east-1_kijdadXdl`
 - **Meta App:** `27398458396409385`
@@ -93,6 +94,9 @@
 - [x] Scraper sitio web → KnowledgeBase
 - [x] ARIA: 23 acciones + voz
 - [x] Upload S3, holidays, plans, templates, demo
+- [x] **Admin Panel API** — `GET /admin/overview`, `GET /admin/tenants` (paginado con cursor), `GET /admin/audit` (v34-v39)
+- [x] Hardening `/onboarding` con idempotencia por email + validación
+- [x] `log_error()` automático: todo error 500 del lambda_handler queda en tabla `ErrorLog`
 ### 👥 Multi-agente
 - [x] Tabla Agents + CRUD
 - [x] Asignación manual + transferencias con historial + motivo
@@ -143,6 +147,19 @@
 - [x] Landing pública con demo IA en vivo
 - [x] Página `/politica-de-privacidad` (con sección Cookies + Habeas Data)
 - [x] Página `/terminos`
+### 🛡️ Admin Panel Fase A ✅
+> Para tu uso interno como super admin de la plataforma. No para clientes.
+- [x] **A1** — Helpers `is_super_admin()` + `get_user_email()` con env var `SUPER_ADMIN_EMAILS` (Lambda v34)
+- [x] **A2** — Router `/admin/overview` + `/admin/tenants` con guard 403 (Lambda v35)
+- [x] **A2.1** — Hotfix DynamoDB reserved keyword `plan` en ProjectionExpression (Lambda v36)
+- [x] **A2.2** — Paginación correcta sin `Limit` mal usado + cursor `next_token` base64 (Lambda v37)
+- [x] **A3** — Overview enriquecido: tenants total/activos, mensajes 24h, pagos 30d, errores 24h, audit 24h, top 5 tenants. Cache 60s + tabla `ErrorLog` + helper `log_error()` (Lambda v38)
+- [x] **A3.7** — Hardening `/onboarding`: validar `business_name` + `client-id` requerido + idempotencia por email (Lambda v39)
+- [x] **A3.8** — Frontend `/onboarding` envía `email` + maneja `already_existed`
+- [x] **A4.1** — `app/admin/layout.tsx` con guard contra `/admin/overview` + sidebar dedicado
+- [x] **A4.2** — `app/admin/page.tsx` overview con auto-refresh 60s + cards + top 5 con barras + banner de errores
+- [x] **A4.3** — `app/admin/tenants/page.tsx` lista paginada con `tokenStack` para navegar atrás
+- [ ] **Fase B** — `/admin/tenants/[id]` detalle + `POST /admin/impersonate` + `/admin/errors` viewer + search global
 ---
 ## 🔧 SPRINT ACTUAL — Cierre de pendientes
 ### Frontend / Landing ✅ 100%
@@ -335,19 +352,20 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-██████████████████████████░░░░ 82%
+███████████████████████████░░░ 85%
 | Categoría | % |
 |---|---|
-| ✅ Hecho | **82%** |
+| ✅ Hecho | **85%** |
 | 🔧 En cierre (Sprint actual) | 1% |
-| 🟡 Planeado (Sprints 1-7) | 17% |
-**Última medición:** 27 abril 2026
+| 🟡 Planeado (Sprints 1-7) | 14% |
+**Última medición:** 27 abril 2026 (post Bloque A)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
 - [x] **50% → 69%** — Multi-agente + Landing + Embedded Signup
 - [x] **69% → 82%** — Seguridad completa + Tokens + Ads Pro + 2FA triple ✅
-- [ ] **82% → 90%** — Admin Panel + Stripe billing + Multicanal ⭐ ESTÁS AQUÍ
+- [x] **82% → 85%** — Admin Panel Fase A (overview + tenants list) ✅ 🦁
+- [ ] **85% → 90%** — Admin Panel Fase B + Stripe billing + Multicanal ⭐ ESTÁS AQUÍ
 - [ ] **90% → 100%** — Premium + Rugido global 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
