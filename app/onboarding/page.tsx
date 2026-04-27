@@ -32,6 +32,7 @@ export default function OnboardingPage() {
           'client-id': user?.sub || user?.email || '',
         },
         body: JSON.stringify({
+          email: user?.email || '',
           business_name: form.business_name,
           item_type: form.item_type,
           currency: form.currency,
@@ -50,6 +51,10 @@ export default function OnboardingPage() {
       }
       const data = await res.json();
       const companyId = data.client_id || user?.sub || '';
+      // Si el backend detecto que el tenant ya existia, avisamos al usuario
+      if (data.already_existed) {
+        console.log('Onboarding idempotente: tenant ya existia', companyId);
+      }
       // 2. Registrar en UserMapping
       await fetch(`${API_URL}/register`, {
         method: 'POST',
