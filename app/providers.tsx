@@ -158,6 +158,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         } catch {}
         const userData = { email, name: payload.name || payload.email || '', sub: payload.sub || '', accessToken: data.AuthenticationResult.AccessToken || '', companyId, role, agentId };
         localStorage.setItem('cb_user', JSON.stringify(userData));
+        localStorage.setItem('cb_last_email', email);
         localStorage.setItem('cb_tokens', JSON.stringify({ id_token: idToken, access_token: data.AuthenticationResult.AccessToken, refresh_token: data.AuthenticationResult.RefreshToken }));
         setUser(userData);
         return { ok: true };

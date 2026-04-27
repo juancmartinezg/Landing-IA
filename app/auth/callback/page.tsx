@@ -56,6 +56,7 @@ function CallbackHandler() {
             agentId,
           };
           localStorage.setItem('cb_user', JSON.stringify(user));
+          localStorage.setItem('cb_last_email', email);
           localStorage.setItem('cb_tokens', JSON.stringify({
             id_token: data.id_token,
             access_token: data.access_token,
