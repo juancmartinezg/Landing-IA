@@ -35,7 +35,7 @@
 ## 🏗️ STACK
 - **Frontend:** Next.js 14 + Tailwind + Amplify
 - **Backend:** AWS Lambda (Python) + Lambda URLs
-- **Datos:** DynamoDB (9 tablas)
+- **Datos:** DynamoDB (11 tablas, todas con PITR)
 - **Auth:** AWS Cognito + Google OAuth
 - **IA:** Gemini 2.5 Flash + VAPI (voz)
 - **Notificaciones:** Firebase Cloud Messaging (FCM)
@@ -495,7 +495,6 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [ ] **85% → 90%** — Admin Panel Fases B-E (Roles + Tenants + Features + Impersonate) ⭐ ESTÁS AQUÍ
 - [ ] **90% → 95%** — Admin Panel Fases F-J (Ticketing + Observabilidad + Comunicación + Compliance)
 - [ ] **95% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
-- [ ] **90% → 100%** — Premium + Rugido global 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
 ## 📞 CONTACTO
