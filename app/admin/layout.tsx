@@ -14,6 +14,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  // Páginas que NO requieren chequeo 2FA (las que sirven para resolverlo)
+  const isExempt = pathname === '/admin/2fa-setup' || pathname === '/admin/2fa-verify';
   useEffect(() => {
     if (loading) return;
     // No logueado → login
@@ -21,31 +23,59 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.replace('/auth/login');
       return;
     }
-    // Verificar acceso de super admin contra el backend
-    // Llamamos a /admin/overview con el header — si responde 403 no es admin
-    fetch(`${API_URL}/admin/overview`, {
-      headers: {
-        'client-id': user.sub || user.email,
-        'x-user-email': user.email,
-      },
-    })
-      .then(res => {
-        if (res.status === 403) {
+    // Verificar acceso de admin + 2FA
+    (async () => {
+      try {
+        // 1) ¿Es admin?
+        const ovRes = await fetch(`${API_URL}/admin/overview`, {
+          headers: {
+            'client-id': user.sub || user.email,
+            'x-user-email': user.email,
+          },
+        });
+        if (ovRes.status === 403) {
           setAuthorized(false);
-          // Redirigir al dashboard normal después de 2s
           setTimeout(() => router.replace('/dashboard'), 2000);
-        } else if (res.ok) {
-          setAuthorized(true);
-        } else {
+          return;
+        }
+        if (!ovRes.ok) {
           setAuthorized(false);
           setTimeout(() => router.replace('/auth/login'), 2000);
+          return;
         }
-      })
-      .catch(() => {
+        // 2) Si la página actual es 2fa-setup/verify, no chequeamos 2FA (evita loop)
+        if (isExempt) {
+          setAuthorized(true);
+          return;
+        }
+        // 3) ¿Tiene 2FA configurado?
+        const sRes = await fetch(`${API_URL}/admin/2fa-status`, {
+          headers: {
+            'client-id': user.sub || user.email,
+            'x-user-email': user.email,
+          },
+        });
+        const sData = await sRes.json();
+        if (!sData.has_2fa) {
+          // No tiene 2FA configurado → forzar setup
+          router.replace('/admin/2fa-setup');
+          return;
+        }
+        // 4) ¿Verificó 2FA en las últimas 24h?
+        const verifiedUntil = parseInt(localStorage.getItem('cb_admin_2fa_verified_until') || '0', 10);
+        if (Date.now() > verifiedUntil) {
+          // No verificado → forzar verify
+          router.replace('/admin/2fa-verify');
+          return;
+        }
+        // Todo OK
+        setAuthorized(true);
+      } catch {
         setAuthorized(false);
         setTimeout(() => router.replace('/auth/login'), 2000);
-      });
-  }, [user, loading, router]);
+      }
+    })();
+  }, [user, loading, router, pathname, isExempt]);
   // Cargando o verificando
   if (loading || authorized === null) {
     return (
