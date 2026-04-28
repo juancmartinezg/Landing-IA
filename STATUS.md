@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 28 abril 2026 (Bloque M M1-M7+M17+M21 + B6.5 cron Ads recomendaciones ✅)
+**Última actualización:** 29 abril 2026 (Bloque M completo + B6.5 + G1+G2 observabilidad ✅ — 95%)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -44,13 +44,12 @@
 - **Cron:** EventBridge
 ---
 ## 📐 INFRAESTRUCTURA
-### Lambdas (5 activas)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp (~4900 líneas)
-- `SaaS_API_Handler` — API dashboard + ARIA + Ads + Admin Panel (~5500 líneas, ~83 endpoints, **v39**)
-- `WhatsApp_Remarketing` — Follow-up + renewal (~255 líneas)
-- `promote-memory-candidates` — Auto-promoción memoria (~122 líneas)
-- `knowledge-ingestor` — Ingestión conocimiento
-### Tablas DynamoDB (11)
+### Lambdas (4 activas — todas con `log_error` → ErrorLog)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp (~5800 líneas, **v17**)
+- `SaaS_API_Handler` — API dashboard + ARIA + Ads + Admin Panel + B6.5 cron + G1 errors (~6300 líneas, ~88 endpoints, **v54**)
+- `WhatsApp_Remarketing` — Follow-up + renewal (~280 líneas, **v1**)
+- `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
+### Tablas DynamoDB (14 — todas con PITR, 3 nuevas hoy)
 - `KnowledgeBase` (PK: `company_id`, SK: `kb_key`, GSI: `phone_number_id-index`)
 - `TypebotSessions` (PK: `phoneNumber`, TTL 24h)
 - `Leads_CRM` (PK: `phoneNumber`, GSI: `company_id-index`)
@@ -241,9 +240,9 @@
 - [ ] **F7** Knowledge Base interna del equipo (`/admin/wiki`)
 - [ ] **F8** Quick actions por tenant (limpiar cache, reenviar pago, reiniciar bot)
 - [ ] **F9** Live escalation (support → super_admin con ping inmediato)
-### 🟫 Fase G — Observabilidad completa
-- [ ] **G1** `GET /admin/errors` viewer paginado con filtros (service, error_type, tenant)
-- [ ] **G2** Hookear `log_error()` en las otras 4 Lambdas (Bot, Remarketing, promote-memory, knowledge-ingestor)
+### 🟫 Fase G — Observabilidad completa (G1+G2 ✅)
+- [x] **G1** `GET /admin/errors` viewer paginado con filtros (service, error_type, tenant) + agregaciones by_service/by_type/by_tenant (API v54) + frontend `/admin/errors` con detalle expandible (`62b6410`) ✅
+- [x] **G2** `log_error()` hookeado en Bot v17 + Remarketing v1 + promote-memory v1 (cualquier error 500 visible en `/admin/errors`) ✅
 - [ ] **G3** `GET /admin/audit?actor=&action=&tenant=&from=&to=` con filtros + viewer
 - [ ] **G4** Export audit log a S3 mensual (compliance > 90 días)
 - [ ] **G5** Audit signing (hash chain para no-tampering)
@@ -305,13 +304,14 @@
 - [ ] **M8** Bot manda `Purchase` event automáticamente cuando webhook de pago (Wompi/Bold/etc) confirma — usa `service_slug` para precio + `source_campaign_id` capturado
 - [ ] **M9** Bot manda `Lead` event cuando llega lead nuevo via CTW Ad
 - [ ] **M10** Bot manda `InitiateCheckout` cuando genera payment link
-#### Eventos de venta multi-persona (caso JMC: 1 reserva = N cupos)
-- [ ] **M11** Estado nuevo `AWAITING_PAX_COUNT` — bot pregunta "¿cuántas personas asisten?" antes de generar link
-- [ ] **M12** Bot calcula total: `pax_count × cupo_price`, genera link de pago correcto
-- [ ] **M13** Webhook de pago dispara WhatsApp Flow `attendees_form` (N paneles dinámicos según pax_count)
-- [ ] **M14** Backend valida unicidad de phone/documento entre asistentes (rechaza duplicados)
-- [ ] **M15** Crea N leads independientes (uno por asistente), manda N Purchase events a Meta — modelo: 5 ventas de $100 (no 1 de $500)
-- [ ] **M16** Después de validación, dispara flow de agendamiento existente
+#### Eventos de venta multi-persona (genérico: 1 compra = N cupos / N unidades del mismo producto) ✅
+- [x] **M11** Estado `AWAITING_PAX_COUNT` — bot pregunta "¿cuántas personas/unidades?" si servicio tiene `allows_group_booking` (Bot v15) ✅
+- [x] **M12** Bot calcula total: `pax_count × unit_price`, genera link multi-pasarela con monto correcto (Bot v15) ✅
+- [~] **M13** ~~WhatsApp Flow `attendees_form`~~ — reemplazado por chat lineal (mejor UX, sin Flow JSON pesado) ✅
+- [x] **M14** Captura datos asistente por asistente (nombre + documento) + valida unicidad documento entre asistentes de la misma compra (Bot v16) ✅
+- [x] **M15** Crea N leads independientes (phone sintético `{sender}_aN` para asistentes 2+) + manda N Purchase events con `event_id` único por documento (Bot v16) ✅
+- [x] **M16** Tras último asistente, dispara `_trigger_scheduling_flow` automáticamente (Bot v16) ✅
+- [x] **M11 UI** — toggle `allows_group_booking` + min/max pax en `/dashboard/services` para que cada cliente decida producto por producto (frontend `2d9e7f3`, API v53) ✅
 #### Pixel por tenant
 - [x] **M17** Embedded Signup crea Pixel automático si tenant nuevo no tiene (Meta Business API en `handle_meta_exchange`) (API v48) ✅
 - [x] **M18** `config_pro.meta_pixel_id` por tenant — `_send_meta_event` lee del config, todos los eventos al pixel del tenant ✅ (implícito por M1)
@@ -319,16 +319,30 @@
 - [ ] **M19** Test event code mode — validar primeros 5 eventos antes de producción
 - [ ] **M20** Dashboard "Match Rate" por tenant en `/admin/tenants/{id}` — qué % de hashes matchearon usuarios reales en Meta
 - [x] **M21** Tabla `AdsAttribution` (PK company_id, SK campaign#phone#event#epoch, GSI campaign-event-index, TTL 365d, PITR) + integración bot wrapper + endpoint `GET /ads/attribution` con métricas agregadas (Bot v14 + API v49) ✅
-#### Bonus de la sesión 28 abril (M1-M7+M17+M21 + B6.5 completo)
+#### Bonus de la sesión 28-29 abril (Bloque M completo + B6.5 + G1+G2)
 - [x] **Bot M3A**: refactor `send_meta_capi_event` → wrapper con `event_id` determinístico + enriquece con `campaign_id` first-touch del lead (Bot v7) ✅
 - [x] **Bot M3B**: elimina llamada legacy duplicada `send_meta_purchase_event` que disparaba Purchase x2 al pixel del SaaS (Bot v8) ✅
 - [x] **Bot M3C**: Lead event ya no se dispara en cada saludo — solo cuando viene de CTW Ad. Agrega `messaging_channel=whatsapp` + `action_source=chat` (Bot v9-v12) ✅
-- [x] **Bot M3D**: borra 89 líneas de código legacy CAPI (env vars `META_PIXEL_ID`/`META_CAPI_ACCESS_TOKEN` + 3 funciones muertas) (Bot v13) ✅
-- [x] **Bot M21 wrapper**: `send_meta_capi_event` registra automáticamente atribución first+last en `AdsAttribution` cuando dispara Purchase/Lead/Checkout/Schedule (Bot v14) ✅
+- [x] **Bot M3D**: borra 89 líneas de código legacy CAPI (Bot v13) ✅
+- [x] **Bot M21 wrapper**: `send_meta_capi_event` registra atribución first+last en `AdsAttribution` automáticamente (Bot v14) ✅
+- [x] **Bot M11-M16**: multi-persona genérico (`allows_group_booking` por servicio + chat lineal asistentes + N Purchase events + scheduling auto) (Bot v15-v16) ✅
+- [x] **Bot G2**: `log_error` hookeado en `lambda_handler` global (Bot v17) ✅
+- [x] **API M5-M6**: `/leads/import-template` (xlsx con dropdown catálogo) + `/leads/bulk-import-purchases` (valida + persiste + dispara Purchase CAPI) (API v46-v47) ✅
+- [x] **API M17**: pixel auto-creado en `handle_meta_exchange` si tenant nuevo no tiene (API v48) ✅
+- [x] **API M21**: tabla `AdsAttribution` + `_log_attribution` + `GET /ads/attribution` con métricas agregadas (API v49) ✅
+- [x] **API B6.5.A-D**: motor IA con 7 reglas + 3 endpoints CRUD + cron solo recomienda (API v50-v52) ✅
+- [x] **API G1**: `/admin/errors` viewer paginado con filtros + agregaciones by_service/by_type/by_tenant (API v54) ✅
+- [x] **API services**: `handle_add_service` ahora pasa 11 campos opcionales (multi-tenant genérico) (API v53) ✅
 - [x] **Layer openpyxl** publicado y adjuntado a SaaS_API_Handler (266 KB, layer:1) ✅
-- [x] **EventBridge `ads-daily-optimize`** ENABLED apuntando a `/ads/cron-recommend` (cron 6 AM UTC, primer ciclo: mañana) ✅
-- [x] **Helpers reutilizables** `~/.deploy_bot.sh` y `~/.deploy_api.sh` (zip + py_compile + deploy + publish-version en 1 línea) — ahorra ~30s por deploy ✅
-- [x] **Bug crítico resuelto**: cron Ads ya NO escala automáticamente sin consentimiento (causa del Bug #2 del 28 abril) — ahora solo recomienda ✅
+- [x] **EventBridge `ads-daily-optimize`** ENABLED apuntando a `/ads/cron-recommend` ✅
+- [x] **Frontend M7**: `/dashboard/crm` botón 💰 Ventas (descarga plantilla + bulk import) (`fa4d537`) ✅
+- [x] **Frontend M11 UI**: `/dashboard/services` toggle `allows_group_booking` + min/max pax (`2d9e7f3`) ✅
+- [x] **Frontend B6.5.8**: `/dashboard/ads` tab "🎯 IA" con cards apply/dismiss (`5273883`) ✅
+- [x] **Frontend G+**: `/admin/errors` viewer + filtros + detalle expandible (`62b6410`) ✅
+- [x] **Helpers** `~/.deploy_bot.sh` y `~/.deploy_api.sh` (1 comando = zip + py_compile + deploy + publish-version) ✅
+- [x] **3 tablas DDB** creadas con TTL + PITR: `MetaEventsLog`, `AdsAttribution`, `AdsRecommendations` ✅
+- [x] **Bug crítico resuelto**: cron Ads ya NO escala automáticamente — ahora solo recomienda (causa Bug #2) ✅
+- [x] **Sintetizador phone para multi-persona**: asistentes 2+ usan `{sender}_aN` para no chocar PK Leads_CRM ✅
 ---
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
 - [x] `PlatformAdmins` (PK: `email`) — equipo de la plataforma ✅ creada
@@ -587,13 +601,12 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-████████████████████████████░░ 92%
+██████████████████████████████ 95%
 | Categoría | % |
 |---|---|
-| ✅ Hecho | **92%** |
-| 🔧 Admin Panel + features pendientes (B6-K + M restantes) | 1% |
-| 🟡 Sprints 1-7 + features futuras | 7% |
-**Última medición:** 28 abril 2026 — sesión maratón nocturna (Bloque M completo + B6.5 cron Ads recomendaciones IA)
+| ✅ Hecho | **95%** |
+| 🔧 Admin Panel C-J + Stripe billing | 5% |
+**Última medición:** 29 abril 2026 — sesión maratón nocturna 1 (Bloque M completo + B6.5 + G1+G2 + multi-persona genérico + 4 Lambdas hookeadas a ErrorLog)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -603,9 +616,10 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **85% → 87%** — B5 (2FA admins) + 8 hotfixes críticos + roadmap M ✅ 🦁
 - [x] **87% → 89%** — Bloque M M1-M7 (Meta CAPI completo + plantilla Excel + bulk import) ✅ 🦁
 - [x] **89% → 92%** — M17 pixel auto + M21 AdsAttribution + B6.5 cron Ads recomendaciones IA (7 reglas + UI) ✅ 🦁🦁
-- [ ] **92% → 95%** — Admin Panel Fases C-E (Tenants detail + Features + Impersonate) + M11-M16 multi-persona JMC ⭐ ESTÁS AQUÍ
-- [ ] **95% → 98%** — Fases F-J (Ticketing + Observabilidad + Comunicación + Compliance)
-- [ ] **98% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
+- [x] **92% → 95%** — M11-M16 multi-persona genérico + G1+G2 observabilidad (4 Lambdas → ErrorLog + admin/errors viewer) ✅ 🦁🦁🦁
+- [ ] **95% → 97%** — Admin Panel Fases C-E (Tenants detail + Features + Impersonate) + G3 audit viewer ⭐ ESTÁS AQUÍ
+- [ ] **97% → 99%** — Fases F-J (Ticketing + Comunicación + Compliance) + M19/M20 (test event + match rate)
+- [ ] **99% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
 
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
