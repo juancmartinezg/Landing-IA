@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 29 abril 2026 (Fase C tenants management + multi-tenant strict mode ✅ — 97%)
+**Última actualización:** 29 abril 2026 (Fase C + multi-tenant strict + Fase M 100% + fix atribución M9/M15 ✅ — 97%)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -45,7 +45,7 @@
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5900 líneas, **v19**)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5900 líneas, **v20**)
 - `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt (~6600 líneas, ~93 endpoints, **v61**)
 - `WhatsApp_Remarketing` — Follow-up + renewal (~280 líneas, **v1**)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
@@ -301,9 +301,9 @@
 - [x] **M6** Endpoint `POST /leads/bulk-import-purchases` valida + persiste + dispara Purchase CAPI (API v47) ✅
 - [x] **M7** UI `/dashboard/crm`: botón 💰 Ventas con descarga plantilla + parsing xlsx cliente + bulk import (frontend `fa4d537`) ✅
 #### Auto-envío en tiempo real
-- [ ] **M8** Bot manda `Purchase` event automáticamente cuando webhook de pago (Wompi/Bold/etc) confirma — usa `service_slug` para precio + `source_campaign_id` capturado
-- [ ] **M9** Bot manda `Lead` event cuando llega lead nuevo via CTW Ad
-- [ ] **M10** Bot manda `InitiateCheckout` cuando genera payment link
+- [x] **M8** Bot manda `Purchase` event automáticamente cuando webhook de pago (Wompi/Bold/etc) confirma — `service_slug` para precio + `source_campaign_id` capturado (Bot `lambda_function.py:2248` + M15 multi-persona `:3871`) ✅
+- [x] **M9** Bot manda `Lead` event cuando llega lead nuevo via CTW Ad (Bot `lambda_function.py:5223`) ✅
+- [x] **M10** Bot manda `InitiateCheckout` cuando genera payment link (Bot `lambda_function.py:2070`) ✅
 #### Eventos de venta multi-persona (genérico: 1 compra = N cupos / N unidades del mismo producto) ✅
 - [x] **M11** Estado `AWAITING_PAX_COUNT` — bot pregunta "¿cuántas personas/unidades?" si servicio tiene `allows_group_booking` (Bot v15) ✅
 - [x] **M12** Bot calcula total: `pax_count × unit_price`, genera link multi-pasarela con monto correcto (Bot v15) ✅
@@ -348,6 +348,7 @@
 - [x] **C7**: botones suspender/reactivar/eliminar tenant con modal de confirmación + razón obligatoria + audit log. Bot respeta `status=SUSPENDED/DELETED` con silencio total (no quema lista WA) (Bot v18, API v57, frontend `46001e7`) ✅
 - [x] **🦁 Multi-tenant strict mode**: `DEFAULT_COMPANY_ID` ya no defaultea a "JMC" — ahora vacío. Bot rechaza silenciosamente webhooks con `phone_number_id` no registrado en ningún `config_pro`. Cada rechazo queda en `ErrorLog` con contexto. Validado: phone fake → `TENANT_NOT_RESOLVED` registrado correctamente (Bot v19) ✅
 - [x] **Deuda técnica del SaaS original eliminada** — ahora puedes onboardear cliente #2/#3/#N sin riesgo de cross-contamination de webhooks ✅
+- [x] **🦁 Fix bug atribución silencioso (v20)** — `_log_attribution` movido del wrapper `send_meta_capi_event` al low-level `_send_meta_event`. Antes M9 Lead CTW Ad y M15 Purchase multi-persona bypaseaban la atribución → `AdsAttribution` subestimaba funnel → cron B6.5 ciego a grupos y CTW leads. Ahora **todos los call sites CAPI loguean atribución automáticamente**. Fase M ahora 100% cerrada excepto M19/M20 (observabilidad) ✅
 ---
 - [x] **Sintetizador phone para multi-persona**: asistentes 2+ usan `{sender}_aN` para no chocar PK Leads_CRM ✅
 ---
