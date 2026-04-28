@@ -604,7 +604,6 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **87% → 89%** — Bloque M M1-M7 (Meta CAPI completo + plantilla Excel + bulk import) ✅ 🦁
 - [x] **89% → 92%** — M17 pixel auto + M21 AdsAttribution + B6.5 cron Ads recomendaciones IA (7 reglas + UI) ✅ 🦁🦁
 - [ ] **92% → 95%** — Admin Panel Fases C-E (Tenants detail + Features + Impersonate) + M11-M16 multi-persona JMC ⭐ ESTÁS AQUÍ
-- [ ] **92% → 95%** — Admin Panel Fases C-E (Tenants + Features + Impersonate)
 - [ ] **95% → 98%** — Fases F-J (Ticketing + Observabilidad + Comunicación + Compliance)
 - [ ] **98% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
 

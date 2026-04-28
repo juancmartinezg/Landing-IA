@@ -9,6 +9,8 @@ const emptyForm = {
   post_payment_flow: '', download_url: '',
   track_inventory: false, sku: '', stock_quantity: '', stock_min_alert: '5',
   cost_price: '', supplier: '',
+  // M11: vender por cantidad (1 compra = N cupos / N unidades del mismo producto)
+  allows_group_booking: false, min_pax: '1', max_pax: '10',
 };
 export default function ServicesPage() {
   const { user } = useAuth();
@@ -82,6 +84,10 @@ export default function ServicesPage() {
       stock_min_alert: String(svc.stock_min_alert ?? '5'),
       cost_price: String(svc.cost_price ?? ''),
       supplier: svc.supplier || '',
+      // M11
+      allows_group_booking: svc.allows_group_booking || false,
+      min_pax: String(svc.min_pax ?? '1'),
+      max_pax: String(svc.max_pax ?? '10'),
     });
     setShowForm(true);
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -122,6 +128,14 @@ export default function ServicesPage() {
         payload.stock_min_alert = parseInt(form.stock_min_alert) || 5;
         payload.cost_price = parseInt(form.cost_price) || 0;
         payload.supplier = form.supplier;
+      }
+      // M11: vender por cantidad
+      if (form.allows_group_booking) {
+        payload.allows_group_booking = true;
+        payload.min_pax = Math.max(1, parseInt(form.min_pax) || 1);
+        payload.max_pax = Math.max(1, parseInt(form.max_pax) || 10);
+      } else {
+        payload.allows_group_booking = false;
       }
       if (editingSlug) {
         await fetch(`${API_URL}/services`, {
@@ -358,6 +372,38 @@ export default function ServicesPage() {
                     placeholder="Nombre proveedor" />
                 </div>
               </div>
+            )}
+          </div>
+          {/* M11: Vender por cantidad */}
+          <div className="mt-4 border-t border-white/5 pt-4">
+            <label className="flex items-center gap-3 cursor-pointer mb-3">
+              <input type="checkbox" checked={form.allows_group_booking} onChange={e => setForm({...form, allows_group_booking: e.target.checked})}
+                className="w-4 h-4 rounded bg-white/5 border-white/20 text-indigo-600 focus:ring-indigo-500" />
+              <span className="text-sm font-medium">👥 Permitir compra por cantidad</span>
+            </label>
+            {form.allows_group_booking && (
+              <>
+                <p className="text-[10px] text-gray-500 mb-3">
+                  El bot preguntará al cliente cuántas unidades/personas quiere antes de generar el pago.
+                  El precio se multiplica automáticamente (ej: 3 × ${(parseInt(form.regular_price) || 0).toLocaleString()}).
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Mínimo</label>
+                    <input type="number" value={form.min_pax} onChange={e => setForm({...form, min_pax: e.target.value})}
+                      min="1" max="99"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white"
+                      placeholder="1" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Máximo</label>
+                    <input type="number" value={form.max_pax} onChange={e => setForm({...form, max_pax: e.target.value})}
+                      min="1" max="99"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white"
+                      placeholder="10" />
+                  </div>
+                </div>
+              </>
             )}
           </div>
           <div className="flex gap-3 mt-4">
