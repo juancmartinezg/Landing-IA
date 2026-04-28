@@ -8,6 +8,7 @@ const adminMenu = [
   { href: '/admin', label: 'Overview', icon: '📊' },
   { href: '/admin/tenants', label: 'Tenants', icon: '🏢' },
   { href: '/admin/errors', label: 'Errores', icon: '🐛' },
+  { href: '/admin/audit', label: 'Audit Log', icon: '📜' },
   { href: '/admin/team', label: 'Equipo', icon: '🧑‍💼' },
 ];
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
