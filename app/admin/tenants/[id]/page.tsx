@@ -278,13 +278,14 @@ export default function AdminTenantDetailPage() {
               </div>
             </div>
           </div>
-          {/* Notas internas */}
-          {data.tenant_notes && (
-            <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-4">
-              <p className="text-[10px] text-yellow-500 uppercase tracking-widest mb-1">🗒️ Notas internas</p>
-              <p className="text-sm text-gray-300 whitespace-pre-wrap">{data.tenant_notes}</p>
-            </div>
-          )}
+          {/* Notas internas + Tags (C3+C4 editable inline) */}
+          <NotesAndTagsEditor
+            tenantId={data.tenant_id}
+            initialNotes={data.tenant_notes}
+            initialTags={data.tags}
+            user={user}
+            onSaved={fetchDetail}
+          />
         </div>
       )}
       {/* ===== TAB: CONFIG ===== */}
@@ -395,6 +396,131 @@ export default function AdminTenantDetailPage() {
       <p className="text-[10px] text-gray-600 text-center">
         Generado {formatTime(data._generated_at)}
       </p>
+    </div>
+  );
+}
+// ============================================================
+// C3+C4: Editor inline de notas internas + tags
+// ============================================================
+const PRESET_TAGS = [
+  { id: 'vip', label: 'VIP', color: 'amber' },
+  { id: 'beta', label: 'Beta', color: 'purple' },
+  { id: 'churn-risk', label: 'Riesgo churn', color: 'red' },
+  { id: 'pago-tarde', label: 'Paga tarde', color: 'orange' },
+  { id: 'testing', label: 'Testing', color: 'blue' },
+  { id: 'multi-persona', label: 'Multi-persona', color: 'emerald' },
+  { id: 'high-volume', label: 'Alto volumen', color: 'sky' },
+];
+function NotesAndTagsEditor({ tenantId, initialNotes, initialTags, user, onSaved }: any) {
+  const [notes, setNotes] = useState(initialNotes || '');
+  const [tags, setTags] = useState<string[]>(initialTags || []);
+  const [customTag, setCustomTag] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/tenants/${encodeURIComponent(tenantId)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'client-id': user?.sub || user?.email,
+          'x-user-email': user?.email,
+        },
+        body: JSON.stringify({ tenant_notes: notes, tags }),
+      });
+      if (res.ok) {
+        setSavedAt(Date.now());
+        setDirty(false);
+        if (onSaved) onSaved();
+      } else {
+        alert('Error guardando');
+      }
+    } catch {
+      alert('Error de conexión');
+    }
+    setSaving(false);
+  };
+  const toggleTag = (tagId: string) => {
+    setTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
+    setDirty(true);
+  };
+  const addCustomTag = () => {
+    const clean = customTag.trim().toLowerCase().replace(/\s+/g, '_').slice(0, 30);
+    if (clean && !tags.includes(clean)) {
+      setTags([...tags, clean]);
+      setCustomTag('');
+      setDirty(true);
+    }
+  };
+  const removeTag = (tagId: string) => {
+    setTags(prev => prev.filter(t => t !== tagId));
+    setDirty(true);
+  };
+  const presetIds = PRESET_TAGS.map(p => p.id);
+  const customTags = tags.filter(t => !presetIds.includes(t));
+  return (
+    <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-4 space-y-4">
+      <div>
+        <p className="text-[10px] text-yellow-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+          🗒️ Notas internas (solo admins)
+          {dirty && <span className="text-[9px] text-orange-400">(sin guardar)</span>}
+          {savedAt && !dirty && <span className="text-[9px] text-emerald-400">✓ guardado</span>}
+        </p>
+        <textarea
+          value={notes}
+          onChange={(e) => { setNotes(e.target.value); setDirty(true); }}
+          placeholder="Notas privadas sobre este tenant (visibles solo para admins)..."
+          maxLength={2000}
+          rows={3}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-yellow-500 resize-none"
+        />
+        <p className="text-[9px] text-gray-500 text-right mt-1">{notes.length}/2000</p>
+      </div>
+      <div>
+        <p className="text-[10px] text-yellow-500 uppercase tracking-widest mb-2">🏷️ Tags</p>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {PRESET_TAGS.map(p => (
+            <button key={p.id} onClick={() => toggleTag(p.id)}
+              className={`text-[10px] px-2 py-1 rounded-full font-bold transition-all border ${
+                tags.includes(p.id)
+                  ? `bg-${p.color}-500/20 text-${p.color}-400 border-${p.color}-500/40`
+                  : 'bg-white/5 text-gray-500 border-white/10 hover:bg-white/10'
+              }`}>
+              {tags.includes(p.id) ? '✓ ' : ''}{p.label}
+            </button>
+          ))}
+        </div>
+        {customTags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {customTags.map(t => (
+              <span key={t} className="text-[10px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/40 flex items-center gap-1">
+                {t}
+                <button onClick={() => removeTag(t)} className="hover:text-red-400 ml-1">✕</button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <input type="text" value={customTag}
+            onChange={(e) => setCustomTag(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(); } }}
+            placeholder="Tag custom..."
+            maxLength={30}
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-yellow-500" />
+          <button onClick={addCustomTag} disabled={!customTag.trim()}
+            className="text-[10px] px-3 py-1.5 rounded-lg bg-yellow-600/20 hover:bg-yellow-600 text-yellow-400 hover:text-white font-bold disabled:opacity-30 transition-all">
+            + Agregar
+          </button>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 border-t border-yellow-500/10 pt-3">
+        <button onClick={save} disabled={!dirty || saving}
+          className="text-xs px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white font-bold disabled:opacity-30 transition-all">
+          {saving ? '⏳ Guardando...' : dirty ? '💾 Guardar cambios' : '✓ Sin cambios'}
+        </button>
+      </div>
     </div>
   );
 }
