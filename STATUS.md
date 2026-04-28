@@ -172,7 +172,28 @@
 - [ ] **B4** Frontend `/admin/team` con tabla + form crear/editar admin (estilo Mi equipo)
 - [x] **B5** 2FA obligatorio para todos los roles admin (Lambda v45 + frontend `0f6234a`) ✅
 - [ ] **B6** Confirmación 2FA en acciones destructivas (eliminar tenant, cambiar plan, dar permisos)
-- [ ] **B6.5** ⚠️ CRÍTICO Reescribir cron Ads: detectar y RECOMENDAR (no auto-aplicar). Cliente decide.
+- [ ] **B6.5** ⚠️ CRÍTICO Reescribir cron Ads — diferenciador real vs Manychat/Wati
+   > **Filosofía**: el humano mira "clics y CPL". La IA debe mirar el FUNNEL COMPLETO.
+   > Sin atribución real (Bloque M) el cron es ciego — solo ve clics, no ROI.
+   > **Esto es lo que justifica el SaaS** — sino somos un Manychat más caro.
+   - [ ] B6.5.1 — Tabla `AdsRecommendations` (PK company_id, SK rec_id, TTL 7d)
+   - [ ] B6.5.2 — Cron analiza funnel COMPLETO: CPM, CPC, CPL, CPA, ROI (no solo CPL)
+   - [ ] B6.5.3 — 7 tipos de recomendación con justificación numérica:
+       - 🟢 ESCALAR +X% (CPL bajó 7d Y conversiones suben Y NO cae ROI)
+       - 🔴 PAUSAR (CPL +50% en 24h Y CTR bajó)
+       - 🟡 REDUCIR -X% (sigue convirtiendo pero CPL marginal sube)
+       - 🔄 REFRESH CREATIVO (CTR -30% esta semana = anuncio quemado)
+       - 🎯 CAMBIAR TARGETING (CPM alto + CTR bajo = audiencia saturada)
+       - ⚠️ RECARGAR PRESUPUESTO (campaña top con saldo < N días)
+       - 📊 A/B TEST (validar copy A vs B en campaña ganadora)
+   - [ ] B6.5.4 — Cada recomendación incluye: data exacta, impacto estimado $, confianza 0-100
+   - [ ] B6.5.5 — Cap máximo: ±25% del budget actual por recomendación (anti-explosión)
+   - [ ] B6.5.6 — Push FCM al owner cuando hay recomendación de alto impacto (>$50k/día)
+   - [ ] B6.5.7 — Endpoints: GET /ads/recommendations · POST /ads/recommendations/{id}/apply · /dismiss
+   - [ ] B6.5.8 — Frontend `/dashboard/ads/recommendations` con cards detalladas
+   - [ ] B6.5.9 — Dismissed 3 veces = sistema deja de sugerir esa misma cosa por 7 días
+   - [ ] B6.5.10 — Después de 48h aplicada, registrar resultado real (sistema aprende)
+   - [ ] B6.5.11 — Reactivar cron `ads-daily-optimize` solo cuando B6.5.1-B6.5.10 estén hechos
 - [ ] **B7** Session timeout 30 min de inactividad para admins
 - [ ] **B8** Email automático "se hizo X en tu cuenta" al cliente cada vez que admin actúa
 - [ ] **B9** Login audit (IP, geo, user-agent) en `AuditLog`
