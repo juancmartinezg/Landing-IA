@@ -4,7 +4,16 @@ import { useAuth } from '../../providers';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function AdsPage() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'create'>('metrics');
+const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommendations' | 'create'>('metrics');
+  // B6.5.8: recomendaciones IA
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [recsByType, setRecsByType] = useState<Record<string, number>>({});
+  const [recsLoading, setRecsLoading] = useState(false);
+  const [recsCount, setRecsCount] = useState(0);
+  const [applyingRec, setApplyingRec] = useState<string | null>(null);
+  const [dismissingRec, setDismissingRec] = useState<string | null>(null);
+  const [overrideAmount, setOverrideAmount] = useState<Record<string, string>>({});
+  const [dismissReason, setDismissReason] = useState<Record<string, string>>({});
   const [metrics, setMetrics] = useState<any>(null);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [audiences, setAudiences] = useState<any[]>([]);
@@ -123,7 +132,72 @@ export default function AdsPage() {
   };
   useEffect(() => {
     loadAdsInit();
+    loadRecommendationsCount();
   }, []);
+  // B6.5.8: cargar contador para banner
+  const loadRecommendationsCount = async () => {
+    try {
+      const res = await fetch(`${API_URL}/ads/recommendations?status=pending&limit=1`, { headers: h });
+      const data = await res.json();
+      setRecsCount(data.total || 0);
+    } catch {}
+  };
+  const loadRecommendations = async () => {
+    setRecsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/recommendations?status=pending&limit=50`, { headers: h });
+      const data = await res.json();
+      setRecommendations(data.recommendations || []);
+      setRecsByType(data.by_type || {});
+      setRecsCount(data.total || 0);
+    } catch {
+      showToast('Error cargando recomendaciones');
+    }
+    setRecsLoading(false);
+  };
+  const applyRecommendation = async (rec: any) => {
+    setApplyingRec(rec.rec_id);
+    try {
+      const action = { ...(rec.suggested_action || {}) };
+      // Si el usuario modificó el monto, usar override
+      const overrideKey = `${rec.rec_id}_amount`;
+      if (overrideAmount[overrideKey]) {
+        const v = parseInt(overrideAmount[overrideKey]);
+        if (v > 0) action.new_daily_budget_cents = v * 100;
+      }
+      const res = await fetch(`${API_URL}/ads/recommendations/apply?rec_id=${encodeURIComponent(rec.rec_id)}`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ override_action: action }),
+      });
+      const data = await res.json();
+      if (data.meta_result?.ok) {
+        showToast('✅ Recomendación aplicada');
+        loadRecommendations();
+        reloadDashboard();
+      } else {
+        showToast('❌ ' + (data.meta_result?.error || 'Error aplicando'));
+      }
+    } catch { showToast('Error de conexión'); }
+    setApplyingRec(null);
+  };
+  const dismissRecommendation = async (rec: any) => {
+    setDismissingRec(rec.rec_id);
+    try {
+      const res = await fetch(`${API_URL}/ads/recommendations/dismiss?rec_id=${encodeURIComponent(rec.rec_id)}`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: dismissReason[rec.rec_id] || '' }),
+      });
+      if (res.ok) {
+        showToast('Recomendación descartada');
+        loadRecommendations();
+      } else {
+        showToast('Error descartando');
+      }
+    } catch { showToast('Error de conexión'); }
+    setDismissingRec(null);
+  };
   const handleGenerate = async () => {
     setCreating(true); setVariants([]);
     showToast('⏳ La IA está creando tus anuncios...');
@@ -407,10 +481,27 @@ export default function AdsPage() {
         </div>
       </div>
       <div className="flex gap-2 mb-6 overflow-x-auto">
-        {[{id:'metrics',l:'📊 Resultados'},{id:'campaigns',l:'📋 Mis campañas'},{id:'audiences',l:'👥 Audiencias'},{id:'create',l:'✨ Crear campaña'}].map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id as any); if (t.id === 'campaigns') { fetch(`${API_URL}/ads/campaigns`, { headers: h }).then((r: any) => r.json()).then((d: any) => setCampaigns(d.campaigns || [])).catch(() => {}); } }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${tab === t.id ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>
+        {[
+          {id:'metrics',l:'📊 Resultados'},
+          {id:'campaigns',l:'📋 Mis campañas'},
+          {id:'audiences',l:'👥 Audiencias'},
+          {id:'recommendations',l: recsCount > 0 ? `🎯 IA (${recsCount})` : '🎯 IA'},
+          {id:'create',l:'✨ Crear campaña'},
+        ].map(t => (
+          <button key={t.id} onClick={() => {
+            setTab(t.id as any);
+            if (t.id === 'campaigns') {
+              fetch(`${API_URL}/ads/campaigns`, { headers: h }).then((r: any) => r.json()).then((d: any) => setCampaigns(d.campaigns || [])).catch(() => {});
+            }
+            if (t.id === 'recommendations') {
+              loadRecommendations();
+            }
+          }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${tab === t.id ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'} ${t.id === 'recommendations' && recsCount > 0 ? 'ring-1 ring-emerald-500/50' : ''}`}>
             {t.l}
+            {t.id === 'recommendations' && recsCount > 0 && tab !== 'recommendations' && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            )}
           </button>
         ))}
       </div>
@@ -827,6 +918,185 @@ export default function AdsPage() {
               </div>
             </details>
           </div>
+        </div>
+      )}
+      {tab === 'recommendations' && (
+        <div>
+          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 mb-4">
+            <h3 className="font-bold text-sm mb-1">🎯 Recomendaciones IA — análisis del funnel completo</h3>
+            <p className="text-[10px] text-gray-400 leading-relaxed">
+              La IA revisa tus campañas todos los días a las 6 AM (UTC) y analiza CPM, CPC, CPL, CPA, ROI y ventas reales del CRM.
+              Tú decides qué aplicar — nada se cambia automáticamente.
+            </p>
+          </div>
+          {recsLoading ? (
+            <div className="flex flex-col items-center py-12">
+              <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3" />
+              <p className="text-xs text-gray-400">Cargando recomendaciones...</p>
+            </div>
+          ) : recommendations.length === 0 ? (
+            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-12 text-center">
+              <p className="text-5xl mb-4">✨</p>
+              <h3 className="font-bold mb-2">Todo en orden</h3>
+              <p className="text-xs text-gray-400 mb-4">
+                La IA no detectó nada que requiera acción. Revisará de nuevo mañana a las 6 AM (UTC).
+              </p>
+              <button onClick={loadRecommendations}
+                className="text-[10px] px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all">
+                🔄 Actualizar ahora
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2 mb-4 text-[10px]">
+                {Object.entries(recsByType).map(([type, count]) => (
+                  <span key={type} className="px-2 py-1 rounded-full bg-white/5 text-gray-400">
+                    {type}: <strong className="text-white">{count as number}</strong>
+                  </span>
+                ))}
+                <button onClick={loadRecommendations}
+                  className="ml-auto px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all">
+                  🔄 Actualizar
+                </button>
+              </div>
+              <div className="space-y-3">
+                {recommendations.map((rec: any) => {
+                  const typeMeta: Record<string, {icon: string, label: string, color: string}> = {
+                    scale: { icon: '🟢', label: 'Escalar presupuesto', color: 'emerald' },
+                    pause: { icon: '🔴', label: 'Pausar campaña', color: 'red' },
+                    reduce: { icon: '🟡', label: 'Reducir presupuesto', color: 'yellow' },
+                    refresh_creative: { icon: '🔄', label: 'Refrescar creativo', color: 'purple' },
+                    change_targeting: { icon: '🎯', label: 'Cambiar audiencia', color: 'indigo' },
+                    recharge_budget: { icon: '⚠️', label: 'Recargar saldo', color: 'orange' },
+                    ab_test: { icon: '📊', label: 'Probar A/B Test', color: 'blue' },
+                  };
+                  const meta = typeMeta[rec.recommendation_type] || { icon: '💡', label: rec.recommendation_type, color: 'gray' };
+                  const just = rec.justification || {};
+                  const action = rec.suggested_action || {};
+                  const impact = (rec.impact_estimate_cents || 0) / 100;
+                  const conf = rec.confidence || 0;
+                  const isApplying = applyingRec === rec.rec_id;
+                  const isDismissing = dismissingRec === rec.rec_id;
+                  const overrideKey = `${rec.rec_id}_amount`;
+                  // Para scale/reduce, mostrar input de monto editable
+                  const showAmountInput = rec.recommendation_type === 'scale' || rec.recommendation_type === 'reduce';
+                  const newBudget = (action.new_daily_budget_cents || 0) / 100;
+                  return (
+                    <div key={rec.rec_id} className={`bg-white/[0.03] border rounded-2xl p-4 transition-all hover:border-${meta.color}-500/30`}>
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={`w-10 h-10 rounded-xl bg-${meta.color}-500/10 flex items-center justify-center text-xl shrink-0`}>
+                          {meta.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className={`font-bold text-sm text-${meta.color}-400`}>{meta.label}</h4>
+                            <span className={`text-[8px] px-1.5 py-0.5 rounded-full bg-${meta.color}-500/20 text-${meta.color}-400 font-bold`}>
+                              Conf {conf}%
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-300 truncate" title={rec.campaign_name}>
+                            📋 {rec.campaign_name || rec.campaign_id}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-[8px] text-gray-500 uppercase tracking-widest">Impacto est.</p>
+                          <p className={`text-sm font-bold ${impact >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            ${Math.abs(impact).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Justificación */}
+                      <div className="bg-white/[0.02] rounded-xl p-3 mb-3">
+                        <p className="text-[10px] text-gray-400 mb-2">📊 Por qué la IA sugiere esto:</p>
+                        <p className="text-xs text-white mb-2">{just.rule || 'Análisis de métricas'}</p>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-gray-500">
+                          {just.cpl_now_cents !== undefined && (
+                            <span>CPL actual: <strong className="text-white">${(just.cpl_now_cents / 100).toLocaleString()}</strong></span>
+                          )}
+                          {just.cpl_prev_cents !== undefined && just.cpl_prev_cents > 0 && (
+                            <span>CPL anterior: <strong className="text-white">${(just.cpl_prev_cents / 100).toLocaleString()}</strong></span>
+                          )}
+                          {just.roas !== undefined && (
+                            <span>ROAS: <strong className="text-emerald-400">{just.roas}x</strong></span>
+                          )}
+                          {just.purchases_7d !== undefined && (
+                            <span>Ventas 7d: <strong className="text-white">{just.purchases_7d}</strong></span>
+                          )}
+                          {just.ctr_drop_pct !== undefined && (
+                            <span>Caída CTR: <strong className="text-red-400">{just.ctr_drop_pct}%</strong></span>
+                          )}
+                          {just.cpl_jump_pct !== undefined && (
+                            <span>Subida CPL: <strong className="text-red-400">+{just.cpl_jump_pct}%</strong></span>
+                          )}
+                          {just.balance_cents !== undefined && (
+                            <span>Saldo: <strong className="text-yellow-400">${(just.balance_cents / 100).toLocaleString()}</strong></span>
+                          )}
+                          {just.days_left !== undefined && (
+                            <span>Dura: <strong className="text-yellow-400">{just.days_left} días</strong></span>
+                          )}
+                          {just.impressions !== undefined && (
+                            <span>Impresiones: <strong className="text-white">{just.impressions.toLocaleString()}</strong></span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Acción sugerida con input editable si aplica */}
+                      <div className="bg-white/[0.02] rounded-xl p-3 mb-3">
+                        <p className="text-[10px] text-gray-400 mb-2">⚡ Acción sugerida:</p>
+                        {showAmountInput && newBudget > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-300">Nuevo presupuesto diario:</span>
+                            <span className="text-xs text-gray-500">$</span>
+                            <input
+                              type="number"
+                              defaultValue={newBudget.toFixed(0)}
+                              onChange={(e) => setOverrideAmount({ ...overrideAmount, [overrideKey]: e.target.value })}
+                              className="w-28 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-emerald-500"
+                            />
+                            <span className="text-[9px] text-gray-500">(puedes editarlo)</span>
+                          </div>
+                        ) : action.pause ? (
+                          <p className="text-xs text-red-400">⏸️ Pausar campaña hasta corregir</p>
+                        ) : action.suggestion ? (
+                          <p className="text-xs text-gray-300">{action.suggestion}</p>
+                        ) : action.recharge_budget ? (
+                          <p className="text-xs text-yellow-400">
+                            💰 Recargar ~${((action.suggested_amount_cents || 0) / 100).toLocaleString()} (cubre 2 semanas)
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-300">{JSON.stringify(action).slice(0, 100)}</p>
+                        )}
+                      </div>
+                      {/* Botones */}
+                      <div className="flex gap-2">
+                        <button onClick={() => applyRecommendation(rec)} disabled={isApplying || isDismissing}
+                          className="flex-1 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-50">
+                          {isApplying ? '⏳ Aplicando...' : '✅ Aplicar'}
+                        </button>
+                        <details className="flex-1 group">
+                          <summary className="block text-center py-2 rounded-xl text-xs font-bold border border-white/10 text-gray-400 hover:bg-white/5 cursor-pointer transition-all list-none">
+                            ✕ Descartar
+                          </summary>
+                          <div className="mt-2 bg-white/[0.02] rounded-xl p-2 space-y-2">
+                            <input
+                              type="text"
+                              placeholder="Razón (opcional, ayuda a mejorar la IA)"
+                              maxLength={200}
+                              onChange={(e) => setDismissReason({ ...dismissReason, [rec.rec_id]: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white outline-none focus:border-red-500"
+                            />
+                            <button onClick={() => dismissRecommendation(rec)} disabled={isDismissing}
+                              className="w-full py-1.5 rounded-lg text-[10px] font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50">
+                              {isDismissing ? '⏳' : 'Confirmar descartar'}
+                            </button>
+                          </div>
+                        </details>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
       {tab === 'create' && (
