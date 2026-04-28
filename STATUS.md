@@ -608,23 +608,29 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-██████████████████████████████ 98%
+████████████████████░░░░░░░░░░ 72%
 | Categoría | % |
 |---|---|
-| ✅ Hecho | **98%** |
+| ✅ Infraestructura construida | **72%** |
+| 🔴 Stripe billing (para cobrar) | 0% — bloqueante |
+| 🔴 Feature Flags por plan | 0% — bloqueante |
+| 🟡 Multicanal (IG/Messenger/Telegram) | 0% — Sprint 2 |
+| 🟡 Admin Panel completo (D-J) | ~15% |
+| 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
 | 🔧 Pendiente: D (Feature Flags) + E (Impersonate) + F-J + Stripe + multicanal | 2% |
 **Última medición:** 29 abril 2026 — sesión maratón nocturna completa (Bloque M + B6.5 + G1-G3 + Fase C 6/12 + multi-tenant strict + rate limit + cron fix)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
-- [x] **50% → 69%** — Multi-agente + Landing + Embedded Signup
-- [x] **69% → 82%** — Seguridad completa + Tokens + Ads Pro + 2FA triple ✅
-- [x] **82% → 85%** — Admin Panel Fase A (overview + tenants list) ✅ 🦁
-- [x] **85% → 87%** — B5 (2FA admins) + 8 hotfixes críticos + roadmap M ✅ 🦁
-- [x] **87% → 89%** — Bloque M M1-M7 (Meta CAPI completo + plantilla Excel + bulk import) ✅ 🦁
-- [x] **89% → 92%** — M17 pixel auto + M21 AdsAttribution + B6.5 cron Ads recomendaciones IA (7 reglas + UI) ✅ 🦁🦁
-- [x] **92% → 95%** — M11-M16 multi-persona genérico + G1+G2 observabilidad (4 Lambdas → ErrorLog + admin/errors viewer) ✅ 🦁🦁🦁
-- [x] **95% → 97%** — Fase C parcial (C1-C4, C7 = detalle/notas/tags/suspend) + multi-tenant strict mode (eliminada deuda DEFAULT_COMPANY_ID=JMC) ✅ 🦁🦁🦁🦁
+- [x] **50% → 60%** — Multi-agente + Landing + Embedded Signup
+- [x] **60% → 65%** — Seguridad completa + Tokens + Ads Pro + 2FA triple
+- [x] **65% → 67%** — Admin Panel Fase A (overview + tenants list)
+- [x] **67% → 68%** — B5 (2FA admins) + 8 hotfixes críticos
+- [x] **68% → 70%** — Bloque M Meta CAPI + plantilla Excel + bulk import
+- [x] **70% → 72%** — B6.5 cron IA + Fase C parcial + G1-G3 + multi-tenant strict 🦁
+- [ ] **72% → 80%** — Stripe billing + Feature Flags + Quotas ⭐ ESTÁS AQUÍ
+- [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
+- [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 - [ ] **97% → 99%** — Fase D (Feature Flags + Quotas) + Fase E (Impersonate con consentimiento) + G3 audit viewer + M19/M20 ⭐ ESTÁS AQUÍ
 - [ ] **99% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
 
