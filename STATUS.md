@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 29 abril 2026 (Bloque M completo + B6.5 + G1+G2 observabilidad ✅ — 95%)
+**Última actualización:** 29 abril 2026 (Fase C tenants management + multi-tenant strict mode ✅ — 97%)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -45,8 +45,8 @@
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp (~5800 líneas, **v17**)
-- `SaaS_API_Handler` — API dashboard + ARIA + Ads + Admin Panel + B6.5 cron + G1 errors (~6300 líneas, ~88 endpoints, **v54**)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5900 líneas, **v19**)
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt (~6500 líneas, ~92 endpoints, **v57**)
 - `WhatsApp_Remarketing` — Follow-up + renewal (~280 líneas, **v1**)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
 ### Tablas DynamoDB (14 — todas con PITR, 3 nuevas hoy)
@@ -195,17 +195,17 @@
 - [ ] **B7** Session timeout 30 min de inactividad para admins
 - [ ] **B8** Email automático "se hizo X en tu cuenta" al cliente cada vez que admin actúa
 - [ ] **B9** Login audit (IP, geo, user-agent) en `AuditLog`
-### 🟩 Fase C — Tenants Management
-- [ ] **C1** `GET /admin/tenants/{id}` detalle completo (config, métricas, errores, timeline)
-- [ ] **C2** Frontend `/admin/tenants/[id]` con tabs (Config / Métricas / Errores / Timeline)
-- [ ] **C3** Notas internas por tenant (`tenant_notes` en config_pro, solo admins)
-- [ ] **C4** Tags por tenant (filtrable en lista) — VIP, beta, churn-risk, etc.
-- [ ] **C5** Eventos timeline por tenant (registro, primer pago, último mensaje, churn)
-- [ ] **C6** Search backend en `/admin/tenants?q=...` (`Contains` en brand_name + company_id)
-- [ ] **C7** Acciones: suspender / reactivar / eliminar (soft delete con status=DELETED)
+### 🟩 Fase C — Tenants Management (5/12 ✅ operacional)
+- [x] **C1** `GET /admin/tenants/{id}` detalle completo (config + métricas + errores + timeline + integrations) (API v55) ✅
+- [x] **C2** Frontend `/admin/tenants/[id]` con 4 tabs (Métricas / Config / Errores / Timeline) (`7046897`) ✅
+- [x] **C3** Notas internas por tenant (`tenant_notes` editable inline, max 2000 chars) (API v56 + frontend `efd9d77`) ✅
+- [x] **C4** Tags por tenant (7 presets + custom, filtrable, max 20 tags) (API v56 + frontend `efd9d77`) ✅
+- [ ] **C5** Eventos timeline por tenant (parcial — ya hay timeline desde AuditLog en tab Timeline)
+- [ ] **C6** Search backend en `/admin/tenants?q=...` (`Contains` en brand_name + company_id) — TODO
+- [x] **C7** Acciones: suspender / reactivar / eliminar (soft delete) — bot respeta `status=SUSPENDED/DELETED` con silencio total + modal con razón obligatoria + audit log (Bot v18 + API v57 + frontend `46001e7`) ✅
 - [ ] **C8** Cambiar plan con dry-run (preview qué se desactiva antes de aplicar)
 - [ ] **C9** Reset password de cliente (Cognito Admin API → email automático Resend)
-- [ ] **C10** Modo mantenimiento por tenant (pausar 1 sin tocar los demás)
+- [ ] **C10** Modo mantenimiento por tenant (parcial — C7 cumple este caso)
 - [ ] **C11** Clonar configuración de tenant (template para nuevos clientes)
 - [ ] **C12** Recovery / undo 24h ventana de cualquier acción admin
 ### 🟨 Fase D — Feature Flags + Quotas
@@ -341,7 +341,14 @@
 - [x] **Frontend G+**: `/admin/errors` viewer + filtros + detalle expandible (`62b6410`) ✅
 - [x] **Helpers** `~/.deploy_bot.sh` y `~/.deploy_api.sh` (1 comando = zip + py_compile + deploy + publish-version) ✅
 - [x] **3 tablas DDB** creadas con TTL + PITR: `MetaEventsLog`, `AdsAttribution`, `AdsRecommendations` ✅
-- [x] **Bug crítico resuelto**: cron Ads ya NO escala automáticamente — ahora solo recomienda (causa Bug #2) ✅
+- [x] **Bug crítico resuelto**: cron Ads ya NO escala automáticamente sin consentimiento (causa del Bug #2 del 28 abril) — ahora solo recomienda ✅
+#### Bonus segunda mitad de la noche (29 abril madrugada)
+- [x] **C1+C2**: detalle de tenant con 4 tabs (Métricas/Config/Errores/Timeline) + integrations card con expiración de token Meta + lista clickeable hacia detalle (Bot/API v55, frontend `7046897`) ✅
+- [x] **C3+C4**: editor inline de tenant_notes (2000 chars) + tags con 7 presets (vip/beta/churn-risk/etc) + custom tags + audit log automático (API v56, frontend `efd9d77`) ✅
+- [x] **C7**: botones suspender/reactivar/eliminar tenant con modal de confirmación + razón obligatoria + audit log. Bot respeta `status=SUSPENDED/DELETED` con silencio total (no quema lista WA) (Bot v18, API v57, frontend `46001e7`) ✅
+- [x] **🦁 Multi-tenant strict mode**: `DEFAULT_COMPANY_ID` ya no defaultea a "JMC" — ahora vacío. Bot rechaza silenciosamente webhooks con `phone_number_id` no registrado en ningún `config_pro`. Cada rechazo queda en `ErrorLog` con contexto. Validado: phone fake → `TENANT_NOT_RESOLVED` registrado correctamente (Bot v19) ✅
+- [x] **Deuda técnica del SaaS original eliminada** — ahora puedes onboardear cliente #2/#3/#N sin riesgo de cross-contamination de webhooks ✅
+---
 - [x] **Sintetizador phone para multi-persona**: asistentes 2+ usan `{sender}_aN` para no chocar PK Leads_CRM ✅
 ---
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
@@ -601,12 +608,12 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-██████████████████████████████ 95%
+██████████████████████████████ 97%
 | Categoría | % |
 |---|---|
-| ✅ Hecho | **95%** |
-| 🔧 Admin Panel C-J + Stripe billing | 5% |
-**Última medición:** 29 abril 2026 — sesión maratón nocturna 1 (Bloque M completo + B6.5 + G1+G2 + multi-persona genérico + 4 Lambdas hookeadas a ErrorLog)
+| ✅ Hecho | **97%** |
+| 🔧 Pendiente: D (Feature Flags) + E (Impersonate) + F-J + Stripe + multicanal | 3% |
+**Última medición:** 29 abril 2026 — sesión maratón nocturna 1 + 2 (Bloque M + B6.5 + G1+G2 + Fase C parcial + multi-tenant strict mode)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -617,8 +624,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **87% → 89%** — Bloque M M1-M7 (Meta CAPI completo + plantilla Excel + bulk import) ✅ 🦁
 - [x] **89% → 92%** — M17 pixel auto + M21 AdsAttribution + B6.5 cron Ads recomendaciones IA (7 reglas + UI) ✅ 🦁🦁
 - [x] **92% → 95%** — M11-M16 multi-persona genérico + G1+G2 observabilidad (4 Lambdas → ErrorLog + admin/errors viewer) ✅ 🦁🦁🦁
-- [ ] **95% → 97%** — Admin Panel Fases C-E (Tenants detail + Features + Impersonate) + G3 audit viewer ⭐ ESTÁS AQUÍ
-- [ ] **97% → 99%** — Fases F-J (Ticketing + Comunicación + Compliance) + M19/M20 (test event + match rate)
+- [x] **95% → 97%** — Fase C parcial (C1-C4, C7 = detalle/notas/tags/suspend) + multi-tenant strict mode (eliminada deuda DEFAULT_COMPANY_ID=JMC) ✅ 🦁🦁🦁🦁
+- [ ] **97% → 99%** — Fase D (Feature Flags + Quotas) + Fase E (Impersonate con consentimiento) + G3 audit viewer + M19/M20 ⭐ ESTÁS AQUÍ
 - [ ] **99% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
 
 > *"Cada % se gana con café. Cada café se gana con un commit."*
