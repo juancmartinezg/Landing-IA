@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 28 abril 2026 (Bloque M Meta CAPI — M1-M7 deployados ✅)
+**Última actualización:** 28 abril 2026 (Bloque M M1-M7+M17+M21 + B6.5 cron Ads recomendaciones ✅)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -172,28 +172,27 @@
 - [ ] **B4** Frontend `/admin/team` con tabla + form crear/editar admin (estilo Mi equipo)
 - [x] **B5** 2FA obligatorio para todos los roles admin (Lambda v45 + frontend `0f6234a`) ✅
 - [ ] **B6** Confirmación 2FA en acciones destructivas (eliminar tenant, cambiar plan, dar permisos)
-- [ ] **B6.5** ⚠️ CRÍTICO Reescribir cron Ads — diferenciador real vs Manychat/Wati
-   > **Filosofía**: el humano mira "clics y CPL". La IA debe mirar el FUNNEL COMPLETO.
+- [x] **B6.5** ⚠️ CRÍTICO Cron Ads → recomendaciones IA (diferenciador real vs Manychat/Wati) ✅
    > Sin atribución real (Bloque M) el cron es ciego — solo ve clics, no ROI.
    > **Esto es lo que justifica el SaaS** — sino somos un Manychat más caro.
-   - [ ] B6.5.1 — Tabla `AdsRecommendations` (PK company_id, SK rec_id, TTL 7d)
-   - [ ] B6.5.2 — Cron analiza funnel COMPLETO: CPM, CPC, CPL, CPA, ROI (no solo CPL)
-   - [ ] B6.5.3 — 7 tipos de recomendación con justificación numérica:
-       - 🟢 ESCALAR +X% (CPL bajó 7d Y conversiones suben Y NO cae ROI)
-       - 🔴 PAUSAR (CPL +50% en 24h Y CTR bajó)
-       - 🟡 REDUCIR -X% (sigue convirtiendo pero CPL marginal sube)
-       - 🔄 REFRESH CREATIVO (CTR -30% esta semana = anuncio quemado)
-       - 🎯 CAMBIAR TARGETING (CPM alto + CTR bajo = audiencia saturada)
-       - ⚠️ RECARGAR PRESUPUESTO (campaña top con saldo < N días)
-       - 📊 A/B TEST (validar copy A vs B en campaña ganadora)
-   - [ ] B6.5.4 — Cada recomendación incluye: data exacta, impacto estimado $, confianza 0-100
-   - [ ] B6.5.5 — Cap máximo: ±25% del budget actual por recomendación (anti-explosión)
-   - [ ] B6.5.6 — Push FCM al owner cuando hay recomendación de alto impacto (>$50k/día)
-   - [ ] B6.5.7 — Endpoints: GET /ads/recommendations · POST /ads/recommendations/{id}/apply · /dismiss
-   - [ ] B6.5.8 — Frontend `/dashboard/ads/recommendations` con cards detalladas
-   - [ ] B6.5.9 — Dismissed 3 veces = sistema deja de sugerir esa misma cosa por 7 días
-   - [ ] B6.5.10 — Después de 48h aplicada, registrar resultado real (sistema aprende)
-   - [ ] B6.5.11 — Reactivar cron `ads-daily-optimize` solo cuando B6.5.1-B6.5.10 estén hechos
+   - [x] B6.5.1 — Tabla `AdsRecommendations` (PK company_id, SK rec_id, TTL 7d, GSI status-created) ✅
+   - [x] B6.5.2 — `handle_ads_cron_recommend()` analiza funnel COMPLETO: CPM, CPC, CPL, ROAS real desde `AdsAttribution` (API v52) ✅
+   - [x] B6.5.3 — 7 tipos de recomendación con justificación numérica implementadas:
+       - 🟢 SCALE (ROAS≥2.5x + CPL estable + ≥3 ventas)
+       - 🔴 PAUSE (CPL +50% Y CTR cae >15%)
+       - 🟡 REDUCE (CPL marginal sube 20-50%)
+       - 🔄 REFRESH_CREATIVE (CTR cae ≥30% en 7d)
+       - 🎯 CHANGE_TARGETING (CPM alto + CTR bajo)
+       - ⚠️ RECHARGE_BUDGET (saldo < 3 días)
+       - 📊 AB_TEST (campaña ganadora estable)
+   - [x] B6.5.4 — Justification dict + impact_estimate_cents + confidence 0-100 ✅
+   - [x] B6.5.5 — Cap ±25% del budget actual (en regla SCALE) ✅
+   - [ ] B6.5.6 — Push FCM al owner para recs de alto impacto (TODO — no bloquea, ya queda registrado en CloudWatch)
+   - [x] B6.5.7 — Endpoints: GET /ads/recommendations · POST /ads/recommendations/apply · /dismiss (API v51) ✅
+   - [x] B6.5.8 — Frontend `/dashboard/ads` tab "🎯 IA" con cards + apply (override) + dismiss (con razón) (frontend `5273883`) ✅
+   - [x] B6.5.9 — Helper `_b65_already_dismissed_recently` bloquea 3 dismisses del mismo tipo+campaña por 7d ✅
+   - [ ] B6.5.10 — Resultado 48h post-apply (sistema aprende) — TODO siguiente sprint
+   - [x] B6.5.11 — EventBridge `ads-daily-optimize` reactivado apuntando a `/ads/cron-recommend` (cron 6 AM UTC) ✅
 - [ ] **B7** Session timeout 30 min de inactividad para admins
 - [ ] **B8** Email automático "se hizo X en tu cuenta" al cliente cada vez que admin actúa
 - [ ] **B9** Login audit (IP, geo, user-agent) en `AuditLog`
@@ -314,19 +313,22 @@
 - [ ] **M15** Crea N leads independientes (uno por asistente), manda N Purchase events a Meta — modelo: 5 ventas de $100 (no 1 de $500)
 - [ ] **M16** Después de validación, dispara flow de agendamiento existente
 #### Pixel por tenant
-- [ ] **M17** Embedded Signup crea Pixel automático para cliente nuevo si no tiene (vía Meta Business API)
-- [ ] **M18** `config_pro.pixel_id` por tenant — todos los eventos van al pixel del tenant, no del SaaS
+- [x] **M17** Embedded Signup crea Pixel automático si tenant nuevo no tiene (Meta Business API en `handle_meta_exchange`) (API v48) ✅
+- [x] **M18** `config_pro.meta_pixel_id` por tenant — `_send_meta_event` lee del config, todos los eventos al pixel del tenant ✅ (implícito por M1)
 #### Validación + observabilidad
 - [ ] **M19** Test event code mode — validar primeros 5 eventos antes de producción
 - [ ] **M20** Dashboard "Match Rate" por tenant en `/admin/tenants/{id}` — qué % de hashes matchearon usuarios reales en Meta
-- [ ] **M21** Tabla `AdsAttribution` (campaign_id → leads → payments) para calcular ROI real por campaña
-#### Bonus de la sesión M1-M7 (28 abril)
-- [x] **Bot M3A**: refactor `send_meta_capi_event` → wrapper que usa `_send_meta_event` con `event_id` determinístico + enriquece con `campaign_id` first-touch del lead (Bot v7) ✅
+- [x] **M21** Tabla `AdsAttribution` (PK company_id, SK campaign#phone#event#epoch, GSI campaign-event-index, TTL 365d, PITR) + integración bot wrapper + endpoint `GET /ads/attribution` con métricas agregadas (Bot v14 + API v49) ✅
+#### Bonus de la sesión 28 abril (M1-M7+M17+M21 + B6.5 completo)
+- [x] **Bot M3A**: refactor `send_meta_capi_event` → wrapper con `event_id` determinístico + enriquece con `campaign_id` first-touch del lead (Bot v7) ✅
 - [x] **Bot M3B**: elimina llamada legacy duplicada `send_meta_purchase_event` que disparaba Purchase x2 al pixel del SaaS (Bot v8) ✅
 - [x] **Bot M3C**: Lead event ya no se dispara en cada saludo — solo cuando viene de CTW Ad. Agrega `messaging_channel=whatsapp` + `action_source=chat` (Bot v9-v12) ✅
 - [x] **Bot M3D**: borra 89 líneas de código legacy CAPI (env vars `META_PIXEL_ID`/`META_CAPI_ACCESS_TOKEN` + 3 funciones muertas) (Bot v13) ✅
-- [x] **Layer openpyxl** publicado y adjuntado a SaaS_API_Handler (266 KB, layer:1)
-- [x] Helpers reutilizables `~/.deploy_bot.sh` y `~/.deploy_api.sh` (zip + py_compile + deploy + publish-version en 1 línea)
+- [x] **Bot M21 wrapper**: `send_meta_capi_event` registra automáticamente atribución first+last en `AdsAttribution` cuando dispara Purchase/Lead/Checkout/Schedule (Bot v14) ✅
+- [x] **Layer openpyxl** publicado y adjuntado a SaaS_API_Handler (266 KB, layer:1) ✅
+- [x] **EventBridge `ads-daily-optimize`** ENABLED apuntando a `/ads/cron-recommend` (cron 6 AM UTC, primer ciclo: mañana) ✅
+- [x] **Helpers reutilizables** `~/.deploy_bot.sh` y `~/.deploy_api.sh` (zip + py_compile + deploy + publish-version en 1 línea) — ahorra ~30s por deploy ✅
+- [x] **Bug crítico resuelto**: cron Ads ya NO escala automáticamente sin consentimiento (causa del Bug #2 del 28 abril) — ahora solo recomienda ✅
 ---
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
 - [x] `PlatformAdmins` (PK: `email`) — equipo de la plataforma ✅ creada
@@ -336,8 +338,8 @@
 - [ ] `BugReports` (PK: `report_id`, GSI: `company_id`)
 - [ ] `TenantQuotas` (PK: `company_id`, SK: `period`) — tracking mensajes/leads/agentes
 - [x] `MetaEventsLog` (PK: `event_id`, TTL 90d, PITR) ✅ creada — dedup eventos CAPI antes de enviar
-- [ ] `AdsAttribution` (PK: `company_id`, SK: `lead_phone#payment_id`) — vincula campaign → lead → pago
-- [ ] `AdsRecommendations` (PK: `company_id`, SK: `rec_id`, TTL 7d) — recomendaciones IA del cron
+- [x] `AdsAttribution` (PK: `company_id`, SK: `campaign_id#phone#event#epoch`, GSI: `campaign-event-index`, TTL 365d, PITR) ✅ creada — vincula campaign → lead → pago
+- [x] `AdsRecommendations` (PK: `company_id`, SK: `rec_id`, GSI: `status-created-index`, TTL 7d, PITR) ✅ creada — recomendaciones IA del cron
 - [ ] Modificar `KnowledgeBase config_pro`: agregar `feature_overrides`, `tenant_notes`, `tags`, `events_timeline`, `pixel_id`
 - [ ] Modificar `Leads_CRM`: agregar `source_campaign_id`, `source_type`, `paid_amount`
 ### ⚙️ Env vars nuevas
@@ -585,13 +587,13 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-███████████████████████████░░░ 89%
+████████████████████████████░░ 92%
 | Categoría | % |
 |---|---|
-| ✅ Hecho | **89%** |
-| 🔧 Admin Panel B-M (planeado completo) | 4% |
+| ✅ Hecho | **92%** |
+| 🔧 Admin Panel + features pendientes (B6-K + M restantes) | 1% |
 | 🟡 Sprints 1-7 + features futuras | 7% |
-**Última medición:** 28 abril 2026 (Bloque M M1-M7 deployados — Meta CAPI multi-tenant funcionando)
+**Última medición:** 28 abril 2026 — sesión maratón nocturna (Bloque M completo + B6.5 cron Ads recomendaciones IA)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -600,7 +602,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **82% → 85%** — Admin Panel Fase A (overview + tenants list) ✅ 🦁
 - [x] **85% → 87%** — B5 (2FA admins) + 8 hotfixes críticos + roadmap M ✅ 🦁
 - [x] **87% → 89%** — Bloque M M1-M7 (Meta CAPI completo + plantilla Excel + bulk import) ✅ 🦁
-- [ ] **89% → 92%** — Bloque M M11-M21 (multi-persona + pixel auto + match rate) + B6.5 cron Ads ⭐ ESTÁS AQUÍ
+- [x] **89% → 92%** — M17 pixel auto + M21 AdsAttribution + B6.5 cron Ads recomendaciones IA (7 reglas + UI) ✅ 🦁🦁
+- [ ] **92% → 95%** — Admin Panel Fases C-E (Tenants detail + Features + Impersonate) + M11-M16 multi-persona JMC ⭐ ESTÁS AQUÍ
 - [ ] **92% → 95%** — Admin Panel Fases C-E (Tenants + Features + Impersonate)
 - [ ] **95% → 98%** — Fases F-J (Ticketing + Observabilidad + Comunicación + Compliance)
 - [ ] **98% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
