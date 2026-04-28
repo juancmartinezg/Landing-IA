@@ -1,6 +1,7 @@
 'use client';
 import { useAuth } from '../../providers';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 interface Tenant {
   company_id: string;
@@ -141,26 +142,33 @@ export default function AdminTenantsPage() {
                 <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-bold">Plan</th>
                 <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-bold">Status</th>
                 <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest text-gray-500 font-bold">Creado</th>
+                <th className="px-4 py-3 w-12"></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-12">
+                  <td colSpan={6} className="text-center py-12">
                     <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-12 text-xs text-gray-500">
+                  <td colSpan={6} className="text-center py-12 text-xs text-gray-500">
                     {search ? 'Sin resultados con ese filtro' : 'Sin tenants'}
                   </td>
                 </tr>
               ) : (
-                filtered.map(t => (
-                  <tr key={t.company_id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
+               filtered.map(t => (
+                  <tr key={t.company_id}
+                    className="border-b border-white/[0.03] hover:bg-white/[0.04] cursor-pointer transition-all"
+                    onClick={() => window.location.href = `/admin/tenants/${t.company_id}`}>
                     <td className="px-4 py-3">
-                      <code className="text-xs font-mono text-indigo-300">{t.company_id}</code>
+                      <Link href={`/admin/tenants/${t.company_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs font-mono text-indigo-300 hover:text-indigo-200 hover:underline">
+                        {t.company_id}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-sm text-white">
                       {t.brand_name || <span className="text-gray-600 italic">sin nombre</span>}
@@ -181,6 +189,9 @@ export default function AdminTenantsPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400">
                       {formatDate(t.created_at)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-xs text-gray-500">
+                      →
                     </td>
                   </tr>
                 ))
