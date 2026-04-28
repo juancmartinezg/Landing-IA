@@ -7,6 +7,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const adminMenu = [
   { href: '/admin', label: 'Overview', icon: '📊' },
   { href: '/admin/tenants', label: 'Tenants', icon: '🏢' },
+  { href: '/admin/errors', label: 'Errores', icon: '🐛' },
   { href: '/admin/team', label: 'Equipo', icon: '🧑‍💼' },
 ];
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
