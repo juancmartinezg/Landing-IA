@@ -160,10 +160,18 @@ export default function AdminTenantDetailPage() {
             ))}
           </div>
         </div>
-        <button onClick={fetchDetail} disabled={refreshing}
-          className="text-xs px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg disabled:opacity-50 transition-all">
-          {refreshing ? '⏳' : '🔄 Actualizar'}
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={fetchDetail} disabled={refreshing}
+            className="text-xs px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg disabled:opacity-50 transition-all">
+            {refreshing ? '⏳' : '🔄 Actualizar'}
+          </button>
+          <StatusActionsPanel
+            tenantId={data.tenant_id}
+            currentStatus={status}
+            user={user}
+            onChanged={fetchDetail}
+          />
+        </div>
       </div>
       {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto border-b border-white/5">
@@ -522,5 +530,131 @@ function NotesAndTagsEditor({ tenantId, initialNotes, initialTags, user, onSaved
         </button>
       </div>
     </div>
+  );
+}
+// ============================================================
+// C7: Panel de acciones de status (Suspender / Reactivar / Eliminar)
+// ============================================================
+function StatusActionsPanel({ tenantId, currentStatus, user, onChanged }: any) {
+  const [acting, setActing] = useState<string | null>(null);
+  const [modal, setModal] = useState<null | { action: 'SUSPENDED' | 'ACTIVE' | 'DELETED', title: string, desc: string, requireReason: boolean }>(null);
+  const [reason, setReason] = useState('');
+  const openModal = (action: 'SUSPENDED' | 'ACTIVE' | 'DELETED') => {
+    const configs = {
+      SUSPENDED: {
+        title: '⏸️ Suspender tenant',
+        desc: 'El bot dejará de responderle al usuario final (silencio total). No se pierde data, se puede reactivar cuando quieras.',
+        requireReason: true,
+      },
+      ACTIVE: {
+        title: '✅ Reactivar tenant',
+        desc: 'El bot volverá a responder normalmente.',
+        requireReason: false,
+      },
+      DELETED: {
+        title: '🗑️ Marcar como eliminado',
+        desc: 'Soft delete. El bot se apaga, el tenant sale de las listas por defecto, pero la data queda intacta durante 90 días.',
+        requireReason: true,
+      },
+    };
+    setReason('');
+    setModal({ action, ...configs[action] });
+  };
+  const execute = async () => {
+    if (!modal) return;
+    if (modal.requireReason && !reason.trim()) {
+      alert('Escribe una razón para auditoría');
+      return;
+    }
+    setActing(modal.action);
+    try {
+      const res = await fetch(`${API_URL}/admin/tenants/${encodeURIComponent(tenantId)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'client-id': user?.sub || user?.email,
+          'x-user-email': user?.email,
+        },
+        body: JSON.stringify({ status: modal.action, reason: reason.trim() }),
+      });
+      if (res.ok) {
+        setModal(null);
+        if (onChanged) onChanged();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert('Error: ' + (err.error || res.status));
+      }
+    } catch {
+      alert('Error de conexión');
+    }
+    setActing(null);
+  };
+  const isSuspended = currentStatus === 'SUSPENDED';
+  const isDeleted = currentStatus === 'DELETED';
+  return (
+    <>
+      {isSuspended || isDeleted ? (
+        <button onClick={() => openModal('ACTIVE')} disabled={acting === 'ACTIVE'}
+          className="text-xs px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold transition-all disabled:opacity-50">
+          {acting === 'ACTIVE' ? '⏳' : '✅ Reactivar'}
+        </button>
+      ) : (
+        <button onClick={() => openModal('SUSPENDED')} disabled={acting === 'SUSPENDED'}
+          className="text-xs px-4 py-2 bg-yellow-600/20 hover:bg-yellow-600 text-yellow-400 hover:text-white border border-yellow-500/30 rounded-lg font-bold transition-all disabled:opacity-50">
+          {acting === 'SUSPENDED' ? '⏳' : '⏸️ Suspender'}
+        </button>
+      )}
+      {!isDeleted && (
+        <button onClick={() => openModal('DELETED')} disabled={acting === 'DELETED'}
+          className="text-xs px-4 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-lg font-bold transition-all disabled:opacity-50">
+          {acting === 'DELETED' ? '⏳' : '🗑️ Eliminar'}
+        </button>
+      )}
+      {/* Modal de confirmación */}
+      {modal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setModal(null)}>
+          <div className="bg-[#0B0F1A] border border-white/10 rounded-2xl p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-2">{modal.title}</h3>
+            <p className="text-xs text-gray-400 mb-4">{modal.desc}</p>
+            <div className="bg-white/5 rounded-lg p-3 mb-4">
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Tenant</p>
+              <code className="text-xs text-indigo-300 font-mono">{tenantId}</code>
+            </div>
+            {modal.requireReason && (
+              <div className="mb-4">
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">
+                  Razón (requerida para auditoría)
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Ej: Cliente no pagó 3 meses / pausa vacaciones / cierre de cuenta..."
+                  maxLength={500}
+                  rows={3}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 resize-none"
+                />
+                <p className="text-[9px] text-gray-600 text-right mt-1">{reason.length}/500</p>
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setModal(null)}
+                className="text-xs px-4 py-2 border border-white/10 hover:bg-white/5 text-gray-400 rounded-lg font-bold transition-all">
+                Cancelar
+              </button>
+              <button onClick={execute} disabled={acting !== null}
+                className={`text-xs px-4 py-2 rounded-lg font-bold transition-all disabled:opacity-50 ${
+                  modal.action === 'ACTIVE' ? 'bg-emerald-600 hover:bg-emerald-500 text-white' :
+                  modal.action === 'DELETED' ? 'bg-red-600 hover:bg-red-500 text-white' :
+                  'bg-yellow-600 hover:bg-yellow-500 text-white'
+                }`}>
+                {acting ? '⏳ Aplicando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
