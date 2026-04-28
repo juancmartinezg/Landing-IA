@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 28 abril 2026 (B5 + hotfixes 2FA + bug crítico webhook + Bloque M Meta CAPI)
+**Última actualización:** 28 abril 2026 (Bloque M Meta CAPI — M1-M7 deployados ✅)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -293,15 +293,15 @@
 ### 🎯 Fase M — Meta CAPI completo + ROI real (CRÍTICO antes de optimización IA)
 > Sin esto el algoritmo IA del cron es ciego — solo ve clics, no ventas reales.
 > Diferenciador masivo: HubSpot cobra $890/mes por esto, en clientes.bot va incluido.
-#### Fundamento (sin esto, todo lo demás es ruido)
-- [ ] **M1** Helper `_send_meta_event(event_name, user_data, custom_data, campaign_id, test_event_code)` con SHA-256 hashing reusable
-- [ ] **M2** Tabla `MetaEventsLog` (PK: event_id, TTL 90d) — dedup en nuestra DB antes de mandar
-- [ ] **M3** `event_id` determinístico para dedup en Meta: `purchase_{phone}_{service_slug}_{yyyymmdd}` y `lead_{phone}_{campaign_id}_{yyyymmdd}`
-- [ ] **M4** Bot captura `referral.source_id` y `referral.source_type` cuando llega lead via CTW Ad — guarda en `Leads_CRM.source_campaign_id`
+##### Fundamento (sin esto, todo lo demás es ruido)
+- [x] **M1** Helper `_send_meta_event(event_name, user_data, custom_data, campaign_id, test_event_code)` con SHA-256 hashing reusable (Bot v5) ✅
+- [x] **M2** Tabla `MetaEventsLog` (PK: event_id, TTL 90d, PITR) ✅
+- [x] **M3** `event_id` determinístico: `{event}_{phone_last4}_{ref}_{yyyymmdd}` (Bot v5) ✅
+- [x] **M4** Bot captura `referral.source_id` + `ctwa_clid` con modelo first-touch + last-touch en `Leads_CRM` (Bot v6) ✅
 #### Plantilla Excel inteligente para subir histórico
-- [ ] **M5** Endpoint `GET /leads/import-template?company_id=X` genera `.xlsx` con dropdown nativo de servicios del catálogo del tenant (usa `openpyxl` layer)
-- [ ] **M6** Endpoint `POST /leads/bulk-import-purchases` procesa el .xlsx subido — valida servicio contra catálogo, calcula monto del catálogo si no se especifica, manda Purchase events a Meta CAPI
-- [ ] **M7** UI en `/dashboard/crm`: botones "📥 Descargar plantilla" + "📤 Subir ventas históricas"
+- [x] **M5** Endpoint `GET /leads/import-template` genera `.xlsx` con dropdown nativo del catálogo (openpyxl layer + API v46) ✅
+- [x] **M6** Endpoint `POST /leads/bulk-import-purchases` valida + persiste + dispara Purchase CAPI (API v47) ✅
+- [x] **M7** UI `/dashboard/crm`: botón 💰 Ventas con descarga plantilla + parsing xlsx cliente + bulk import (frontend `fa4d537`) ✅
 #### Auto-envío en tiempo real
 - [ ] **M8** Bot manda `Purchase` event automáticamente cuando webhook de pago (Wompi/Bold/etc) confirma — usa `service_slug` para precio + `source_campaign_id` capturado
 - [ ] **M9** Bot manda `Lead` event cuando llega lead nuevo via CTW Ad
@@ -320,6 +320,13 @@
 - [ ] **M19** Test event code mode — validar primeros 5 eventos antes de producción
 - [ ] **M20** Dashboard "Match Rate" por tenant en `/admin/tenants/{id}` — qué % de hashes matchearon usuarios reales en Meta
 - [ ] **M21** Tabla `AdsAttribution` (campaign_id → leads → payments) para calcular ROI real por campaña
+#### Bonus de la sesión M1-M7 (28 abril)
+- [x] **Bot M3A**: refactor `send_meta_capi_event` → wrapper que usa `_send_meta_event` con `event_id` determinístico + enriquece con `campaign_id` first-touch del lead (Bot v7) ✅
+- [x] **Bot M3B**: elimina llamada legacy duplicada `send_meta_purchase_event` que disparaba Purchase x2 al pixel del SaaS (Bot v8) ✅
+- [x] **Bot M3C**: Lead event ya no se dispara en cada saludo — solo cuando viene de CTW Ad. Agrega `messaging_channel=whatsapp` + `action_source=chat` (Bot v9-v12) ✅
+- [x] **Bot M3D**: borra 89 líneas de código legacy CAPI (env vars `META_PIXEL_ID`/`META_CAPI_ACCESS_TOKEN` + 3 funciones muertas) (Bot v13) ✅
+- [x] **Layer openpyxl** publicado y adjuntado a SaaS_API_Handler (266 KB, layer:1)
+- [x] Helpers reutilizables `~/.deploy_bot.sh` y `~/.deploy_api.sh` (zip + py_compile + deploy + publish-version en 1 línea)
 ---
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
 - [x] `PlatformAdmins` (PK: `email`) — equipo de la plataforma ✅ creada
@@ -328,7 +335,7 @@
 - [ ] `SupportTickets` (PK: `ticket_id`, GSI: `company_id`, GSI: `assigned_to`)
 - [ ] `BugReports` (PK: `report_id`, GSI: `company_id`)
 - [ ] `TenantQuotas` (PK: `company_id`, SK: `period`) — tracking mensajes/leads/agentes
-- [ ] `MetaEventsLog` (PK: `event_id`, TTL 90 días) — dedup eventos CAPI antes de enviar
+- [x] `MetaEventsLog` (PK: `event_id`, TTL 90d, PITR) ✅ creada — dedup eventos CAPI antes de enviar
 - [ ] `AdsAttribution` (PK: `company_id`, SK: `lead_phone#payment_id`) — vincula campaign → lead → pago
 - [ ] `AdsRecommendations` (PK: `company_id`, SK: `rec_id`, TTL 7d) — recomendaciones IA del cron
 - [ ] Modificar `KnowledgeBase config_pro`: agregar `feature_overrides`, `tenant_notes`, `tags`, `events_timeline`, `pixel_id`
@@ -578,13 +585,13 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-███████████████████████████░░░ 87%
+███████████████████████████░░░ 89%
 | Categoría | % |
 |---|---|
-| ✅ Hecho | **87%** |
-| 🔧 Admin Panel B-M (planeado completo) | 6% |
+| ✅ Hecho | **89%** |
+| 🔧 Admin Panel B-M (planeado completo) | 4% |
 | 🟡 Sprints 1-7 + features futuras | 7% |
-**Última medición:** 28 abril 2026 (B5 cerrado + 8 bugs fixeados + Bloque M aterrizado)
+**Última medición:** 28 abril 2026 (Bloque M M1-M7 deployados — Meta CAPI multi-tenant funcionando)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -592,7 +599,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **69% → 82%** — Seguridad completa + Tokens + Ads Pro + 2FA triple ✅
 - [x] **82% → 85%** — Admin Panel Fase A (overview + tenants list) ✅ 🦁
 - [x] **85% → 87%** — B5 (2FA admins) + 8 hotfixes críticos + roadmap M ✅ 🦁
-- [ ] **87% → 92%** — Bloque M Meta CAPI + B6.5 cron Ads recomendaciones ⭐ ESTÁS AQUÍ
+- [x] **87% → 89%** — Bloque M M1-M7 (Meta CAPI completo + plantilla Excel + bulk import) ✅ 🦁
+- [ ] **89% → 92%** — Bloque M M11-M21 (multi-persona + pixel auto + match rate) + B6.5 cron Ads ⭐ ESTÁS AQUÍ
 - [ ] **92% → 95%** — Admin Panel Fases C-E (Tenants + Features + Impersonate)
 - [ ] **95% → 98%** — Fases F-J (Ticketing + Observabilidad + Comunicación + Compliance)
 - [ ] **98% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
