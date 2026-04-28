@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 29 abril 2026 (Fase C + multi-tenant strict + Fase M 100% + fix atribución M9/M15 ✅ — 73%)
+**Última actualización:** 29 abril 2026 (Fase C + multi-tenant strict + Fase M 100% + fix atribución M9/M15 + estrategia GHL killer definida ✅ — 73%)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -31,6 +31,51 @@
 | **Video IA** | HeyGen (sin chat) | Solo video, sin contexto | Video personalizado por lead |
 | **White label** | GoHighLevel | $297/mes minimum | Plan agencia con margen alto |
 **Meta:** 1,000 clientes pagando en 12 meses post-lanzamiento. ARR $2M+.
+---
+## 💰 ESTRATEGIA COMERCIAL — "GoHighLevel++"
+> **Posicionamiento**: lo que GoHighLevel debería haber sido.
+> Mismo precio, 3x más features (IA real, CAPI completo, LATAM nativo, Voz IA incluida).
+> NO competimos por precio — competimos por valor con precio igualado al líder.
+### 🎯 Pricing definitivo (3 planes + Enterprise contact)
+| Plan | USD (Stripe) | COP (Wompi) | Target | vs GHL |
+|---|---|---|---|---|
+| **Solo** | $97/mes | $349,000 | 1 negocio, 1 WhatsApp | = GHL Starter $97 (con IA real) |
+| **Pro** ⭐ | $297/mes | $1,090,000 | PYME con equipo, 5 sub-cuentas | = GHL Unlimited $297 (con CAPI + Voz) |
+| **Agency** | $497/mes | $1,790,000 | White-label total ilimitado | = GHL SaaS Pro $497 (con cron IA Ads) |
+| **Enterprise** | $997+ | $3,590,000+ | Custom, account manager | (GHL no tiene equivalente) |
+### 📊 Quotas por plan
+| Quota | Solo $97 | Pro $297 | Agency $497 | Enterprise $997+ |
+|---|---|---|---|---|
+| Sub-cuentas | 1 | 5 | Ilimitado | Ilimitado |
+| Mensajes WhatsApp/mes | 5,000 | 25,000 | 100,000 | Ilimitado |
+| Leads CRM | 5,000 | Ilimitado | Ilimitado | Ilimitado |
+| Agentes humanos | 3 | 10 | Ilimitado | Ilimitado |
+| Ads Pro IA | ✅ | ✅ + cron | ✅ + cron | ✅ + cron + custom |
+| Meta CAPI + atribución | ✅ | ✅ | ✅ | ✅ |
+| VAPI Voz IA | 60 min/mes | 300 min/mes | 1,000 min/mes | Ilimitado |
+| White-label | ❌ | Parcial | ✅ Total | ✅ + custom domain |
+| API pública | ❌ | ✅ | ✅ | ✅ |
+| Soporte | Email 24h | Email 4h | WhatsApp 1h | Slack dedicado |
+### 🎁 Descuentos y promos de lanzamiento
+- **Trial 14 días sin tarjeta** (vs GHL 14 días — igualamos)
+- **Annual -20%** (Solo $77/$297→$237/$497→$397)
+- **Lifetime Beta — 25 cupos $97 one-time = Solo plan forever** (escasez real, capital early)
+- **NO** plan Free (mata percepción premium)
+### 🤝 Programa de afiliados (movido al Sprint 1)
+> Diferenciador clave vs GHL: **30% recurring FOREVER** (GHL da 40% año 1, 5% después).
+> A partir del año 2, los afiliados cobran 6x más con clientes.bot que con GHL.
+- **Comisión**: 30% recurring forever del MRR del referido
+- **Cookie**: 90 días (vs GHL 30 días)
+- **Min payout**: $50 USD / $200,000 COP
+- **Pago mensual** día 5 vía Stripe Connect (USD) o transferencia Wompi (COP)
+- **Sin tope, sin caducidad** — argumento de venta principal a YouTubers GHL
+- **Sub-afiliados 2-tier** — pendiente Sprint 4 (no en MVP)
+### 🎯 Migration tool (importador desde GHL)
+- CSV de leads → Leads_CRM (Sprint 1)
+- Workflows GHL → templates internos (Sprint 4)
+- Argumento de venta: "1-click migration desde GoHighLevel"
+### 🔥 Tagline propuesto landing
+> *"Lo que GoHighLevel debería haber sido. WhatsApp con IA real. Atribución completa. Multi-pasarela LATAM. Por el mismo precio."*
 ---
 ## 🏗️ STACK
 - **Frontend:** Next.js 14 + Tailwind + Amplify
@@ -358,7 +403,11 @@
 - [ ] `SupportRequests` (PK: `request_id`, GSI: `company_id`, TTL 30 días)
 - [ ] `SupportTickets` (PK: `ticket_id`, GSI: `company_id`, GSI: `assigned_to`)
 - [ ] `BugReports` (PK: `report_id`, GSI: `company_id`)
-- [ ] `TenantQuotas` (PK: `company_id`, SK: `period`) — tracking mensajes/leads/agentes
+- [ ] `TenantQuotas` (PK: `company_id`, SK: `period`) — tracking mensajes/leads/agentes (Sprint 1)
+- [ ] `Subscriptions` (PK: `company_id`) — gateway-agnostic, status, plan, trial_ends_at (Sprint 1)
+- [ ] `Affiliates` (PK: `email`, GSI: `affiliate_code-index`) — programa de afiliados (Sprint 1)
+- [ ] `Referrals` (PK: `referral_id`, GSI: `affiliate_email-index`) — tracking de referidos (Sprint 1)
+- [ ] `AffiliatePayouts` (PK: `affiliate_email`, SK: `month`) — payouts mensuales (Sprint 1)
 - [x] `MetaEventsLog` (PK: `event_id`, TTL 90d, PITR) ✅ creada — dedup eventos CAPI antes de enviar
 - [x] `AdsAttribution` (PK: `company_id`, SK: `campaign_id#phone#event#epoch`, GSI: `campaign-event-index`, TTL 365d, PITR) ✅ creada — vincula campaign → lead → pago
 - [x] `AdsRecommendations` (PK: `company_id`, SK: `rec_id`, GSI: `status-created-index`, TTL 7d, PITR) ✅ creada — recomendaciones IA del cron
@@ -367,7 +416,12 @@
 ### ⚙️ Env vars nuevas
 - `SUPER_ADMIN_EMAILS` (ya existe) — bootstrap inicial
 - `IMPERSONATE_HMAC_SECRET` — firma de tickets
-- `PLAN_FEATURES_JSON` — catálogo de features por plan
+- `PLAN_FEATURES_JSON` — catálogo de features + quotas por plan (Sprint 1)
+- `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` — billing global (Sprint 1)
+- `STRIPE_CONNECT_CLIENT_ID` — payout de afiliados USD (Sprint 1)
+- `WOMPI_SUBSCRIPTIONS_PUBLIC_KEY` / `WOMPI_SUBSCRIPTIONS_PRIVATE_KEY` — billing CO recurrente (Sprint 1)
+- `AFFILIATE_COMMISSION_RATE` — default 0.30 (30%) configurable (Sprint 1)
+- `AFFILIATE_COOKIE_DAYS` — default 90 (Sprint 1)
 ### 🛡️ Reglas inamovibles del Admin Panel
 - Toda acción admin queda en `AuditLog`
 - Toda escritura sobre tenant requiere consentimiento del cliente o 2FA del admin
@@ -464,16 +518,42 @@
 - [ ] Pasarela personalizada bajo demanda (proceso documentado para integrar nuevas en <48h)
 ---
 ## 🟡 SPRINTS PLANEADOS — Orden de ejecución (sin fechas)
-### 🥇 Sprint 1 — Foundation: empezar a cobrar
-> Costo: **$0** (Stripe es comisión por transacción, sin minimum)
-- [ ] **Stripe billing del SaaS** (Fase 28)
-  - Trial 7 días automático
-  - Feature flags por plan (Starter / Growth / Enterprise)
-  - Límites por plan (conversaciones, leads, agentes)
-  - Stripe Checkout + webhooks
-  - Página `/pricing` pública
-  - Upgrade/downgrade desde dashboard
-  - Email confirmación cobro / fallo de cobro
+### 🥇 Sprint 1 — Foundation: empezar a cobrar + afiliados (estrategia GHL killer)
+> Costo: **$0** (Stripe + Wompi son comisión por transacción, sin minimum)
+> **3 frentes integrados**: Billing dual (Stripe global + Wompi CO) + Feature Flags + Quotas + Programa de Afiliados
+#### Billing dual gateway
+- [ ] **S1.0** Pre-flight: verificar Wompi Subscriptions habilitado + crear cuenta Stripe test
+- [ ] **S1.1** Tabla `Subscriptions` gateway-agnostic (PK company_id, gateway, gateway_subscription_id, status, plan, trial_ends_at, next_billing_date)
+- [ ] **S1.2** Catálogo `PLAN_FEATURES_JSON` env var (Solo/Pro/Agency/Enterprise → features + quotas)
+- [ ] **S1.3** Helper `_resolve_billing_gateway(country)` → `wompi` (CO) o `stripe` (resto del mundo)
+- [ ] **S1.4** Endpoints: `/billing/checkout`, `/billing/portal`, `/billing/me`, `/billing/cancel`
+- [ ] **S1.5** Webhooks separados Stripe + Wompi → formato canónico interno (`subscription.active/past_due/canceled`)
+- [ ] **S1.6** Trial 14 días simulado (cron diario revisa `trial_ends_at` y cobra al día 15)
+- [ ] **S1.7** Email Resend: cobro OK / cobro falla / trial_ending día 12 / trial_expired
+#### Frontend billing
+- [ ] **S1.A** Página `/pricing` pública con detección país (toggle COP/USD) + 3 planes + comparativa GHL
+- [ ] **S1.B** Página `/dashboard/billing` (plan actual + invoices + upgrade/downgrade + cancelar)
+- [ ] **S1.C** Banner "trial expira en X días" en dashboard cliente
+- [ ] **S1.D** Modal annual discount (-20%) en upgrade
+#### Feature Flags + Quotas (Fase D adelantada)
+- [ ] **S1.E** Helper `has_feature(company_id, feature)` con override individual
+- [ ] **S1.F** Quotas tracking (mensajes/mes, leads, agentes, voz_min) en tabla `TenantQuotas`
+- [ ] **S1.G** Enforcement en bot/API: rechaza si excede + banner upgrade
+- [ ] **S1.H** Dashboard de uso por tenant (cards quota usado/total)
+#### 🤝 Programa de afiliados (30% recurring forever — diferenciador GHL killer)
+- [ ] **S1.I** Tabla `Affiliates` (PK email, affiliate_code único, payout_method, total_referred_mrr) + GSI affiliate_code-index
+- [ ] **S1.J** Tabla `Referrals` (PK referral_id, GSI affiliate_email, status PENDING/ACTIVE/CHURNED)
+- [ ] **S1.K** Tabla `AffiliatePayouts` (PK affiliate_email, SK month, status PENDING/PAID)
+- [ ] **S1.L** Endpoint `POST /affiliate/signup` + generación `affiliate_code` (slug+6 chars)
+- [ ] **S1.M** Tracking URL `clientes.bot/?ref=AFFILIATE_CODE` → cookie 90 días en frontend
+- [ ] **S1.N** Hook `/billing/checkout`: lee cookie ref → marca `Subscription.referred_by`
+- [ ] **S1.O** Webhook handlers: en cada cobro exitoso, calcula 30% y registra en `AffiliatePayouts`
+- [ ] **S1.P** Frontend `/affiliate` dashboard (link único + comisiones acumuladas + payouts pendientes/pagados + métricas)
+- [ ] **S1.Q** Cron mensual `affiliate-payout-batch` día 5: agrupa payouts ≥ $50 USD / $200k COP y paga vía Stripe Connect / transferencia Wompi
+- [ ] **S1.R** Email Resend confirmación de comisión generada + payout enviado
+#### Migration tool desde GHL
+- [ ] **S1.S** Importador CSV `Contacts` GHL → `Leads_CRM` (parseo de campos custom)
+- [ ] **S1.T** Página `/migrate-from-ghl` con guía + uploader CSV
 ### 🥈 Sprint 2 — Multicanal real (el rugido principal)
 > Costo: **$0** (todas las APIs son gratis)
 - [ ] **Web Chat Widget embebible** — `<script src="clientes.bot/widget/{company_id}.js">`
@@ -497,8 +577,9 @@
 - [ ] **Reseñas con IA** — bot pide reseña post-venta y publica en Google Maps/FB
 - [ ] **Funnel builder visual** — drag & drop con `react-flow` (gratis)
 - [ ] **Marketplace de bots** — clientes suben/descargan personalidades (bienes raíces, clínica, etc.)
-- [ ] **Comisiones de afiliados** — sistema de referidos con tracking automático
+- [ ] **Afiliados 2-tier avanzado** — sub-afiliados (gana % de los afiliados que reclutó). MVP de afiliados ya en Sprint 1.
 - [ ] **White label / Agencia** — multi-cliente dashboard + branding personalizado
+- [ ] **Migration workflows desde GHL** — importar templates/funnels GHL como triggers internos (CSV de leads ya en Sprint 1)
 - [ ] **API pública con docs** (`swagger-ui` gratis)
 ### 🎖️ Sprint 5 — Globalización
 > Costo: **$0**
@@ -618,8 +699,9 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | 🟡 Multicanal (IG/Messenger/Telegram) | 0% — Sprint 2 |
 | 🟡 Admin Panel completo (D-J) | ~15% |
 | 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
-| 🔧 Pendiente: D (Feature Flags) + E (Impersonate) + F-J + Stripe + multicanal | 2% |
-**Última medición:** 29 abril 2026 — sesión maratón + Fase M cerrada 100% + fix atribución silencioso v20 (M9 Lead CTW + M15 Purchase multi-persona)
+| 🤝 Programa Afiliados (movido a Sprint 1) | 0% — bloqueante crecimiento |
+| 🔧 Pendiente: Sprint 1 ampliado (Stripe+Wompi+Quotas+Afiliados) + E (Impersonate) + F-J + multicanal | 2% |
+**Última medición:** 29 abril 2026 — Fase M 100% + fix atribución v20 + estrategia "GHL killer" definida (pricing $97/$297/$497, afiliados 30% recurring forever movidos a Sprint 1)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
