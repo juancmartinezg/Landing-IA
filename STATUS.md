@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 27 abril 2026 (cierre Bloque A + roadmap Admin Panel completo B-K)
+**Última actualización:** 28 abril 2026 (B5 + hotfixes 2FA + bug crítico webhook + Bloque M Meta CAPI)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -170,8 +170,9 @@
 - [ ] **B2** Helper `get_admin_role()` + middleware `require_admin(roles)`
 - [ ] **B3** CRUD endpoints `/admin/team` (GET/POST/PUT/DELETE)
 - [ ] **B4** Frontend `/admin/team` con tabla + form crear/editar admin (estilo Mi equipo)
-- [ ] **B5** 2FA obligatorio para todos los roles admin (reusa sistema 2FA existente)
+- [x] **B5** 2FA obligatorio para todos los roles admin (Lambda v45 + frontend `0f6234a`) ✅
 - [ ] **B6** Confirmación 2FA en acciones destructivas (eliminar tenant, cambiar plan, dar permisos)
+- [ ] **B6.5** ⚠️ CRÍTICO Reescribir cron Ads: detectar y RECOMENDAR (no auto-aplicar). Cliente decide.
 - [ ] **B7** Session timeout 30 min de inactividad para admins
 - [ ] **B8** Email automático "se hizo X en tu cuenta" al cliente cada vez que admin actúa
 - [ ] **B9** Login audit (IP, geo, user-agent) en `AuditLog`
@@ -268,29 +269,49 @@
 - [ ] **K9** Tax handling + facturación electrónica por país
 - [ ] **K10** LTV (Customer Lifetime Value) calculado en tiempo real
 - [ ] **K11** Upsell suggestions IA ("este tenant pagaría más, está al 80% de su quota")
-### 🎯 Fase L — Meta CAPI completo (Conversions API)
-> CRM events → Meta para entrenar el algoritmo. Diferenciador masivo (HubSpot cobra $890/mes por esto).
-- [ ] **L1** Helper `send_meta_event(event_name, user_data, event_time, event_id)` reusable
-- [ ] **L2** Hashing helper SHA-256 normalizado (phone, email, name, document, city)
-- [ ] **L3** `POST /admin/capi/backfill-leads?company_id=&since=` (lote retroactivo)
-- [ ] **L4** UI botón "📡 Sincronizar 87 leads con Meta" en `/dashboard/crm`
-- [ ] **L5** Auto-sync popup después de CSV import (cliente decide)
-- [ ] **L6** Auto-envío `Lead` event en tiempo real (cada lead nuevo del bot)
-- [ ] **L7** Auto-envío `InitiateCheckout` cuando bot genera payment link
-- [ ] **L8** Recuperar `send_meta_purchase_event` del PR #5 (post-pago) y generalizar
-- [ ] **L9** Auto-envío `CompleteRegistration` (al confirmar email Cognito)
-- [ ] **L10** Test event code mode (validación primeros 5 antes de spammear pixel)
-- [ ] **L11** Dashboard de Match Rate por tenant en `/admin/tenants/{id}`
-- [ ] **L12** Dedupe entre online y offline events (event_id consistente)
-- [ ] **L13** Pixel del tenant (no del SaaS) — usa `feature_overrides` de Fase D
+### 🎯 Fase M — Meta CAPI completo + ROI real (CRÍTICO antes de optimización IA)
+> Sin esto el algoritmo IA del cron es ciego — solo ve clics, no ventas reales.
+> Diferenciador masivo: HubSpot cobra $890/mes por esto, en clientes.bot va incluido.
+#### Fundamento (sin esto, todo lo demás es ruido)
+- [ ] **M1** Helper `_send_meta_event(event_name, user_data, custom_data, campaign_id, test_event_code)` con SHA-256 hashing reusable
+- [ ] **M2** Tabla `MetaEventsLog` (PK: event_id, TTL 90d) — dedup en nuestra DB antes de mandar
+- [ ] **M3** `event_id` determinístico para dedup en Meta: `purchase_{phone}_{service_slug}_{yyyymmdd}` y `lead_{phone}_{campaign_id}_{yyyymmdd}`
+- [ ] **M4** Bot captura `referral.source_id` y `referral.source_type` cuando llega lead via CTW Ad — guarda en `Leads_CRM.source_campaign_id`
+#### Plantilla Excel inteligente para subir histórico
+- [ ] **M5** Endpoint `GET /leads/import-template?company_id=X` genera `.xlsx` con dropdown nativo de servicios del catálogo del tenant (usa `openpyxl` layer)
+- [ ] **M6** Endpoint `POST /leads/bulk-import-purchases` procesa el .xlsx subido — valida servicio contra catálogo, calcula monto del catálogo si no se especifica, manda Purchase events a Meta CAPI
+- [ ] **M7** UI en `/dashboard/crm`: botones "📥 Descargar plantilla" + "📤 Subir ventas históricas"
+#### Auto-envío en tiempo real
+- [ ] **M8** Bot manda `Purchase` event automáticamente cuando webhook de pago (Wompi/Bold/etc) confirma — usa `service_slug` para precio + `source_campaign_id` capturado
+- [ ] **M9** Bot manda `Lead` event cuando llega lead nuevo via CTW Ad
+- [ ] **M10** Bot manda `InitiateCheckout` cuando genera payment link
+#### Eventos de venta multi-persona (caso JMC: 1 reserva = N cupos)
+- [ ] **M11** Estado nuevo `AWAITING_PAX_COUNT` — bot pregunta "¿cuántas personas asisten?" antes de generar link
+- [ ] **M12** Bot calcula total: `pax_count × cupo_price`, genera link de pago correcto
+- [ ] **M13** Webhook de pago dispara WhatsApp Flow `attendees_form` (N paneles dinámicos según pax_count)
+- [ ] **M14** Backend valida unicidad de phone/documento entre asistentes (rechaza duplicados)
+- [ ] **M15** Crea N leads independientes (uno por asistente), manda N Purchase events a Meta — modelo: 5 ventas de $100 (no 1 de $500)
+- [ ] **M16** Después de validación, dispara flow de agendamiento existente
+#### Pixel por tenant
+- [ ] **M17** Embedded Signup crea Pixel automático para cliente nuevo si no tiene (vía Meta Business API)
+- [ ] **M18** `config_pro.pixel_id` por tenant — todos los eventos van al pixel del tenant, no del SaaS
+#### Validación + observabilidad
+- [ ] **M19** Test event code mode — validar primeros 5 eventos antes de producción
+- [ ] **M20** Dashboard "Match Rate" por tenant en `/admin/tenants/{id}` — qué % de hashes matchearon usuarios reales en Meta
+- [ ] **M21** Tabla `AdsAttribution` (campaign_id → leads → payments) para calcular ROI real por campaña
 ---
-### 🗂️ Tablas DynamoDB nuevas (a crear durante B-K)
-- `PlatformAdmins` (PK: `email`, SK: `role`) — equipo de la plataforma
-- `SupportRequests` (PK: `request_id`, GSI: `company_id`, TTL 30 días)
-- `SupportTickets` (PK: `ticket_id`, GSI: `company_id`, GSI: `assigned_to`)
-- `BugReports` (PK: `report_id`, GSI: `company_id`)
-- `TenantQuotas` (PK: `company_id`, SK: `period`) — tracking mensajes/leads/agentes
-- Modificar `KnowledgeBase config_pro`: agregar `feature_overrides`, `tenant_notes`, `tags`, `events_timeline`
+### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
+- [x] `PlatformAdmins` (PK: `email`) — equipo de la plataforma ✅ creada
+- [x] `ErrorLog` (PK: `service`, SK: `sk`, TTL 30d, PITR) ✅ creada
+- [ ] `SupportRequests` (PK: `request_id`, GSI: `company_id`, TTL 30 días)
+- [ ] `SupportTickets` (PK: `ticket_id`, GSI: `company_id`, GSI: `assigned_to`)
+- [ ] `BugReports` (PK: `report_id`, GSI: `company_id`)
+- [ ] `TenantQuotas` (PK: `company_id`, SK: `period`) — tracking mensajes/leads/agentes
+- [ ] `MetaEventsLog` (PK: `event_id`, TTL 90 días) — dedup eventos CAPI antes de enviar
+- [ ] `AdsAttribution` (PK: `company_id`, SK: `lead_phone#payment_id`) — vincula campaign → lead → pago
+- [ ] `AdsRecommendations` (PK: `company_id`, SK: `rec_id`, TTL 7d) — recomendaciones IA del cron
+- [ ] Modificar `KnowledgeBase config_pro`: agregar `feature_overrides`, `tenant_notes`, `tags`, `events_timeline`, `pixel_id`
+- [ ] Modificar `Leads_CRM`: agregar `source_campaign_id`, `source_type`, `paid_amount`
 ### ⚙️ Env vars nuevas
 - `SUPER_ADMIN_EMAILS` (ya existe) — bootstrap inicial
 - `IMPERSONATE_HMAC_SECRET` — firma de tickets
@@ -302,6 +323,48 @@
 - Acciones destructivas = pide 2FA otra vez aunque ya hayas iniciado sesión
 - 2 super_admins requeridos para: eliminar tenant, killswitch global, dar rol super_admin
 - Email automático al cliente cada vez que un admin actúa (transparencia total)
+---
+## 🐛 INCIDENTES CRÍTICOS RESUELTOS
+### 28 abril 2026 — 8 bugs en 1 día (sesión maratón)
+#### Bug #1 (CRÍTICO 🔴) — Webhook WhatsApp apuntaba al Lambda equivocado
+- **Síntoma**: 3 días de campañas Ads (~$500k COP gastado), 0 leads nuevos en CRM
+- **Causa**: webhook URL del WABA registrado en Meta apuntaba a `lambda-url.us-east-1.on.aws/` (SaaS_API_Handler) en vez del API Gateway del bot
+- **Origen**: error de configuración en Meta App "Gestor de Clientes" desde el principio
+- **Fix**: cambiar callback URL a `https://7f0rgbqgs2.execute-api.us-east-1.amazonaws.com/default/WhatsApp_Typebot_Bridge`
+- **Lección**: necesitamos health check automático de webhook URL por tenant (Fase G7.5)
+#### Bug #2 (CRÍTICO 🔴) — Cron Ads escala automáticamente sin consentimiento
+- **Síntoma**: presupuesto de campaña subió de $100k/día → $194k/día en 3 días
+- **CPL real subió 53%** ($916 → $1.399) — escalamiento empeoró ROI
+- **Causa**: `handle_ads_cron_optimize()` aplica cambios automáticos sin notificar al cliente
+- **Fix temporal**: cron pausado (`aws events disable-rule --name ads-daily-optimize`)
+- **Fix definitivo (B6.5)**: reescribir cron para detectar y RECOMENDAR, cliente decide
+#### Bug #3 (ALTO 🟡) — Login con Google bypassea 2FA
+- **Síntoma**: usuario con 2FA configurado podía entrar directo via Google sin código
+- **Fix**: callback Google chequea `totp_enabled`/`passkey_enabled` post-login → redirige a `/auth/login?2fa=1` si tiene 2FA
+#### Bug #4 (ALTO 🟡) — DynamoDB UpdateExpression syntax sin comas
+- **Síntoma**: error "Invalid UpdateExpression" al configurar passkey/TOTP
+- **Causa**: `REMOVE passkey_challenge passkey_challenge_expires` (sin coma)
+- **Fix**: agregar comas en 3 lugares (Lambda v43)
+#### Bug #5 (ALTO 🟡) — `/me` no devolvía flags de 2FA
+- **Síntoma**: frontend nunca detectaba que usuario tenía 2FA configurado
+- **Causa**: handler no incluía `totp_enabled`, `passkey_enabled`, `passkey_count`
+- **Fix**: agregar campos al response (Lambda v44)
+#### Bug #6 (MEDIO 🟢) — `cb_last_email` no se persistía
+- **Síntoma**: botón "Iniciar con huella" nunca aparecía aunque hubiera passkey
+- **Causa**: ni `signInWithEmail` ni callback Google guardaban el flag
+- **Fix**: agregar `localStorage.setItem('cb_last_email', email)` en ambos lugares
+#### Bug #7 (MEDIO 🟢) — `app/auth/login/page.tsx` JSX roto
+- **Síntoma**: build de Amplify falla con "Unexpected token"
+- **Causa**: edición manual mal hecha que duplicó atributos del botón Google
+- **Fix**: limpieza del bloque
+#### Bug #8 (BAJO ⚪) — `dashboard/layout.tsx` TS error
+- **Síntoma**: build falla — `tokenWarning.days_left` no existe en tipo
+- **Fix**: agregar `days_left?: number` al tipo
+### Lecciones para el roadmap
+1. **Health checks automáticos por tenant** son CRÍTICOS — webhook URLs, tokens, pixel, etc. (Fase G prioritaria)
+2. **NUNCA aplicar cambios automáticos** que afecten dinero del cliente sin consentimiento explícito (Fase B6.5)
+3. **Test mode antes de producción** para integraciones externas (Meta, Stripe, etc.)
+4. **Rollback en 1 click** debe ser estándar para todo deploy
 ---
 ## 🔧 SPRINT ACTUAL — Cierre de pendientes
 ### Frontend / Landing ✅ 100%
@@ -494,22 +557,25 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-███████████████████████████░░░ 85%
+███████████████████████████░░░ 87%
 | Categoría | % |
 |---|---|
-| ✅ Hecho | **85%** |
-| 🔧 Admin Panel B-K (planeado completo) | 5% |
-| 🟡 Sprints 1-7 + features futuras | 10% |
-**Última medición:** 27 abril 2026 (Bloque A cerrado, roadmap B-K aterrizado)
+| ✅ Hecho | **87%** |
+| 🔧 Admin Panel B-M (planeado completo) | 6% |
+| 🟡 Sprints 1-7 + features futuras | 7% |
+**Última medición:** 28 abril 2026 (B5 cerrado + 8 bugs fixeados + Bloque M aterrizado)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
 - [x] **50% → 69%** — Multi-agente + Landing + Embedded Signup
 - [x] **69% → 82%** — Seguridad completa + Tokens + Ads Pro + 2FA triple ✅
 - [x] **82% → 85%** — Admin Panel Fase A (overview + tenants list) ✅ 🦁
-- [ ] **85% → 90%** — Admin Panel Fases B-E + L (Roles + Tenants + Features + Impersonate + Meta CAPI) ⭐ ESTÁS AQUÍ
-- [ ] **90% → 95%** — Admin Panel Fases F-J (Ticketing + Observabilidad + Comunicación + Compliance)
-- [ ] **95% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
+- [x] **85% → 87%** — B5 (2FA admins) + 8 hotfixes críticos + roadmap M ✅ 🦁
+- [ ] **87% → 92%** — Bloque M Meta CAPI + B6.5 cron Ads recomendaciones ⭐ ESTÁS AQUÍ
+- [ ] **92% → 95%** — Admin Panel Fases C-E (Tenants + Features + Impersonate)
+- [ ] **95% → 98%** — Fases F-J (Ticketing + Observabilidad + Comunicación + Compliance)
+- [ ] **98% → 100%** — Stripe billing + Fase K + Multicanal completo + RUGIDO 🦁
+
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
 ## 📞 CONTACTO
