@@ -46,7 +46,7 @@
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
 - `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5900 líneas, **v19**)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt (~6500 líneas, ~92 endpoints, **v57**)
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt (~6600 líneas, ~93 endpoints, **v61**)
 - `WhatsApp_Remarketing` — Follow-up + renewal (~280 líneas, **v1**)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
 ### Tablas DynamoDB (14 — todas con PITR, 3 nuevas hoy)
@@ -201,7 +201,7 @@
 - [x] **C3** Notas internas por tenant (`tenant_notes` editable inline, max 2000 chars) (API v56 + frontend `efd9d77`) ✅
 - [x] **C4** Tags por tenant (7 presets + custom, filtrable, max 20 tags) (API v56 + frontend `efd9d77`) ✅
 - [ ] **C5** Eventos timeline por tenant (parcial — ya hay timeline desde AuditLog en tab Timeline)
-- [ ] **C6** Search backend en `/admin/tenants?q=...` (`Contains` en brand_name + company_id) — TODO
+- [x] **C6** Search backend `/admin/tenants?q=` server-side (Contains en company_id + brand_name) (API v61) ✅
 - [x] **C7** Acciones: suspender / reactivar / eliminar (soft delete) — bot respeta `status=SUSPENDED/DELETED` con silencio total + modal con razón obligatoria + audit log (Bot v18 + API v57 + frontend `46001e7`) ✅
 - [ ] **C8** Cambiar plan con dry-run (preview qué se desactiva antes de aplicar)
 - [ ] **C9** Reset password de cliente (Cognito Admin API → email automático Resend)
@@ -243,7 +243,7 @@
 ### 🟫 Fase G — Observabilidad completa (G1+G2 ✅)
 - [x] **G1** `GET /admin/errors` viewer paginado con filtros (service, error_type, tenant) + agregaciones by_service/by_type/by_tenant (API v54) + frontend `/admin/errors` con detalle expandible (`62b6410`) ✅
 - [x] **G2** `log_error()` hookeado en Bot v17 + Remarketing v1 + promote-memory v1 (cualquier error 500 visible en `/admin/errors`) ✅
-- [ ] **G3** `GET /admin/audit?actor=&action=&tenant=&from=&to=` con filtros + viewer
+- [x] **G3** Frontend `/admin/audit` viewer con timeline + filtro por tenant + colores por acción (`48dca59`) ✅
 - [ ] **G4** Export audit log a S3 mensual (compliance > 90 días)
 - [ ] **G5** Audit signing (hash chain para no-tampering)
 - [ ] **G6** Reportes de actividad anómala con alertas (50 acciones/h = sospechoso)
@@ -608,12 +608,12 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-██████████████████████████████ 97%
+██████████████████████████████ 98%
 | Categoría | % |
 |---|---|
-| ✅ Hecho | **97%** |
-| 🔧 Pendiente: D (Feature Flags) + E (Impersonate) + F-J + Stripe + multicanal | 3% |
-**Última medición:** 29 abril 2026 — sesión maratón nocturna 1 + 2 (Bloque M + B6.5 + G1+G2 + Fase C parcial + multi-tenant strict mode)
+| ✅ Hecho | **98%** |
+| 🔧 Pendiente: D (Feature Flags) + E (Impersonate) + F-J + Stripe + multicanal | 2% |
+**Última medición:** 29 abril 2026 — sesión maratón nocturna completa (Bloque M + B6.5 + G1-G3 + Fase C 6/12 + multi-tenant strict + rate limit + cron fix)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
