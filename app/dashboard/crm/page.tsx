@@ -110,6 +110,12 @@ export default function CRMPage() {
   const [columnMap, setColumnMap] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
+  // M7: import de ventas historicas (Bloque M Meta CAPI)
+  const [showSalesImport, setShowSalesImport] = useState(false);
+  const [salesRows, setSalesRows] = useState<any[]>([]);
+  const [salesImporting, setSalesImporting] = useState(false);
+  const [salesResult, setSalesResult] = useState<any>(null);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [agentsList, setAgentsList] = useState<any[]>([]);
   const [filterAgent, setFilterAgent] = useState('all');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -349,6 +355,98 @@ export default function CRMPage() {
     } catch { setImportResult({ error: 'Error de conexión' }); }
     setImporting(false);
   };
+  // === M7: Descargar plantilla Excel del catalogo ===
+  const handleDownloadTemplate = async () => {
+    setDownloadingTemplate(true);
+    try {
+      const res = await fetch(`${API_URL}/leads/import-template`, {
+        headers: { 'client-id': user?.companyId || '' },
+      });
+      if (!res.ok) throw new Error('Error generando plantilla');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const today = new Date().toISOString().split('T')[0];
+      a.download = `plantilla-ventas-${user?.companyId || 'export'}-${today}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('No se pudo descargar la plantilla. Intenta de nuevo.');
+    }
+    setDownloadingTemplate(false);
+  };
+  // === M7: Parsear xlsx de ventas en cliente ===
+  const handleSalesFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: 'array' });
+        const sheetName = wb.SheetNames.find((n: string) => n.toLowerCase().includes('venta')) || wb.SheetNames[0];
+        const sheet = wb.Sheets[sheetName];
+        const jsonRows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false }) as any[][];
+        if (jsonRows.length < 2) {
+          alert('El archivo esta vacio. Borra solo la fila de ejemplo y agrega ventas reales.');
+          return;
+        }
+        // Mapeo posicional fijo de M5:
+        // 0:phone 1:email 2:service_slug 3:amount 4:currency 5:purchase_date
+        // 6:campaign_id 7:customer_first_name 8:customer_last_name
+        const rows: any[] = [];
+        for (let i = 1; i < jsonRows.length; i++) {
+          const r = jsonRows[i];
+          if (!r || !r[0]) continue;
+          const phone = String(r[0] || '').replace(/\D/g, '');
+          if (!phone) continue;
+          // Saltar fila de ejemplo (email placeholder)
+          if (i === 1 && String(r[1] || '').toLowerCase() === 'cliente@email.com') continue;
+          rows.push({
+            phone,
+            email: String(r[1] || '').trim().toLowerCase(),
+            service_slug: String(r[2] || '').trim(),
+            amount: r[3] ? String(r[3]).replace(/[^\d.]/g, '') : '',
+            currency: String(r[4] || '').trim().toUpperCase() || 'COP',
+            purchase_date: String(r[5] || '').trim().slice(0, 10),
+            campaign_id: String(r[6] || '').trim(),
+            customer_first_name: String(r[7] || '').trim(),
+            customer_last_name: String(r[8] || '').trim(),
+          });
+        }
+        if (!rows.length) {
+          alert('No encontramos ventas validas. Revisa la plantilla.');
+          return;
+        }
+        setSalesRows(rows);
+        setSalesResult(null);
+      } catch (err) {
+        console.error('Error parseando xlsx ventas:', err);
+        alert('No pudimos leer el archivo. Asegurate de usar la plantilla descargada.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+  // === M7: Subir ventas a M6 endpoint ===
+  const handleSalesImport = async () => {
+    if (!salesRows.length) return;
+    setSalesImporting(true);
+    try {
+      const res = await fetch(`${API_URL}/leads/bulk-import-purchases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ rows: salesRows }),
+      });
+      const data = await res.json();
+      setSalesResult(data);
+      if (data.imported > 0) {
+        fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
+          .then((r: any) => r.json()).then((d: any) => setLeads(d.leads || []));
+      }
+    } catch {
+      setSalesResult({ error: 'Error de conexion' });
+    }
+    setSalesImporting(false);
+  };
   const handleAddLead = async () => {
     if (!newLead.phone.trim()) return;
     setSavingLead(true);
@@ -392,14 +490,124 @@ export default function CRMPage() {
           <button onClick={() => { setShowAddLead(!showAddLead); setShowImport(false); }} className="bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-xl text-xs font-bold transition-all">
             ➕ Agregar
           </button>
-          <button onClick={() => { setShowImport(!showImport); setShowAddLead(false); }} className="bg-white/5 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-xl text-xs font-bold transition-all">
+          <button onClick={() => { setShowImport(!showImport); setShowAddLead(false); setShowSalesImport(false); }} className="bg-white/5 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-xl text-xs font-bold transition-all">
             📤 Importar
+          </button>
+          <button onClick={() => { setShowSalesImport(!showSalesImport); setShowImport(false); setShowAddLead(false); }}
+            className="bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+            title="Subir historial de ventas para enviar Purchase events a Meta">
+            💰 Ventas
           </button>
           <button onClick={exportCSV} className="bg-white/5 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hidden sm:block">
             📥 Exportar
           </button>
         </div>
       </div>
+      {/* M7: Modal import de ventas historicas */}
+      {showSalesImport && (
+        <div className="bg-white/[0.03] border border-emerald-500/20 rounded-2xl p-6 mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="font-bold">💰 Importar ventas históricas</h3>
+              <p className="text-[10px] text-gray-500 mt-0.5">Sube tu Excel de ventas — enviamos Purchase events a Meta automáticamente para entrenar tus campañas.</p>
+            </div>
+            <button onClick={() => { setShowSalesImport(false); setSalesRows([]); setSalesResult(null); }}
+              className="text-gray-500 hover:text-white text-lg">✕</button>
+          </div>
+          {/* Paso 1: descargar plantilla */}
+          <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 mb-4">
+            <p className="text-xs font-bold mb-1">Paso 1 — Descarga la plantilla</p>
+            <p className="text-[10px] text-gray-500 mb-3">Trae dropdown con los servicios de tu catálogo para evitar errores.</p>
+            <button onClick={handleDownloadTemplate} disabled={downloadingTemplate}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+              {downloadingTemplate ? 'Generando...' : '📥 Descargar plantilla Excel'}
+            </button>
+          </div>
+          {/* Paso 2: subir archivo */}
+          {salesRows.length === 0 ? (
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
+              <p className="text-xs font-bold mb-1">Paso 2 — Sube el archivo completado</p>
+              <p className="text-[10px] text-gray-500 mb-3">Llena tus ventas en la hoja &quot;Ventas&quot; y guarda. Luego sube el .xlsx aquí.</p>
+              <label className="inline-block bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl cursor-pointer transition-all text-xs">
+                📁 Seleccionar archivo
+                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleSalesFile(f);
+                  e.target.value = '';
+                }} />
+              </label>
+            </div>
+          ) : salesResult ? (
+            <div className="text-center py-6">
+              <p className="text-3xl mb-3">{salesResult.error ? '❌' : '✅'}</p>
+              {salesResult.error ? (
+                <p className="text-red-400 text-sm">{salesResult.error}</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-emerald-400 font-bold text-lg">{salesResult.imported} ventas importadas</p>
+                  <div className="text-xs text-gray-400 space-y-1">
+                    <p>📊 Total filas: {salesResult.total_rows}</p>
+                    <p>📤 Purchase events enviados a Meta: <span className="text-emerald-400 font-bold">{salesResult.capi_sent || 0}</span></p>
+                    {salesResult.capi_dedup > 0 && (
+                      <p>♻️ Eventos duplicados omitidos: {salesResult.capi_dedup}</p>
+                    )}
+                    {salesResult.capi_failed > 0 && (
+                      <p className="text-yellow-400">⚠️ Eventos fallidos: {salesResult.capi_failed}</p>
+                    )}
+                    {salesResult.skipped > 0 && (
+                      <p className="text-yellow-400">⚠️ Filas saltadas: {salesResult.skipped}</p>
+                    )}
+                  </div>
+                  {salesResult.errors?.length > 0 && (
+                    <details className="text-left mt-4 bg-red-500/5 border border-red-500/20 rounded-xl p-3">
+                      <summary className="text-xs text-red-400 cursor-pointer font-bold">
+                        Ver errores ({salesResult.errors_total || salesResult.errors.length})
+                      </summary>
+                      <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                        {salesResult.errors.map((err: any, i: number) => (
+                          <li key={i} className="text-[10px] text-red-300">
+                            <span className="text-gray-500">Fila {err.row}:</span> {err.reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+              )}
+              <button onClick={() => { setSalesRows([]); setSalesResult(null); }}
+                className="mt-4 text-xs text-indigo-400 hover:text-indigo-300 font-bold">
+                Importar otro archivo
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
+              <p className="text-xs font-bold text-emerald-400 mb-2">
+                ✓ {salesRows.length} ventas listas para importar
+              </p>
+              <div className="bg-white/[0.02] rounded-lg p-3 mb-4 max-h-48 overflow-y-auto">
+                <p className="text-[9px] text-gray-500 mb-2">Vista previa (primeras 5):</p>
+                {salesRows.slice(0, 5).map((row, i) => (
+                  <div key={i} className="text-[10px] text-gray-400 border-b border-white/5 py-1.5 grid grid-cols-3 gap-2">
+                    <span>📱 <strong className="text-white">{row.phone}</strong></span>
+                    <span>🏷️ {row.service_slug || '—'}</span>
+                    <span>💰 {row.amount ? `$${Number(row.amount).toLocaleString()}` : '(catálogo)'}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => { setSalesRows([]); setSalesResult(null); }}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-all">
+                  Cancelar
+                </button>
+                <button onClick={handleSalesImport} disabled={salesImporting}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 transition-all disabled:opacity-50">
+                  {salesImporting ? 'Importando + enviando a Meta...' : `💰 Importar ${salesRows.length} ventas`}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
