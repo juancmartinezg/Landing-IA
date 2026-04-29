@@ -118,6 +118,7 @@ export default function CRMPage() {
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [agentsList, setAgentsList] = useState<any[]>([]);
   const [filterAgent, setFilterAgent] = useState('all');
+  const [reportingMeta, setReportingMeta] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   useEffect(() => {
     fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' } })
@@ -371,8 +372,9 @@ export default function CRMPage() {
       a.download = `plantilla-ventas-${user?.companyId || 'export'}-${today}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
+    } catch (e) {
       alert('No se pudo descargar la plantilla. Intenta de nuevo.');
+      console.error(e);
     }
     setDownloadingTemplate(false);
   };
@@ -446,6 +448,41 @@ export default function CRMPage() {
       setSalesResult({ error: 'Error de conexion' });
     }
     setSalesImporting(false);
+  };
+  // === Reportar venta individual a Meta CAPI ===
+  const handleReportToMeta = async () => {
+    if (!selectedLead?.lead?.phoneNumber) return;
+    setReportingMeta(true);
+    try {
+      const lead = selectedLead.lead;
+      const payment = selectedLead.payment;
+      const body: any = {
+        phone: lead.phoneNumber,
+        email: lead.email || '',
+        first_name: (lead.customer_name || '').split(' ')[0] || '',
+        last_name: (lead.customer_name || '').split(' ').slice(1).join(' ') || '',
+        city: lead.city || '',
+        zip_code: lead.zip_code || '',
+        service_slug: (lead.purchase_info?.product_name || lead.service_of_interest || '').toLowerCase().replace(/\s+/g, '-'),
+        amount: payment?.amount || 0,
+        currency: payment?.currency || 'COP',
+        purchase_date: new Date().toISOString().split('T')[0],
+      };
+      const res = await fetch(`${API_URL}/leads/report-purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.ok || data.capi_sent) {
+        alert('✅ Venta reportada a Meta. El algoritmo actualizará las campañas.');
+      } else {
+        alert('⚠️ ' + (data.error || 'Meta no confirmó el evento. Verifica el pixel en configuración.'));
+      }
+    } catch {
+      alert('❌ Error de conexión al reportar a Meta.');
+    }
+    setReportingMeta(false);
   };
   const handleAddLead = async () => {
     if (!newLead.phone.trim()) return;
@@ -1558,6 +1595,11 @@ export default function CRMPage() {
                     className="text-[10px] px-3 py-1.5 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600 hover:text-white font-bold transition-all">
                     📞 Contactado
                   </button>
+                  <button onClick={handleReportToMeta} disabled={reportingMeta}
+                        className="text-[10px] px-3 py-1.5 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white font-bold transition-all disabled:opacity-50"
+                        title="Envía Purchase event a Meta CAPI — entrena el algoritmo de tus campañas">
+                        {reportingMeta ? '⏳ Enviando...' : '📤 Reportar a Meta'}
+                      </button>
                   <button onClick={async () => {
                     if (!confirm('¿Eliminar este lead? Esta acción no se puede deshacer.')) return;
                     try {
