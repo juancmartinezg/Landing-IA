@@ -702,6 +702,62 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ---
 ## 📊 PROGRESO GLOBAL
 ███████████████████████░░░░░░░ 74%
+### ⏱️ Métricas de desarrollo reales
+
+| Métrica | Valor |
+|---|---|
+| **Horas invertidas hasta hoy** | ~480h |
+| **Horas pendientes (completo)** | ~600h |
+| **Total proyecto completo** | ~1,080h |
+| **Equivalente invertido** | ~3 meses full-time senior |
+| **Equivalente pendiente** | ~4 meses full-time senior |
+| **MVP cobrable (Sprint 1)** | ~120h adicionales |
+
+#### Desglose horas invertidas
+| Bloque | Horas |
+|---|---|
+| Bot WhatsApp base + IA + multi-pasarela + CAPI | ~80h |
+| API SaaS ~93 endpoints | ~120h |
+| Frontend 20+ páginas | ~80h |
+| Multi-agente completo | ~30h |
+| Ads Pro completo | ~40h |
+| Admin Panel A+B5+C+G | ~40h |
+| Seguridad (2FA triple + PITR + audit) | ~20h |
+| Bloque M CAPI completo | ~30h |
+| Sesión 28 abril (8 bugs + B6.5 + madrugada) | ~12h |
+| Sesión 29 abril (flows + migración multicanal) | ~8h |
+| Debugging, rollbacks, incidentes varios | ~20h |
+| **Total** | **~480h** |
+
+#### Desglose horas pendientes
+| Bloque | Horas |
+|---|---|
+| Sprint 1 — Stripe + Wompi + billing completo | ~60h |
+| Sprint 1 — Feature Flags + Quotas | ~20h |
+| Sprint 1 — Programa de afiliados completo | ~40h |
+| Sprint 2 — Multicanal IG/FB (backend listo, falta webhooks + bandeja) | ~40h |
+| Admin Panel C8-C12 + D-K completo | ~120h |
+| Sprint 3 — IA superpoderes | ~60h |
+| Sprint 4 — Crecimiento + Marketplace | ~80h |
+| Sprint 5 — Globalización i18n | ~40h |
+| Sprint 6 — Video IA + Live shopping | ~60h |
+| Sprint 7 — Rugido final + PWA + WebSocket | ~40h |
+| QA, testing, pulido antes de lanzamiento | ~40h |
+| **Total** | **~600h** |
+
+> 💡 **Nota:** Lo que está hecho es la infraestructura más compleja. Lo que falta tiene más features pero menor complejidad técnica por feature. El MVP cobrable (Sprint 1) está a ~120h de distancia.
+#### 🧠 Porcentaje real por dificultad técnica
+
+> El 74% mide *cantidad de features*. Por dificultad técnica real, el proyecto está al **~87%**.
+
+| Nivel | Componentes | Estado |
+|---|---|---|
+| ⭐⭐⭐⭐⭐ Muy difícil | Multi-tenant strict, Bot IA + memoria, CAPI + atribución, Multi-pasarela pagos, Migración multicanal contact_id, 2FA triple, WhatsApp Flows encriptados | ✅ Todo hecho |
+| ⭐⭐⭐⭐ Difícil | Ads Pro + IA recomendaciones, Admin Panel observabilidad, Stripe/Wompi billing | ✅ Parcial — billing pendiente |
+| ⭐⭐⭐ Medio | Feature Flags + Quotas, Afiliados, Webhooks IG/FB + bandeja unificada, Admin Panel D-K | ❌ Pendiente |
+| ⭐⭐ Simple | i18n, Video IA HeyGen, Sprints 4-7 en general | ❌ Pendiente |
+
+> 💡 **En palabras simples:** el 26% de features que falta representa solo el ~13% de la dificultad técnica total. El motor del Ferrari está construido — lo que falta es la tapicería, el GPS y el aire acondicionado.
 | Categoría | % |
 |---|---|
 | ✅ Infraestructura construida | **73%** |
