@@ -50,7 +50,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       window.fetch = function (input: any, init?: any) {
         try {
           const url = typeof input === 'string' ? input : (input?.url || '');
-          // Solo interceptar llamadas a nuestra API
           if (url.includes('lambda-url') || url.includes(API_URL)) {
             const stored = localStorage.getItem('cb_user');
             if (stored) {
@@ -68,36 +67,61 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
     const checkUser = async () => {
       const stored = localStorage.getItem('cb_user');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (parsed.companyId) {
-            setUser(parsed);
-            setLoading(false);
-            return;
-          }
-          // Si no tiene companyId, buscarlo en /me
-          if (parsed.email) {
-            try {
-              const res = await fetch(`${API_URL}/me?email=${encodeURIComponent(parsed.email)}`);
-              if (res.ok) {
-                const data = await res.json();
-                parsed.companyId = data.company_id || '';
-                parsed.role = data.role || 'owner';
-                parsed.agentId = data.agent_id || '';
-              } else {
-                parsed.companyId = '';
-                parsed.role = '';
-                parsed.agentId = '';
-              }
-            } catch {
-              parsed.companyId = '';
-            }
-            localStorage.setItem('cb_user', JSON.stringify(parsed));
-          }
-          setUser(parsed);
-        } catch {}
+      if (!stored) {
+        setLoading(false);
+        return;
       }
+      try {
+        const parsed = JSON.parse(stored);
+
+        // ✅ FIX: setUser inmediatamente con lo que hay en localStorage
+        // El dashboard carga al instante sin esperar fetch a /me
+        if (parsed.companyId) {
+          setUser(parsed);
+          setLoading(false);
+
+          // Refrescar datos de /me en background (no bloquea el render)
+          if (parsed.email) {
+            fetch(`${API_URL}/me?email=${encodeURIComponent(parsed.email)}`)
+              .then(res => res.ok ? res.json() : null)
+              .then(data => {
+                if (data) {
+                  const updated = {
+                    ...parsed,
+                    companyId: data.company_id || parsed.companyId,
+                    role: data.role || parsed.role,
+                    agentId: data.agent_id || parsed.agentId,
+                  };
+                  localStorage.setItem('cb_user', JSON.stringify(updated));
+                  setUser(updated);
+                }
+              })
+              .catch(() => {});
+          }
+          return;
+        }
+
+        // Si no tiene companyId aún, buscar en /me (primer login)
+        if (parsed.email) {
+          try {
+            const res = await fetch(`${API_URL}/me?email=${encodeURIComponent(parsed.email)}`);
+            if (res.ok) {
+              const data = await res.json();
+              parsed.companyId = data.company_id || '';
+              parsed.role = data.role || 'owner';
+              parsed.agentId = data.agent_id || '';
+            } else {
+              parsed.companyId = '';
+              parsed.role = '';
+              parsed.agentId = '';
+            }
+          } catch {
+            parsed.companyId = '';
+          }
+          localStorage.setItem('cb_user', JSON.stringify(parsed));
+        }
+        setUser(parsed);
+      } catch {}
       setLoading(false);
     };
     checkUser();
