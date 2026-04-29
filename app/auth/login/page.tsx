@@ -1,13 +1,73 @@
 'use client';
 import { useAuth } from '../../providers';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+
+const API = process.env.NEXT_PUBLIC_API_URL || '';
+
+async function attemptPasskeyLogin(email: string): Promise<{ ok: boolean; companyId?: string; role?: string; agentId?: string; error?: string }> {
+  try {
+    const optRes = await fetch(`${API}/auth/passkey-login-options`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const optData = await optRes.json();
+    if (!optData.options) return { ok: false, error: 'no_passkey' };
+
+    const opts = optData.options;
+    opts.challenge = Uint8Array.from(atob(opts.challenge.replace(/-/g, '+').replace(/_/g, '/')), (c: string) => c.charCodeAt(0));
+    opts.allowCredentials = (opts.allowCredentials || []).map((c: any) => ({
+      ...c,
+      id: Uint8Array.from(atob(c.id.replace(/-/g, '+').replace(/_/g, '/')), (c: string) => c.charCodeAt(0)),
+    }));
+
+    const credential = await navigator.credentials.get({ publicKey: opts }) as any;
+    if (!credential) return { ok: false, error: 'cancelled' };
+
+    const verifyRes = await fetch(`${API}/auth/passkey-login-complete`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        credential: {
+          id: credential.id,
+          rawId: credential.id,
+          type: credential.type,
+          response: {
+            clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+            authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+            signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+          },
+        },
+      }),
+    });
+    const verifyData = await verifyRes.json();
+    if (!verifyData.verified) return { ok: false, error: verifyData.error || 'verify_failed' };
+
+    // Obtener datos del usuario
+    let companyId = '', role = 'owner', agentId = '';
+    try {
+      const meRes = await fetch(`${API}/me?email=${encodeURIComponent(email)}`);
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        companyId = meData.company_id || '';
+        role = meData.role || 'owner';
+        agentId = meData.agent_id || '';
+      }
+    } catch {}
+
+    return { ok: true, companyId, role, agentId };
+  } catch (e: any) {
+    if (e.name === 'NotAllowedError') return { ok: false, error: 'cancelled' };
+    return { ok: false, error: e.message };
+  }
+}
+
 export default function LoginPage() {
   const { user, loading, loginWithGoogle, signUpWithEmail, signInWithEmail, confirmSignUp } = useAuth();
   const router = useRouter();
   const [checked, setChecked] = useState(false);
-  const [mode, setMode] = useState<'login' | 'register' | 'confirm'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'confirm' | '2fa'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
@@ -16,9 +76,14 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [autoPasskeyRunning, setAutoPasskeyRunning] = useState(false);
+  const [lastEmail, setLastEmail] = useState('');
+  const passkeyAttempted = useRef(false);
+
   useEffect(() => {
     if (checked) return;
     setChecked(true);
+
     // Si viene con ?2fa=1 (redirect del callback Google con 2FA pendiente)
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -26,23 +91,63 @@ export default function LoginPage() {
         const pendingEmail = sessionStorage.getItem('cb_pending_2fa') || '';
         if (pendingEmail) {
           setEmail(pendingEmail);
-          setMode('2fa' as any);
+          setMode('2fa');
           sessionStorage.removeItem('cb_pending_2fa');
-          // Limpiar query string sin recargar
           window.history.replaceState({}, '', '/auth/login');
         }
         return;
       }
     }
+
+    // Si ya hay sesión activa → directo al dashboard
     const stored = localStorage.getItem('cb_user');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        if (parsed.companyId) router.replace('/dashboard');
-        else router.replace('/auth/welcome');
-      } catch { router.replace('/dashboard'); }
+        if (parsed.companyId) { router.replace('/dashboard'); return; }
+        else { router.replace('/auth/welcome'); return; }
+      } catch { router.replace('/dashboard'); return; }
+    }
+
+    // Auto-disparo de passkey si el usuario ya había entrado antes
+    const savedEmail = localStorage.getItem('cb_last_email') || '';
+    if (savedEmail && typeof window !== 'undefined' && (window as any).PublicKeyCredential && !passkeyAttempted.current) {
+      passkeyAttempted.current = true;
+      setLastEmail(savedEmail);
+      setAutoPasskeyRunning(true);
+
+      attemptPasskeyLogin(savedEmail).then((result) => {
+        setAutoPasskeyRunning(false);
+        if (result.ok) {
+          const userData = {
+            email: savedEmail,
+            name: savedEmail,
+            sub: '',
+            accessToken: '',
+            companyId: result.companyId || '',
+            role: result.role || 'owner',
+            agentId: result.agentId || '',
+          };
+          localStorage.setItem('cb_user', JSON.stringify(userData));
+          localStorage.setItem('cb_last_email', savedEmail);
+          if (result.companyId) router.push('/dashboard');
+          else router.push('/auth/welcome');
+        } else if (result.error === 'no_passkey') {
+          // No tiene passkey — mostrar login normal sin error
+          setLastEmail('');
+        } else if (result.error === 'cancelled') {
+          // Usuario canceló — mostrar login normal sin error
+          setLastEmail(savedEmail); // mantener para que pueda intentar de nuevo
+        } else {
+          setError('No se pudo verificar la huella. Usa email o Google.');
+          setLastEmail(savedEmail);
+        }
+      });
+    } else {
+      setLastEmail(savedEmail);
     }
   }, [checked, router]);
+
   const handleEmailSubmit = async () => {
     setError(''); setSubmitting(true);
     if (mode === 'register') {
@@ -50,79 +155,39 @@ export default function LoginPage() {
       if (password.length < 8) { setError('La contraseña debe tener mínimo 8 caracteres'); setSubmitting(false); return; }
       if (password !== password2) { setError('Las contraseñas no coinciden'); setSubmitting(false); return; }
       const res = await signUpWithEmail(email, password, name);
-      if (res.ok && res.needsConfirm) { setMode('confirm'); }
+      if (res.ok && res.needsConfirm) setMode('confirm');
       else if (res.error) setError(res.error);
-   } else if (mode === 'login') {
+    } else if (mode === 'login') {
       const res = await signInWithEmail(email, password);
       if (res.ok) {
-        // Verificar si tiene 2FA activado
         try {
-          const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/me?email=${encodeURIComponent(email)}`);
+          const meRes = await fetch(`${API}/me?email=${encodeURIComponent(email)}`);
           const meData = await meRes.json();
           const has2FA = meData.totp_enabled || meData.passkey_enabled || false;
           if (has2FA) {
-            // Tiene 2FA — mostrar pantalla de verificación
-            setMode('2fa' as any);
-            // Si tiene passkey, intentar automáticamente
-            if (meData.passkey_enabled && window.PublicKeyCredential) {
-              try {
-                const optRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-options`, {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email }),
-                });
-                const optData = await optRes.json();
-                if (optData.options) {
-                  const opts = optData.options;
-                  opts.challenge = Uint8Array.from(atob(opts.challenge.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0));
-                  opts.allowCredentials = (opts.allowCredentials || []).map((c: any) => ({
-                    ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0)),
-                  }));
-                  const credential = await navigator.credentials.get({ publicKey: opts }) as any;
-                  const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-complete`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      email,
-                      credential: {
-                        id: credential.id,
-                        rawId: credential.id,
-                        type: credential.type,
-                        response: {
-                          clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
-                          authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
-                          signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
-                        },
-                      },
-                    }),
-                  });
-                  const verifyData = await verifyRes.json();
-                  if (verifyData.verified) {
-                    const stored2 = localStorage.getItem('cb_user');
-                    const parsed2 = stored2 ? JSON.parse(stored2) : {};
-                    if (parsed2.companyId) router.push('/dashboard');
-                    else router.push('/auth/welcome');
-                    setSubmitting(false);
-                    return;
-                  }
-                }
-              } catch (pkErr) {
-                // Passkey falló (usuario canceló, no soportado) — fallback a código
-                console.log('Passkey fallback a código:', pkErr);
+            setMode('2fa');
+            if (meData.passkey_enabled && (window as any).PublicKeyCredential) {
+              // Intentar passkey automáticamente tras login con email
+              const result = await attemptPasskeyLogin(email);
+              if (result.ok) {
+                const userData = { email, name: email, sub: '', accessToken: '', companyId: result.companyId || '', role: result.role || 'owner', agentId: result.agentId || '' };
+                localStorage.setItem('cb_user', JSON.stringify(userData));
+                localStorage.setItem('cb_last_email', email);
+                setSubmitting(false);
+                if (result.companyId) router.push('/dashboard');
+                else router.push('/auth/welcome');
+                return;
               }
             }
-            // Enviar código por email automáticamente como fallback
-            if (!meData.passkey_enabled || true) {
-              fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/send-code`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email }),
-              }).catch(() => {});
-            }
+            // Fallback: enviar código por email
+            fetch(`${API}/auth/send-code`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email }),
+            }).catch(() => {});
             setSubmitting(false);
             return;
           }
-        } catch (e) {
-          console.log('2FA check failed, proceeding without:', e);
-        }
-        // Sin 2FA — directo al dashboard
+        } catch {}
         localStorage.setItem('cb_last_email', email);
         const stored = localStorage.getItem('cb_user');
         const parsed = stored ? JSON.parse(stored) : {};
@@ -139,6 +204,7 @@ export default function LoginPage() {
     }
     setSubmitting(false);
   };
+
   if (!checked || loading) {
     return (
       <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center">
@@ -146,8 +212,37 @@ export default function LoginPage() {
       </div>
     );
   }
-  // Pantalla de verificación 2FA
-  if ((mode as string) === '2fa') {
+
+  // Pantalla de carga mientras se dispara passkey automáticamente
+  if (autoPasskeyRunning) {
+    return (
+      <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center px-4">
+        <div className="text-center space-y-6">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <img src="/cb-logo.webp" alt="Logo" className="w-12 h-12 object-contain" />
+            <span className="text-2xl font-bold text-white tracking-tighter">clientes.bot</span>
+          </div>
+          <div className="w-20 h-20 bg-indigo-600/20 rounded-full flex items-center justify-center text-4xl mx-auto animate-pulse">
+            🔐
+          </div>
+          <div>
+            <p className="text-white font-bold text-lg">Verificando identidad</p>
+            <p className="text-gray-400 text-sm mt-1">Usa tu huella o FaceID para entrar</p>
+            <p className="text-gray-600 text-xs mt-2">{lastEmail}</p>
+          </div>
+          <button
+            onClick={() => { setAutoPasskeyRunning(false); passkeyAttempted.current = true; }}
+            className="text-gray-500 hover:text-gray-400 text-xs transition-all"
+          >
+            Usar otra forma de acceso
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Pantalla 2FA (código por email)
+  if (mode === '2fa') {
     return (
       <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center px-4">
         <div className="w-full max-w-md">
@@ -166,7 +261,7 @@ export default function LoginPage() {
                 Te enviamos un código de 6 dígitos a <strong className="text-white">{email}</strong>
               </p>
             </div>
-           {error && <p className="text-red-400 text-xs text-center mb-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">{error}</p>}
+            {error && <p className="text-red-400 text-xs text-center mb-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">{error}</p>}
             <input
               type="text"
               inputMode="numeric"
@@ -182,12 +277,13 @@ export default function LoginPage() {
                 if (code.length !== 6) { setError('Ingresa los 6 dígitos'); return; }
                 setSubmitting(true); setError('');
                 try {
-                  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/verify-2fa`, {
+                  const res = await fetch(`${API}/auth/verify-2fa`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, code }),
                   });
                   const data = await res.json();
                   if (data.verified) {
+                    localStorage.setItem('cb_last_email', email);
                     const stored = localStorage.getItem('cb_user');
                     const parsed = stored ? JSON.parse(stored) : {};
                     if (parsed.companyId) router.push('/dashboard');
@@ -206,11 +302,10 @@ export default function LoginPage() {
             <button
               onClick={async () => {
                 setError('');
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/send-code`, {
+                await fetch(`${API}/auth/send-code`, {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ email }),
-                });
-                if (res.ok) setError('');
+                }).catch(() => {});
               }}
               className="w-full text-indigo-400 hover:text-indigo-300 text-xs font-medium py-2 transition-all"
             >
@@ -227,6 +322,7 @@ export default function LoginPage() {
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -235,97 +331,57 @@ export default function LoginPage() {
             <img src="/cb-logo.webp" alt="Logo" className="w-12 h-12 object-contain" />
             <span className="text-2xl font-bold text-white tracking-tighter">clientes.bot</span>
           </div>
-          <p className="text-gray-400 text-sm">{mode === 'register' ? 'Crea tu cuenta gratis' : mode === 'confirm' ? 'Confirma tu email' : 'Inicia sesión para acceder'}</p>
+          <p className="text-gray-400 text-sm">
+            {mode === 'register' ? 'Crea tu cuenta gratis' : mode === 'confirm' ? 'Confirma tu email' : 'Inicia sesión para acceder'}
+          </p>
         </div>
+
         <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
-          {/* Botón huella — SOLO aparece si ya entraste antes (cb_last_email existe) */}
-          {typeof window !== 'undefined' && (window as any).PublicKeyCredential && localStorage.getItem('cb_last_email') && (
+
+          {/* Botón huella manual — solo si passkey disponible y usuario canceló el auto-disparo */}
+          {lastEmail && typeof window !== 'undefined' && (window as any).PublicKeyCredential && mode === 'login' && (
             <>
               <button
                 type="button"
                 onClick={async () => {
-                  const targetEmail = localStorage.getItem('cb_last_email') || '';
-                  if (!targetEmail) return;
                   setError('');
-                  try {
-                    const optRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-options`, {
-                      method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ email: targetEmail }),
-                    });
-                    const optData = await optRes.json();
-                    if (!optData.options) {
-                      // No tiene passkey configurado para este email
-                      setError('No has configurado huella aún. Inicia con email y contraseña.');
-                      return;
-                    }
-                    const opts = optData.options;
-                    opts.challenge = Uint8Array.from(atob(opts.challenge.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0));
-                    opts.allowCredentials = (opts.allowCredentials || []).map((c: any) => ({
-                      ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), (c: string) => c.charCodeAt(0)),
-                    }));
-                    const credential = await navigator.credentials.get({ publicKey: opts }) as any;
-                    const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/auth/passkey-login-complete`, {
-                      method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        email: targetEmail,
-                        credential: {
-                          id: credential.id,
-                          rawId: credential.id,
-                          type: credential.type,
-                          response: {
-                            clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
-                            authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
-                            signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
-                          },
-                        },
-                      }),
-                    });
-                    const verifyData = await verifyRes.json();
-                    if (verifyData.verified) {
-                      // Cargar /me para obtener companyId/role/agentId
-                      let companyId = '', role = 'owner', agentId = '';
-                      try {
-                        const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/me?email=${encodeURIComponent(targetEmail)}`);
-                        if (meRes.ok) {
-                          const meData = await meRes.json();
-                          companyId = meData.company_id || '';
-                          role = meData.role || 'owner';
-                          agentId = meData.agent_id || '';
-                        }
-                      } catch {}
-                      const userData = { email: targetEmail, name: targetEmail, sub: '', accessToken: '', companyId, role, agentId };
-                      localStorage.setItem('cb_user', JSON.stringify(userData));
-                      if (companyId) router.push('/dashboard');
-                      else router.push('/auth/welcome');
-                    } else {
-                      setError(verifyData.error || 'No se pudo verificar la huella');
-                    }
-                  } catch (e: any) {
-                    if (e.name !== 'NotAllowedError') {
-                      setError('Error con la huella. Usa email y contraseña.');
-                    }
+                  setAutoPasskeyRunning(true);
+                  const result = await attemptPasskeyLogin(lastEmail);
+                  setAutoPasskeyRunning(false);
+                  if (result.ok) {
+                    const userData = { email: lastEmail, name: lastEmail, sub: '', accessToken: '', companyId: result.companyId || '', role: result.role || 'owner', agentId: result.agentId || '' };
+                    localStorage.setItem('cb_user', JSON.stringify(userData));
+                    localStorage.setItem('cb_last_email', lastEmail);
+                    if (result.companyId) router.push('/dashboard');
+                    else router.push('/auth/welcome');
+                  } else if (result.error !== 'cancelled') {
+                    setError('No se pudo verificar. Usa email o Google.');
                   }
                 }}
                 className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-2xl transition-all mb-2 shadow-lg shadow-indigo-600/20"
               >
                 <span className="text-xl">🔐</span>
-                Continuar como {(localStorage.getItem('cb_last_email') || '').split('@')[0]}
+                Entrar como {lastEmail.split('@')[0]}
               </button>
               <button
                 type="button"
                 onClick={() => {
                   localStorage.removeItem('cb_last_email');
-                  setEmail('');
+                  setLastEmail('');
                   setError('');
-                  // Forzar re-render
-                  window.location.reload();
                 }}
                 className="w-full text-center text-xs text-gray-500 hover:text-gray-300 py-2 mb-3 transition-all"
               >
                 Usar otra cuenta
               </button>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex-1 h-px bg-white/10"></div>
+                <span className="text-gray-500 text-xs uppercase tracking-widest">o</span>
+                <div className="flex-1 h-px bg-white/10"></div>
+              </div>
             </>
           )}
+
           <button onClick={loginWithGoogle}
             className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-bold py-4 px-6 rounded-2xl hover:bg-gray-100 transition-all mb-4">
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -336,16 +392,19 @@ export default function LoginPage() {
             </svg>
             Continuar con Google
           </button>
+
           <div className="flex items-center gap-4 my-6">
             <div className="flex-1 h-px bg-white/10"></div>
             <span className="text-gray-500 text-xs uppercase tracking-widest">o</span>
             <div className="flex-1 h-px bg-white/10"></div>
           </div>
+
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-4">
               <p className="text-xs text-red-400">{error}</p>
             </div>
           )}
+
           {mode === 'confirm' ? (
             <div className="space-y-4">
               <p className="text-sm text-gray-300 text-center">Te enviamos un código de verificación a <strong className="text-white">{email}</strong></p>
@@ -372,10 +431,12 @@ export default function LoginPage() {
                   {showPass ? '🙈' : '👁️'}
                 </button>
               </div>
-              {mode === 'register' && <p className="text-[9px] text-gray-500 -mt-1 ml-1">Mínimo 8 caracteres, una mayúscula y un número</p>}
               {mode === 'register' && (
-                <input value={password2} onChange={e => setPassword2(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="Confirmar contraseña"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white" />
+                <>
+                  <p className="text-[9px] text-gray-500 -mt-1 ml-1">Mínimo 8 caracteres, una mayúscula y un número</p>
+                  <input value={password2} onChange={e => setPassword2(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="Confirmar contraseña"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white" />
+                </>
               )}
               <button type="submit" disabled={submitting || !email || !password}
                 className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50">
@@ -383,6 +444,7 @@ export default function LoginPage() {
               </button>
             </form>
           )}
+
           {mode !== 'confirm' && (
             <div className="mt-4 text-center">
               <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setPassword(''); setPassword2(''); }}
@@ -392,6 +454,7 @@ export default function LoginPage() {
             </div>
           )}
         </div>
+
         <div className="text-center mt-6">
           <Link href="/" className="text-gray-500 text-sm hover:text-white transition-colors">← Volver al inicio</Link>
         </div>
