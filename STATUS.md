@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 29 abril 2026 (Fase C + multi-tenant strict + Fase M 100% + fix atribución M9/M15 + estrategia GHL killer definida ✅ — 73%)
+**Última actualización:** 29 abril 2026 — fix flows fantasma v21 + migración multicanal (contact_id PK + tablas v2 + bot v27 + API v62) ✅ — 74%
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -80,7 +80,7 @@
 ## 🏗️ STACK
 - **Frontend:** Next.js 14 + Tailwind + Amplify
 - **Backend:** AWS Lambda (Python) + Lambda URLs
-- **Datos:** DynamoDB (11 tablas, todas con PITR)
+- **Datos:** DynamoDB (19 tablas, todas con PITR)
 - **Auth:** AWS Cognito + Google OAuth
 - **IA:** Gemini 2.5 Flash + VAPI (voz)
 - **Notificaciones:** Firebase Cloud Messaging (FCM)
@@ -90,14 +90,16 @@
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5900 líneas, **v20**)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt (~6600 líneas, ~93 endpoints, **v61**)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5900 líneas, **v27** — contact_id multicanal)
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt (~8900 líneas, ~93 endpoints, **v62** — contact_id multicanal)`
 - `WhatsApp_Remarketing` — Follow-up + renewal (~280 líneas, **v1**)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
-### Tablas DynamoDB (14 — todas con PITR, 3 nuevas hoy)
+### Tablas DynamoDB (19 — todas con PITR)
 - `KnowledgeBase` (PK: `company_id`, SK: `kb_key`, GSI: `phone_number_id-index`)
 - `TypebotSessions` (PK: `phoneNumber`, TTL 24h)
+- `TypebotSessions_v2` (PK: `contact_id`, GSI: `company_id-channel-index` + `company_id-last_interaction-index`, PITR ✅) — ACTIVA
 - `Leads_CRM` (PK: `phoneNumber`, GSI: `company_id-index`)
+- `Leads_CRM_v2` (PK: `contact_id`, GSI: `company_id-index` + `company_id-channel-index`, PITR ✅) — ACTIVA
 - `StudentPaymentState` (PK: `phoneNumber`, GSI: `company_id-index`)
 - `ConversationMemory` (PK: `company_id`, SK: `normalized_question`)
 - `ConversationMemoryCandidates` (PK: `company_id`, SK: `normalized_question`)
@@ -111,7 +113,7 @@
 - **Meta App:** `27398458396409385`
 - **WABA:** `948932884157315`
 - **Pixel:** `1102373681952908`
-- **EventBridge cron:** `ads-daily-optimize` (6 AM diario), `meta-token-renewal` (domingos 5 AM UTC)
+- **EventBridge crons:** `ads-daily-optimize` ENABLED (6 AM diario), `meta-token-renewal` ENABLED (domingos 5 AM UTC), `promote-memory-every-5min` ENABLED, `remarketing-every-hour` ENABLED
 ---
 ## ✅ MÓDULOS COMPLETADOS
 ### 🤖 Bot WhatsApp
@@ -397,6 +399,15 @@
 ---
 - [x] **Sintetizador phone para multi-persona**: asistentes 2+ usan `{sender}_aN` para no chocar PK Leads_CRM ✅
 ---
+#### Bonus sesión 29 abril (tarde) — multicanal + fixes
+- [x] **Fix flows fantasma (v21)**: `handle_flows_data_exchange` resuelve tenant via `resolve_company(PHONE_NUMBER_ID)` antes de descifrar — elimina `DEFAULT_COMPANY_ID` vacío en lookup de llave privada ✅
+- [x] **`ChatwootLiveSessions` eliminada**: verificado que ninguna Lambda la usaba — tabla basura eliminada ✅
+- [x] **`Subscriptions` PITR activado**: tabla existía sin PITR — activado antes de Sprint 1 ✅
+- [x] **Migración multicanal — arquitectura contact_id**: `TypebotSessions_v2` + `Leads_CRM_v2` con PK `contact_id` genérico + campo `channel` (whatsapp/instagram/facebook) + GSI x2 + PITR. Backup pre-migración en S3 `clientes-bot-backups-235565749479/pre-migration/` ✅
+- [x] **Bot v27**: 23 cambios — `contact_id` como PK en session_table y leads_table, `channel` field default `whatsapp`, `leads_table` sin hardcode, backwards compat `payment_table` ✅
+- [x] **API v62**: 49+ cambios — `contact_id` como PK en session_table y leads_table, `payments_table` intacta con `phoneNumber` ✅
+- [x] **Canales Meta verificados**: WA activo (`phone_number_id: 1048898704969876`), FB Messenger (`page_id: 224383387690264`) y IG DM (`ig_id: 17841459029140443`) listos para conectar en Sprint 2 ✅
+---
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
 - [x] `PlatformAdmins` (PK: `email`) — equipo de la plataforma ✅ creada
 - [x] `ErrorLog` (PK: `service`, SK: `sk`, TTL 30d, PITR) ✅ creada
@@ -404,7 +415,7 @@
 - [ ] `SupportTickets` (PK: `ticket_id`, GSI: `company_id`, GSI: `assigned_to`)
 - [ ] `BugReports` (PK: `report_id`, GSI: `company_id`)
 - [ ] `TenantQuotas` (PK: `company_id`, SK: `period`) — tracking mensajes/leads/agentes (Sprint 1)
-- [ ] `Subscriptions` (PK: `company_id`) — gateway-agnostic, status, plan, trial_ends_at (Sprint 1)
+- [x] `Subscriptions` (PK: `company_id`, GSI: `gateway-subscription-index` + `status-index`, PITR ✅) — creada, lista para Sprint 1`
 - [ ] `Affiliates` (PK: `email`, GSI: `affiliate_code-index`) — programa de afiliados (Sprint 1)
 - [ ] `Referrals` (PK: `referral_id`, GSI: `affiliate_email-index`) — tracking de referidos (Sprint 1)
 - [ ] `AffiliatePayouts` (PK: `affiliate_email`, SK: `month`) — payouts mensuales (Sprint 1)
@@ -690,7 +701,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-██████████████████████░░░░░░░░ 73%
+███████████████████████░░░░░░░ 74%
 | Categoría | % |
 |---|---|
 | ✅ Infraestructura construida | **73%** |
@@ -701,7 +712,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
 | 🤝 Programa Afiliados (movido a Sprint 1) | 0% — bloqueante crecimiento |
 | 🔧 Pendiente: Sprint 1 ampliado (Stripe+Wompi+Quotas+Afiliados) + E (Impersonate) + F-J + multicanal | 2% |
-**Última medición:** 29 abril 2026 — Fase M 100% + fix atribución v20 + estrategia "GHL killer" definida (pricing $97/$297/$497, afiliados 30% recurring forever movidos a Sprint 1)
+**Última medición:** 29 abril 2026 — fix flows v21 + migración multicanal completa + bot v27 + API v62
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -712,7 +723,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **68% → 70%** — Bloque M Meta CAPI + plantilla Excel + bulk import
 - [x] **70% → 72%** — B6.5 cron IA + Fase C parcial + G1-G3 + multi-tenant strict 🦁
 - [x] **72% → 73%** — Fase M 100% (M8/M9/M10 confirmados) + fix atribución silencioso v20 🦁
-- [ ] **73% → 80%** — Stripe billing + Feature Flags + Quotas ⭐ ESTÁS AQUÍ
+- [x] **73% → 74%** — Fix flows fantasma v21 + migración multicanal contact_id + tablas v2 + bot v27 + API v62 🦁
+- [ ] **74% → 80%** — Stripe billing + Feature Flags + Quotas ⭐ ESTÁS AQUÍ
 - [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
 - [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 
