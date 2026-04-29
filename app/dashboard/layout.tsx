@@ -26,6 +26,7 @@ const menuItems = [
   { href: '/dashboard/ads', label: 'Facebook Ads', icon: '📢', roles: ['owner', 'admin'] },
   { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: '📱', roles: ['owner'] },
   { href: '/dashboard/settings', label: 'Configuracion', icon: '⚙️', roles: ['owner'] },
+  { href: '/dashboard/billing', label: 'Suscripción', icon: '💎', roles: ['owner'] },
 ];
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -74,7 +75,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .then(res => res.json())
         .then(data => setReminders(data.reminders || []))
         .catch(() => {});
-      // Contar chats que necesitan atencion
       // Verificar estado del token Meta (1 vez por sesion)
       if (!sessionStorage.getItem('cb_token_checked')) {
         fetch(`${API_URL}/meta/token-status`, { headers: { 'client-id': user.companyId } })
