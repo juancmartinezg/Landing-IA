@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 29 abril 2026 — fix flows fantasma v21 + migración multicanal (contact_id PK + tablas v2 + bot v27 + API v62) ✅ — 74%
+**Última actualización:** 29 abril 2026 — Billing Lemon Squeezy v63/v64/v65 + planes Starter/Growth/Agency + login passkey auto-disparo + dashboard/billing + landing planes con tooltips ✅ — 76%
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -91,7 +91,7 @@
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
 - `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5900 líneas, **v27** — contact_id multicanal)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt (~8900 líneas, ~93 endpoints, **v62** — contact_id multicanal)`
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt (~8900 líneas, ~93 endpoints, **v65** — planes Starter/Growth/Agency + billing Lemon Squeezy)
 - `WhatsApp_Remarketing` — Follow-up + renewal (~280 líneas, **v1**)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -408,6 +408,16 @@
 - [x] **API v62**: 49+ cambios — `contact_id` como PK en session_table y leads_table, `payments_table` intacta con `phoneNumber` ✅
 - [x] **Canales Meta verificados**: WA activo (`phone_number_id: 1048898704969876`), FB Messenger (`page_id: 224383387690264`) y IG DM (`ig_id: 17841459029140443`) listos para conectar en Sprint 2 ✅
 ---
+#### Bonus sesión 29 abril (noche/madrugada) — billing + UX + landing
+- [x] **Lemon Squeezy integrado**: checkout, webhook HMAC, planes, cancel, resume — API v63/v64/v65 ✅
+- [x] **Planes rediseñados**: Starter $97 / Growth $297 / Agency $497 — features correctos por plan ✅
+- [x] **`/dashboard/billing`**: página completa con toggle mensual/anual, estado suscripción, cancel/resume ✅
+- [x] **Sidebar**: ítem 💎 Suscripción agregado para rol owner ✅
+- [x] **Login passkey auto-disparo**: FaceID/huella se activa automáticamente al cargar — sin botones intermedios ✅
+- [x] **Fix dashboard en blanco**: providers.tsx — setUser inmediato desde localStorage, /me en background ✅
+- [x] **Landing planes**: Starter/Growth/Agency con tooltips "?" explicativos, toggle anual -20%, sección "En camino 🚀" ✅
+- [x] **Lemon Squeezy API key renovar**: ⚠️ regenerar la API key expuesta en el chat
+---
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
 - [x] `PlatformAdmins` (PK: `email`) — equipo de la plataforma ✅ creada
 - [x] `ErrorLog` (PK: `service`, SK: `sk`, TTL 30d, PITR) ✅ creada
@@ -701,7 +711,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-███████████████████████░░░░░░░ 74%
+████████████████████████░░░░░░ 76%
 ### ⏱️ Métricas de desarrollo reales
 
 | Métrica | Valor |
@@ -760,7 +770,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 > 💡 **En palabras simples:** el 26% de features que falta representa solo el ~13% de la dificultad técnica total. El motor del Ferrari está construido — lo que falta es la tapicería, el GPS y el aire acondicionado.
 | Categoría | % |
 |---|---|
-| ✅ Infraestructura construida | **73%** |
+| ✅ Infraestructura construida | **76%** |
 | 🔴 Stripe billing (para cobrar) | 0% — bloqueante |
 | 🔴 Feature Flags por plan | 0% — bloqueante |
 | 🟡 Multicanal (IG/Messenger/Telegram) | 0% — Sprint 2 |
@@ -768,7 +778,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
 | 🤝 Programa Afiliados (movido a Sprint 1) | 0% — bloqueante crecimiento |
 | 🔧 Pendiente: Sprint 1 ampliado (Stripe+Wompi+Quotas+Afiliados) + E (Impersonate) + F-J + multicanal | 2% |
-**Última medición:** 29 abril 2026 — fix flows v21 + migración multicanal completa + bot v27 + API v62
+**Última medición:** 29 abril 2026 — Billing LS completo + planes S/G/A + login passkey + dashboard billing + landing actualizada
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -780,7 +790,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **70% → 72%** — B6.5 cron IA + Fase C parcial + G1-G3 + multi-tenant strict 🦁
 - [x] **72% → 73%** — Fase M 100% (M8/M9/M10 confirmados) + fix atribución silencioso v20 🦁
 - [x] **73% → 74%** — Fix flows fantasma v21 + migración multicanal contact_id + tablas v2 + bot v27 + API v62 🦁
-- [ ] **74% → 80%** — Stripe billing + Feature Flags + Quotas ⭐ ESTÁS AQUÍ
+- [x] **74% → 76%** — Lemon Squeezy billing completo (checkout/webhook/cancel/resume) + planes Starter/Growth/Agency + login passkey auto-disparo + dashboard/billing + landing actualizada 🦁
+- [ ] **76% → 80%** — Feature Flags + Quotas + Wompi subscriptions ⭐ ESTÁS AQUÍ
 - [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
 - [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 

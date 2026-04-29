@@ -1582,9 +1582,14 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                 }} className="w-full py-2 rounded-xl border border-dashed border-white/10 text-xs text-gray-400 hover:bg-white/[0.03] hover:text-white transition-all mb-4">
                   + Agregar variante
                 </button>
-                <div className="bg-white/[0.02] rounded-xl p-3 mb-4">
-                  <p className="text-[10px] text-gray-400">📋 {variants.length} anuncios • ${parseInt(wiz.budget_daily || '0').toLocaleString()}/día • {wiz.duration === '0' ? 'Indefinida' : `${wiz.duration} días`} • {wiz.cities?.length > 0 ? wiz.cities.map((c: any) => c.name).join(', ') : wiz.country} • {wiz.age_min}-{wiz.age_max} años • {wiz.gender === 'all' ? 'Todos' : wiz.gender === 'male' ? 'Hombres' : 'Mujeres'}</p>
+                <div className="bg-white/[0.02] rounded-xl p-3 mb-4 space-y-1">
+                <p className="text-[10px] text-gray-400">📋 {variants.length} anuncios • {wiz.duration === '0' ? 'Indefinida' : `${wiz.duration} días`} • {wiz.cities?.length > 0 ? wiz.cities.map((c: any) => c.name).join(', ') : wiz.country} • {wiz.age_min}-{wiz.age_max} años • {wiz.gender === 'all' ? 'Todos' : wiz.gender === 'male' ? 'Hombres' : 'Mujeres'}</p>
+                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-3 py-2">
+                  <p className="text-[10px] text-indigo-300 font-bold">💰 Presupuesto total: ${parseInt(wiz.budget_daily || '0').toLocaleString()}/día</p>
+                  <p className="text-[9px] text-gray-500 mt-0.5">Los {variants.length} anuncios <strong className="text-white">comparten</strong> este presupuesto — Meta decide cuánto darle a cada uno según rendimiento. No se multiplica.</p>
+                  {wiz.duration !== '0' && <p className="text-[9px] text-indigo-400 mt-0.5">Total campaña: ${(parseInt(wiz.budget_daily || '0') * parseInt(wiz.duration || '7')).toLocaleString()} en {wiz.duration} días</p>}
                 </div>
+              </div>
                 <div className="flex gap-2">
                   <button onClick={() => setWizStep(4)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5 transition-all">← Atrás</button>
                   {publishing ? (
@@ -1653,7 +1658,7 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                       <p className="text-[8px] text-gray-500">Confianza: {r.confidence}</p>
                     </div>
                     {r.target_id && (
-                      <button onClick={() => { handleApplyAction(r.action, r.target_id); setAnalysis(null); }}
+                      <button onClick={() => { handleApplyAction(r.action, r.target_id); }}
                         className="text-[9px] px-2 py-1 rounded-lg bg-emerald-600 text-white font-bold ml-2 shrink-0">
                         ✅ Aplicar
                       </button>
@@ -1665,15 +1670,15 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
             <div className="mb-4">
               <p className="text-[10px] text-gray-400 font-bold mb-2">⚡ Acciones rápidas</p>
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => { handleApplyAction('pausar', analysis.campaign_id); setAnalysis(null); }}
+                <button onClick={() => { handleApplyAction('pausar', analysis.campaign_id); }}
                   className="text-[9px] px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 font-bold transition-all">
                   ⏸ Pausar campaña
                 </button>
-                <button onClick={() => { handleApplyAction('activar', analysis.campaign_id); setAnalysis(null); }}
+                <button onClick={() => { handleApplyAction('activar', analysis.campaign_id); }}
                   className="text-[9px] px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all">
                   ▶ Activar campaña
                 </button>
-                <button onClick={() => { handleApplyAction('escalar', analysis.campaign_id); setAnalysis(null); }}
+                <button onClick={() => { handleApplyAction('escalar', analysis.campaign_id);  }}
                   className="text-[9px] px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all">
                   🚀 Aumentar presupuesto 20%
                 </button>
