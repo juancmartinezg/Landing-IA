@@ -2,9 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../providers';
 import Link from 'next/link';
-
+import { getStoredRefCode } from '@/components/AffiliateTracker';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-
 interface Plan {
   key: string;
   name: string;
@@ -23,7 +22,6 @@ interface Plan {
     api_access: boolean;
   };
 }
-
 interface Subscription {
   status: string;
   plan: string;
@@ -154,6 +152,7 @@ export default function BillingPage() {
     const variantKey = annual ? `${plan.key}_annual` : `${plan.key}_monthly`;
     setCheckingOut(variantKey);
     try {
+      const refCode = getStoredRefCode();
       const res = await fetch(`${API_URL}/billing/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'client-id': user.companyId },
@@ -161,6 +160,7 @@ export default function BillingPage() {
           variant_key: variantKey,
           email: user.email || '',
           name: user.name || '',
+          ref_code: refCode || undefined,
         }),
       });
       const data = await res.json();
