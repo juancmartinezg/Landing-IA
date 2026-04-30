@@ -91,8 +91,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5900 líneas, **v27** — contact_id multicanal)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt (~8900 líneas, ~93 endpoints, **v65** — planes Starter/Growth/Agency + billing Lemon Squeezy)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5800 líneas, **v29** — pack consumption + plan_features desde DDB)
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt + Feature Flags + Quotas + Message Packs (~9900 líneas, ~97 endpoints, **v74** — message packs endpoints)
 - `WhatsApp_Remarketing` — Follow-up + renewal (~280 líneas, **v1**)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -419,13 +419,25 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **Landing planes**: Starter/Growth/Agency con tooltips "?" explicativos, toggle anual -20%, sección "En camino 🚀" ✅
 - [x] **Lemon Squeezy API key renovar**: ⚠️ regenerar la API key expuesta en el chat
 ---
+#### Bonus sesión 30 abril (madrugada) — Feature Flags + Quotas + Message Packs 🦁
+- [x] **Catálogo `PLAN_FEATURES` migrado a DDB**: `KnowledgeBase[__PLATFORM__/plan_features]` (hit límite 4KB env vars). Cache 5min. Admin puede editar sin redeploy ✅
+- [x] **Tabla `TenantQuotas`** creada con PITR + TTL 400d (PK: company_id, SK: YYYY-MM). Reset mensual automático por SK ✅
+- [x] **Helpers API**: `has_feature`, `get_plan_quotas`, `get_plan_info`, `incr_quota`, `within_quota`, `get_tenant_usage` (API v70+v71) ✅
+- [x] **Endpoints**: `GET /billing/features` + `GET /billing/usage` — tested JMC=enterprise (unlimited) + CO_979BE374=starter (blocked 5001/5000) (API v72) ✅
+- [x] **Bot v28 enforcement**: chequea quota, incrementa contador. Flag `QUOTA_ENFORCE=false` (rodaje, solo log). Planes ilimitados pasan siempre ✅
+- [x] **🦁 JMC = enterprise lifetime** (`plan_source=owner_lifetime`) — no contabiliza como MRR ✅
+- [x] **Catálogo `MESSAGE_PACKS` en DDB**: 3 packs S=1k/$19, M=5k/$79 ⭐, L=20k/$249 💎 (descuentos 0%/18%/36%) ✅
+- [x] **Bot v29**: `consume_pack_message()` atómico con `ConditionExpression`. Orden: plan → pack → bloqueo ✅
+- [x] **API v73**: catálogos leen DDB con cache 5min + fallback env var (backward-compat) ✅
+- [x] **API v74**: 3 endpoints `/billing/packs` (GET list), `/billing/packs/checkout` (POST Lemon Squeezy one-time), `/billing/packs/history` (GET AuditLog) + webhook handler `order_created` detecta `type=message_pack` y suma al balance ✅
+- [x] **Arquitectura pack balance**: `config_pro.messages_pack_balance` (atomic ADD/SUB) — hasta agotarse, no expira mensualmente (filosofía Stripe/Twilio) ✅
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
 - [x] `PlatformAdmins` (PK: `email`) — equipo de la plataforma ✅ creada
 - [x] `ErrorLog` (PK: `service`, SK: `sk`, TTL 30d, PITR) ✅ creada
 - [ ] `SupportRequests` (PK: `request_id`, GSI: `company_id`, TTL 30 días)
 - [ ] `SupportTickets` (PK: `ticket_id`, GSI: `company_id`, GSI: `assigned_to`)
 - [ ] `BugReports` (PK: `report_id`, GSI: `company_id`)
-- [ ] `TenantQuotas` (PK: `company_id`, SK: `period`) — tracking mensajes/leads/agentes (Sprint 1)
+- [x] `TenantQuotas` (PK: `company_id`, SK: `period` YYYY-MM, PITR ✅, TTL 400d) ✅ creada Sprint 1.F
 - [x] `Subscriptions` (PK: `company_id`, GSI: `gateway-subscription-index` + `status-index`, PITR ✅) — creada, lista para Sprint 1`
 - [ ] `Affiliates` (PK: `email`, GSI: `affiliate_code-index`) — programa de afiliados (Sprint 1)
 - [ ] `Referrals` (PK: `referral_id`, GSI: `affiliate_email-index`) — tracking de referidos (Sprint 1)
@@ -723,7 +735,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-█████████████████████████░░░░░ 78%
+██████████████████████████░░░░ 80%
 ### ⏱️ Métricas de desarrollo reales
 
 | Métrica | Valor |
@@ -804,7 +816,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **73% → 74%** — Fix flows fantasma v21 + migración multicanal contact_id + tablas v2 + bot v27 + API v62 🦁
 - [x] **74% → 76%** — Lemon Squeezy billing completo (checkout/webhook/cancel/resume) + planes Starter/Growth/Agency + login passkey auto-disparo + dashboard/billing + landing actualizada 🦁
 - [x] **76% → 78%** — Meta CAPI individual (report-purchase) + plantilla ventas v2 (nombre/apellido/documento/indicativo/dropdown) + fix CORS Lambda URL + ads fix presupuesto compartido + fix modal análisis 🦁
-- [ ] **78% → 82%** — Feature Flags + Quotas + mejoras motor ads ⭐ ESTÁS AQUÍ
+- [x] **78% → 80%** — Feature Flags (S1.E) + Quotas (S1.F) + Enforcement rodaje (S1.G) + Message Packs (Bloque 6) 🦁
+- [ ] **80% → 82%** — Frontend usage widgets + Packs checkout UI + Affiliates (S1.I-R) ⭐ ESTÁS AQUÍ
 - [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
 - [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 
