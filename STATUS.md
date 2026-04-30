@@ -2,7 +2,8 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**Última actualización:** 29 abril 2026 — Billing Lemon Squeezy v63/v64/v65 + planes Starter/Growth/Agency + login passkey auto-disparo + dashboard/billing + landing planes con tooltips ✅ — 76%
+**v65** — planes Starter/Growth/Agency + billing Lemon Squeezy)
+Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
 **Producción:** https://clientes.bot (Amplify)
@@ -537,6 +538,17 @@
 > (no es Stripe billing del SaaS — eso es Sprint 1 abajo).
 - [ ] **Stripe** (crítico para US/EU/UK) — pago por transacción
 - [ ] Pasarela personalizada bajo demanda (proceso documentado para integrar nuevas en <48h)
+#### Bonus sesión 29 abril (tarde/noche) — Meta CAPI + ads + billing
+- [x] **Endpoint `POST /leads/report-purchase`**: reportar venta individual a Meta CAPI desde el CRM con 1 clic — sin importar si vino del bot o de fuera ✅
+- [x] **Botón "📤 Reportar a Meta"** en panel de detalle del lead (acciones rápidas) ✅
+- [x] **Plantilla ventas v2**: columnas nombre, apellido, documento, celular (con indicativo automático del país), email, servicio (dropdown nombres legibles), monto, moneda, fecha, campaign_id ✅
+- [x] **Mapeo service_name → slug** automático en bulk-import — el usuario ve nombres legibles, el backend mapea al slug correcto ✅
+- [x] **document_id enviado a Meta** como `extern_id` — mejor match rate ✅
+- [x] **Fix CORS Lambda URL**: `AllowOrigins: ["https://clientes.bot", "http://localhost:3000"]` — elimina header duplicado que bloqueaba descarga de plantilla ✅
+- [x] **Fix presupuesto compartido en wizard de ads**: texto claro en paso 5 que el budget NO se multiplica por variantes ✅
+- [x] **Fix modal análisis ads**: botones "Aplicar" ya no cierran el modal ✅
+- [x] **Cron ads**: tenant CO_979BE374 (cuenta basura "asd") limpiado — ya no genera errores en el cron diario ✅
+- [x] **API v67→v69**: fix CORS + plantilla ventas v2 + bulk-import v2 ✅
 ---
 ## 🟡 SPRINTS PLANEADOS — Orden de ejecución (sin fechas)
 ### 🥇 Sprint 1 — Foundation: empezar a cobrar + afiliados (estrategia GHL killer)
@@ -711,7 +723,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-████████████████████████░░░░░░ 76%
+█████████████████████████░░░░░ 78%
 ### ⏱️ Métricas de desarrollo reales
 
 | Métrica | Valor |
@@ -778,7 +790,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
 | 🤝 Programa Afiliados (movido a Sprint 1) | 0% — bloqueante crecimiento |
 | 🔧 Pendiente: Sprint 1 ampliado (Stripe+Wompi+Quotas+Afiliados) + E (Impersonate) + F-J + multicanal | 2% |
-**Última medición:** 29 abril 2026 — Billing LS completo + planes S/G/A + login passkey + dashboard billing + landing actualizada
+**Última medición:** 29 abril 2026 — Meta CAPI completo (report-purchase individual + plantilla ventas v2 + fix CORS Lambda URL) + API v69
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -791,7 +803,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **72% → 73%** — Fase M 100% (M8/M9/M10 confirmados) + fix atribución silencioso v20 🦁
 - [x] **73% → 74%** — Fix flows fantasma v21 + migración multicanal contact_id + tablas v2 + bot v27 + API v62 🦁
 - [x] **74% → 76%** — Lemon Squeezy billing completo (checkout/webhook/cancel/resume) + planes Starter/Growth/Agency + login passkey auto-disparo + dashboard/billing + landing actualizada 🦁
-- [ ] **76% → 80%** — Feature Flags + Quotas + Wompi subscriptions ⭐ ESTÁS AQUÍ
+- [x] **76% → 78%** — Meta CAPI individual (report-purchase) + plantilla ventas v2 (nombre/apellido/documento/indicativo/dropdown) + fix CORS Lambda URL + ads fix presupuesto compartido + fix modal análisis 🦁
+- [ ] **78% → 82%** — Feature Flags + Quotas + mejoras motor ads ⭐ ESTÁS AQUÍ
 - [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
 - [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 
