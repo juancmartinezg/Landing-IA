@@ -34,7 +34,39 @@ interface Subscription {
   trial_ends_at: string;
   ls_subscription_id: string;
 }
-
+interface QuotaStatus {
+  used: number;
+  limit: number;
+  remaining: number;
+  pct: number;
+  unlimited: boolean;
+  exceeded: boolean;
+}
+interface FeaturesResponse {
+  plan: { plan_id: string; name: string };
+  status: Record<string, QuotaStatus>;
+  period: string;
+}
+interface MessagePack {
+  pack_id: string;
+  name: string;
+  messages: number;
+  price_usd: number;
+  price_cop: number;
+  badge: string;
+  active: boolean;
+}
+interface PacksResponse {
+  packs: MessagePack[];
+  balance: number;
+}
+const QUOTA_LABELS: Record<string, { icon: string; label: string; unit: string }> = {
+  messages_whatsapp: { icon: '💬', label: 'Mensajes WhatsApp',   unit: 'msgs' },
+  leads_total:       { icon: '👥', label: 'Leads en CRM',         unit: 'leads' },
+  agents_active:     { icon: '🧑‍💼', label: 'Agentes humanos',     unit: 'agentes' },
+  voice_minutes:     { icon: '🎙️', label: 'Minutos de voz IA',   unit: 'min' },
+  subaccounts:       { icon: '🏢', label: 'Sub-cuentas',          unit: 'cuentas' },
+};
 const PLAN_ICONS: Record<string, string> = { solo: '🚀', pro: '⭐', agency: '🦁' };
 const PLAN_COLORS: Record<string, { border: string; badge: string; btn: string; glow: string }> = {
   solo:   { border: 'border-indigo-500/30',  badge: 'bg-indigo-500/20 text-indigo-400',   btn: 'bg-indigo-600 hover:bg-indigo-500',   glow: 'shadow-indigo-500/20' },
@@ -61,7 +93,11 @@ export default function BillingPage() {
   const [cancelling, setCancelling] = useState(false);
   const [resuming, setResuming] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
-
+  const [features, setFeatures] = useState<FeaturesResponse | null>(null);
+  const [packs, setPacks] = useState<MessagePack[]>([]);
+  const [packBalance, setPackBalance] = useState(0);
+  const [showPacksModal, setShowPacksModal] = useState(false);
+  const [buyingPack, setBuyingPack] = useState<string | null>(null);
   useEffect(() => {
     if (!user?.companyId) return;
     const params = new URLSearchParams(window.location.search);
@@ -69,16 +105,50 @@ export default function BillingPage() {
       setSuccessMsg('🎉 ¡Suscripción activada! Bienvenido a clientes.bot.');
       window.history.replaceState({}, '', '/dashboard/billing');
     }
+    if (params.get('pack') === '1') {
+      setSuccessMsg('🎉 ¡Pack activado! Tus mensajes adicionales ya están disponibles.');
+      window.history.replaceState({}, '', '/dashboard/billing');
+    }
     Promise.all([
       fetch(`${API_URL}/billing/plans`, { headers: { 'client-id': user.companyId } }).then(r => r.json()),
       fetch(`${API_URL}/billing/me`, { headers: { 'client-id': user.companyId } }).then(r => r.json()),
-    ]).then(([plansData, subData]) => {
+      fetch(`${API_URL}/billing/features`, { headers: { 'client-id': user.companyId } }).then(r => r.json()),
+      fetch(`${API_URL}/billing/packs`, { headers: { 'client-id': user.companyId } }).then(r => r.json()),
+    ]).then(([plansData, subData, featuresData, packsData]: [any, any, FeaturesResponse, PacksResponse]) => {
       setPlans(plansData.plans || []);
       if (subData.status && subData.status !== 'no_subscription') setSub(subData);
+      if (featuresData?.plan) setFeatures(featuresData);
+      if (packsData?.packs) {
+        setPacks(packsData.packs);
+        setPackBalance(packsData.balance || 0);
+      }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [user]);
-
+  const handleBuyPack = async (pack: MessagePack) => {
+    if (!user?.companyId) return;
+    setBuyingPack(pack.pack_id);
+    try {
+      const res = await fetch(`${API_URL}/billing/packs/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user.companyId },
+        body: JSON.stringify({
+          pack_id: pack.pack_id,
+          email: user.email || '',
+          name: user.name || '',
+        }),
+      });
+      const data = await res.json();
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        alert(data.error || 'No se pudo crear el checkout del pack');
+      }
+    } catch (e) {
+      console.error('Pack checkout error:', e);
+    }
+    setBuyingPack(null);
+  };
   const handleCheckout = async (plan: Plan) => {
     if (!user?.companyId) return;
     const variantKey = annual ? `${plan.key}_annual` : `${plan.key}_monthly`;
@@ -207,6 +277,104 @@ export default function BillingPage() {
         </div>
       )}
 
+      {/* === USO DEL PLAN (Sprint 1.H) === */}
+      {features && (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Tu uso este mes</p>
+              <p className="text-sm text-gray-400">
+                Período: <span className="text-white font-medium">{features.period}</span>
+                {packBalance > 0 && (
+                  <>
+                    {' · '}
+                    <span className="text-emerald-400 font-medium">
+                      💎 {packBalance.toLocaleString()} msgs en packs
+                    </span>
+                  </>
+                )}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPacksModal(true)}
+              className="text-xs px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold transition-all flex items-center gap-2"
+            >
+              💎 Comprar pack
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Object.entries(features.status).map(([key, q]) => {
+              const meta = QUOTA_LABELS[key] || { icon: '📊', label: key, unit: '' };
+              const barColor =
+                q.exceeded ? 'bg-red-500' :
+                q.pct >= 80 ? 'bg-yellow-500' :
+                q.pct >= 50 ? 'bg-indigo-500' :
+                'bg-emerald-500';
+              return (
+                <div key={key} className="rounded-xl bg-white/[0.02] border border-white/5 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-400 flex items-center gap-1.5">
+                      <span>{meta.icon}</span>
+                      <span>{meta.label}</span>
+                    </span>
+                    {q.exceeded && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold">
+                        EXCEDIDO
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-baseline gap-1 mb-2">
+                    <span className="text-xl font-bold">{q.used.toLocaleString()}</span>
+                    <span className="text-gray-500 text-xs">
+                      / {q.unlimited ? '∞' : q.limit.toLocaleString()}
+                    </span>
+                    {!q.unlimited && (
+                      <span className="ml-auto text-[10px] text-gray-500 font-medium">{q.pct}%</span>
+                    )}
+                  </div>
+                  {!q.unlimited && (
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${barColor} transition-all`}
+                        style={{ width: `${Math.min(100, q.pct)}%` }}
+                      />
+                    </div>
+                  )}
+                  {q.unlimited && (
+                    <p className="text-[10px] text-emerald-400 font-medium">Ilimitado ✨</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* Alerta 80%+ en mensajes */}
+          {features.status.messages_whatsapp && !features.status.messages_whatsapp.unlimited &&
+           features.status.messages_whatsapp.pct >= 80 && (
+            <div className={`rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap ${
+              features.status.messages_whatsapp.exceeded
+                ? 'bg-red-500/10 border border-red-500/20'
+                : 'bg-yellow-500/10 border border-yellow-500/20'
+            }`}>
+              <div>
+                <p className="text-sm font-bold">
+                  {features.status.messages_whatsapp.exceeded
+                    ? '🚨 Excediste tu límite de mensajes este mes'
+                    : '⚠️ Estás cerca del límite mensual de mensajes'}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Compra un pack adicional para seguir atendiendo sin interrupciones.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPacksModal(true)}
+                className="text-xs px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-bold transition-all whitespace-nowrap"
+              >
+                Ver packs 💎
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {/* Toggle mensual/anual */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <p className="text-sm text-gray-400">{sub ? 'Cambiar de plan:' : 'Elige tu plan:'}</p>
@@ -324,7 +492,109 @@ export default function BillingPage() {
         Equivalente a GoHighLevel Unlimited $297 — con IA real, CAPI completo y LATAM nativo incluidos.
         <Link href="/pricing" className="text-indigo-400 hover:text-indigo-300 ml-1">Ver comparativa completa →</Link>
       </div>
-
+      {/* === MODAL COMPRAR PACK === */}
+      {showPacksModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowPacksModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#0B0F1A] border border-white/10 rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h2 className="text-xl font-bold flex items-center gap-2">💎 Paquetes de mensajes adicionales</h2>
+                <p className="text-xs text-gray-400 mt-1">
+                  Pago único. Los mensajes <strong className="text-white">no expiran</strong> hasta agotarse.
+                </p>
+                {packBalance > 0 && (
+                  <p className="text-xs text-emerald-400 mt-2">
+                    Balance actual: {packBalance.toLocaleString()} mensajes disponibles
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowPacksModal(false)}
+                className="text-gray-500 hover:text-white text-xl px-2"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {packs.map((pack) => {
+                const isPopular = pack.pack_id === 'pack_m';
+                const isBest = pack.pack_id === 'pack_l';
+                const pricePerMsg = (pack.price_usd / pack.messages).toFixed(4);
+                const loading = buyingPack === pack.pack_id;
+                return (
+                  <div
+                    key={pack.pack_id}
+                    className={`relative rounded-2xl border p-5 flex flex-col gap-3 transition-all ${
+                      isPopular ? 'border-emerald-500/40 bg-emerald-500/5 ring-1 ring-emerald-500/30' :
+                      isBest ? 'border-amber-500/40 bg-amber-500/5' :
+                      'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    {pack.badge && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className={`text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap ${
+                          isPopular ? 'bg-emerald-600 text-white' :
+                          isBest ? 'bg-amber-600 text-white' :
+                          'bg-white/10 text-gray-300'
+                        }`}>
+                          {pack.badge}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-lg font-bold">{pack.name}</p>
+                      <p className="text-3xl font-bold mt-2">{pack.messages.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">mensajes WhatsApp</p>
+                    </div>
+                    <div className="border-t border-white/5 pt-3">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold">${pack.price_usd}</span>
+                        <span className="text-xs text-gray-500">USD</span>
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        ó ${pack.price_cop.toLocaleString()} COP
+                      </p>
+                      <p className="text-[10px] text-gray-400 mt-2">
+                        ${pricePerMsg} por mensaje
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleBuyPack(pack)}
+                      disabled={loading || !!buyingPack}
+                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-60 ${
+                        isPopular ? 'bg-emerald-600 hover:bg-emerald-500 text-white' :
+                        isBest ? 'bg-amber-600 hover:bg-amber-500 text-white' :
+                        'bg-white/10 hover:bg-white/20 text-white'
+                      }`}
+                    >
+                      {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Redirigiendo...
+                        </span>
+                      ) : 'Comprar ahora'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-5 border border-white/5 rounded-xl p-3 bg-white/[0.02]">
+              <p className="text-[11px] text-gray-400 leading-relaxed">
+                <strong className="text-white">¿Cómo funciona?</strong> Los mensajes del pack se consumen
+                <strong className="text-white"> solo cuando superas el límite de tu plan mensual</strong>.
+                Si no los usas, se acumulan — nunca expiran. Procesado por Lemon Squeezy, tarjetas
+                internacionales aceptadas.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
