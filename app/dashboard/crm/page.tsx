@@ -402,17 +402,18 @@ export default function CRMPage() {
           const phone = String(r[0] || '').replace(/\D/g, '');
           if (!phone) continue;
           // Saltar fila de ejemplo (email placeholder)
-          if (i === 1 && String(r[1] || '').toLowerCase() === 'cliente@email.com') continue;
+          if (i === 1 && String(r[0] || '').toLowerCase() === 'juan carlos') continue;
           rows.push({
+            first_name: String(r[0] || '').trim(),
+            last_name: String(r[1] || '').trim(),
+            document: String(r[2] || '').trim(),
             phone,
-            email: String(r[1] || '').trim().toLowerCase(),
-            service_slug: String(r[2] || '').trim(),
-            amount: r[3] ? String(r[3]).replace(/[^\d.]/g, '') : '',
-            currency: String(r[4] || '').trim().toUpperCase() || 'COP',
-            purchase_date: String(r[5] || '').trim().slice(0, 10),
-            campaign_id: String(r[6] || '').trim(),
-            customer_first_name: String(r[7] || '').trim(),
-            customer_last_name: String(r[8] || '').trim(),
+            email: String(r[4] || '').trim().toLowerCase(),
+            service_name: String(r[5] || '').trim(),
+            amount: r[6] ? String(r[6]).replace(/[^\d.]/g, '') : '',
+            currency: String(r[7] || '').trim().toUpperCase() || 'COP',
+            purchase_date: String(r[8] || '').trim().slice(0, 10),
+            campaign_id: String(r[9] || '').trim(),
           });
         }
         if (!rows.length) {
@@ -626,7 +627,7 @@ export default function CRMPage() {
                 {salesRows.slice(0, 5).map((row, i) => (
                   <div key={i} className="text-[10px] text-gray-400 border-b border-white/5 py-1.5 grid grid-cols-3 gap-2">
                     <span>📱 <strong className="text-white">{row.phone}</strong></span>
-                    <span>🏷️ {row.service_slug || '—'}</span>
+                    <span>🏷️ {row.service_name || '—'}</span>
                     <span>💰 {row.amount ? `$${Number(row.amount).toLocaleString()}` : '(catálogo)'}</span>
                   </div>
                 ))}
