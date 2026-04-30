@@ -63,13 +63,17 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Lifetime Beta — 25 cupos $97 one-time = Solo plan forever** (escasez real, capital early)
 - **NO** plan Free (mata percepción premium)
 ### 🤝 Programa de afiliados (movido al Sprint 1)
-> Diferenciador clave vs GHL: **30% recurring FOREVER** (GHL da 40% año 1, 5% después).
-> A partir del año 2, los afiliados cobran 6x más con clientes.bot que con GHL.
-- **Comisión**: 30% recurring forever del MRR del referido
+> Diferenciador clave vs GHL: **40% año 1 + 30% recurring forever** (GHL da 40% año 1, 5% después).
+> A partir del año 2, los afiliados cobran **6x más** con clientes.bot que con GHL.
+> Unit economics: 84% margen bruto antes de afiliado → 44% margen neto con 40% comisión = sostenible 🦁
+- **Comisión año 1**: 40% del MRR del referido (primeros 12 meses del cliente)
+- **Comisión año 2+**: 30% recurring forever (sin caducidad, sin sub-tiers)
 - **Cookie**: 90 días (vs GHL 30 días)
 - **Min payout**: $50 USD / $200,000 COP
 - **Pago mensual** día 5 vía Stripe Connect (USD) o transferencia Wompi (COP)
-- **Sin tope, sin caducidad** — argumento de venta principal a YouTubers GHL
+- **Hold period 30 días** — comisión se libera 30 días post-pago (protege contra refunds/chargebacks)
+- **Anti-fraude**: 0 comisión si cliente cancela antes de 60 días (filtra spam de trials)
+- **Cláusula legal**: tasas pueden revisarse con 90 días de aviso. Comisiones generadas se respetan bajo términos originales.
 - **Sub-afiliados 2-tier** — pendiente Sprint 4 (no en MVP)
 ### 🎯 Migration tool (importador desde GHL)
 - CSV de leads → Leads_CRM (Sprint 1)
@@ -440,8 +444,9 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] `TenantQuotas` (PK: `company_id`, SK: `period` YYYY-MM, PITR ✅, TTL 400d) ✅ creada Sprint 1.F
 - [x] `Subscriptions` (PK: `company_id`, GSI: `gateway-subscription-index` + `status-index`, PITR ✅) — creada, lista para Sprint 1`
 - [ ] `Affiliates` (PK: `email`, GSI: `affiliate_code-index`) — programa de afiliados (Sprint 1)
-- [ ] `Referrals` (PK: `referral_id`, GSI: `affiliate_email-index`) — tracking de referidos (Sprint 1)
-- [ ] `AffiliatePayouts` (PK: `affiliate_email`, SK: `month`) — payouts mensuales (Sprint 1)
+- [ ] `Referrals` (PK: `company_id`, GSI: `affiliate_email-index`) — tracking de referidos (Sprint 1)
+- [ ] `AffiliateCommissions` (PK: `affiliate_email`, SK: `ts#referral_id`, GSI: `released-hold_until-index`) — comisiones individuales (Sprint 1)
+- [ ] `AffiliatePayouts` (PK: `affiliate_email`, SK: `month` YYYY-MM) — payouts mensuales agrupados (Sprint 1)
 - [x] `MetaEventsLog` (PK: `event_id`, TTL 90d, PITR) ✅ creada — dedup eventos CAPI antes de enviar
 - [x] `AdsAttribution` (PK: `company_id`, SK: `campaign_id#phone#event#epoch`, GSI: `campaign-event-index`, TTL 365d, PITR) ✅ creada — vincula campaign → lead → pago
 - [x] `AdsRecommendations` (PK: `company_id`, SK: `rec_id`, GSI: `status-created-index`, TTL 7d, PITR) ✅ creada — recomendaciones IA del cron
@@ -454,8 +459,13 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` — billing global (Sprint 1)
 - `STRIPE_CONNECT_CLIENT_ID` — payout de afiliados USD (Sprint 1)
 - `WOMPI_SUBSCRIPTIONS_PUBLIC_KEY` / `WOMPI_SUBSCRIPTIONS_PRIVATE_KEY` — billing CO recurrente (Sprint 1)
-- `AFFILIATE_COMMISSION_RATE` — default 0.30 (30%) configurable (Sprint 1)
+- `AFFILIATE_RATE_YEAR1` — default 0.40 (40% primer año) configurable (Sprint 1)
+- `AFFILIATE_RATE_RECURRING` — default 0.30 (30% año 2+) configurable (Sprint 1)
 - `AFFILIATE_COOKIE_DAYS` — default 90 (Sprint 1)
+- `AFFILIATE_HOLD_DAYS` — default 30 (días de retención post-pago) (Sprint 1)
+- `AFFILIATE_MIN_REFERRAL_DAYS` — default 60 (anti-fraude churn rápido) (Sprint 1)
+- `AFFILIATE_MIN_PAYOUT_USD` — default 50 (Sprint 1)
+- `AFFILIATE_MIN_PAYOUT_COP` — default 200000 (Sprint 1)
 ### 🛡️ Reglas inamovibles del Admin Panel
 - Toda acción admin queda en `AuditLog`
 - Toda escritura sobre tenant requiere consentimiento del cliente o 2FA del admin
@@ -585,17 +595,25 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [ ] **S1.F** Quotas tracking (mensajes/mes, leads, agentes, voz_min) en tabla `TenantQuotas`
 - [ ] **S1.G** Enforcement en bot/API: rechaza si excede + banner upgrade
 - [ ] **S1.H** Dashboard de uso por tenant (cards quota usado/total)
-#### 🤝 Programa de afiliados (30% recurring forever — diferenciador GHL killer)
-- [ ] **S1.I** Tabla `Affiliates` (PK email, affiliate_code único, payout_method, total_referred_mrr) + GSI affiliate_code-index
-- [ ] **S1.J** Tabla `Referrals` (PK referral_id, GSI affiliate_email, status PENDING/ACTIVE/CHURNED)
-- [ ] **S1.K** Tabla `AffiliatePayouts` (PK affiliate_email, SK month, status PENDING/PAID)
-- [ ] **S1.L** Endpoint `POST /affiliate/signup` + generación `affiliate_code` (slug+6 chars)
-- [ ] **S1.M** Tracking URL `clientes.bot/?ref=AFFILIATE_CODE` → cookie 90 días en frontend
-- [ ] **S1.N** Hook `/billing/checkout`: lee cookie ref → marca `Subscription.referred_by`
-- [ ] **S1.O** Webhook handlers: en cada cobro exitoso, calcula 30% y registra en `AffiliatePayouts`
-- [ ] **S1.P** Frontend `/affiliate` dashboard (link único + comisiones acumuladas + payouts pendientes/pagados + métricas)
-- [ ] **S1.Q** Cron mensual `affiliate-payout-batch` día 5: agrupa payouts ≥ $50 USD / $200k COP y paga vía Stripe Connect / transferencia Wompi
-- [ ] **S1.R** Email Resend confirmación de comisión generada + payout enviado
+#### 🤝 Programa de afiliados (40% año 1 + 30% lifetime — diferenciador GHL killer sostenible)
+- [ ] **S1.I** Tabla `Affiliates` (PK email, affiliate_code único, payout_method, total_referred_mrr, total_paid_lifetime, status active/banned) + GSI affiliate_code-index
+- [ ] **S1.J** Tabla `Referrals` (PK referral_id=company_id, affiliate_email, signup_date, status PENDING/ACTIVE/CHURNED, first_payment_at, churn_at)
+- [ ] **S1.K** Tabla `AffiliatePayouts` (PK affiliate_email, SK month YYYY-MM, status PENDING/HELD/RELEASED/PAID, amount_cents, commissions_count)
+- [ ] **S1.L** Tabla `AffiliateCommissions` (PK affiliate_email, SK ts#referral_id, amount, rate_pct, billing_period, hold_until, released bool)
+- [ ] **S1.M** Endpoint `POST /affiliate/signup` + generación `affiliate_code` (slug+6 chars únicos)
+- [ ] **S1.N** Tracking URL `clientes.bot/?ref=AFFILIATE_CODE` → cookie 90 días + localStorage en frontend
+- [ ] **S1.O** Hook `/billing/checkout`: lee cookie ref → guarda `referred_by` en `Subscription`
+- [ ] **S1.P** Helper `_calculate_commission_rate(affiliate, signup_date)`: 40% si referral.first_payment_at < 365d, sino 30%
+- [ ] **S1.Q** Webhook handlers: en cada `subscription_payment_success`:
+    - Calcular comisión según rate dinámico (40%/30%)
+    - Crear registro en `AffiliateCommissions` con `hold_until = paid_at + 30d`
+    - **Anti-fraude**: si referral.signup_date < 60d Y status=CHURNED → comisión = 0
+- [ ] **S1.R** Cron diario `affiliate-release-commissions`: libera commissions con `hold_until <= now` y `released=False`
+- [ ] **S1.S** Cron mensual `affiliate-payout-batch` día 5: agrupa released commissions del mes anterior, paga si ≥ $50 USD / $200k COP, sino acumula
+- [ ] **S1.T** Frontend `/affiliate` dashboard: link único + tasa actual (40%/30%) + comisiones acumuladas/pendientes/pagadas + lista de referidos + métricas conversión
+- [ ] **S1.U** Página landing `/affiliates` pública con cálculo de earnings ("Si refieres 10 clientes Growth: $1,188 año 1 + $891/mes recurring")
+- [ ] **S1.V** Email Resend: comisión generada / payout enviado / hito alcanzado (10/50/100 referidos)
+- [ ] **S1.W** TyC del programa con cláusula de revisión 90 días de aviso
 #### Migration tool desde GHL
 - [ ] **S1.S** Importador CSV `Contacts` GHL → `Leads_CRM` (parseo de campos custom)
 - [ ] **S1.T** Página `/migrate-from-ghl` con guía + uploader CSV
