@@ -96,7 +96,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
 - `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5800 líneas, **v29** — pack consumption + plan_features desde DDB)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt + Feature Flags + Quotas + Message Packs (~9900 líneas, ~97 endpoints, **v74** — message packs endpoints)
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt + Feature Flags + Quotas + Message Packs + **Affiliates** (~10,200 líneas, ~102 endpoints, **v78** — affiliate cron release commissions)
 - `WhatsApp_Remarketing` — Follow-up + renewal (~280 líneas, **v1**)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -435,6 +435,20 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **API v73**: catálogos leen DDB con cache 5min + fallback env var (backward-compat) ✅
 - [x] **API v74**: 3 endpoints `/billing/packs` (GET list), `/billing/packs/checkout` (POST Lemon Squeezy one-time), `/billing/packs/history` (GET AuditLog) + webhook handler `order_created` detecta `type=message_pack` y suma al balance ✅
 - [x] **Arquitectura pack balance**: `config_pro.messages_pack_balance` (atomic ADD/SUB) — hasta agotarse, no expira mensualmente (filosofía Stripe/Twilio) ✅
+#### Bonus sesión 30 abril (mañana) — Lemon Squeezy E2E + Affiliates 🦁
+- [x] **3 productos Message Packs** creados en Lemon Squeezy (variants 1593119/1593133/1593137) ✅
+- [x] **🔥 Test E2E REAL con plata**: compra Pack M $79 → webhook `order_created` → `add_pack_messages()` → balance JMC = 5,000 ✅
+- [x] **Bug fix v75**: `/billing/webhook` y `/ads/cron-recommend` agregados a `_public_paths` (LS no manda `client-id`) ✅
+- [x] **4 tablas DDB Afiliados** creadas con PITR: `Affiliates`, `Referrals`, `AffiliateCommissions`, `AffiliatePayouts` ✅
+- [x] **API v76**: 5 endpoints `/affiliate/*` (signup/me/referrals/commissions/validate-code) + hook checkout lee `ref_code` + webhook procesa comisiones con hold 30d ✅
+- [x] **API v77**: fix routing `/me` vs `/affiliate/me` ✅
+- [x] **Modelo de comisiones**: 40% año 1 + 30% recurring forever, hold 30d post-pago, anti-fraude churn <60d ✅
+- [x] **🦁 JMC primer afiliado**: code `JUEX36OP`, status PENDING_REVIEW (auto-approve laxo) ✅
+- [x] **Frontend Affiliate Tracker** (`app/components/AffiliateTracker.tsx`): captura `?ref=CODE` → valida API → cookie 90d + localStorage → limpia URL ✅
+- [x] **`handleCheckout`** lee cookie `cb_ref` y envía `ref_code` a Lemon Squeezy ✅
+- [x] **API v78**: cron `handle_affiliate_cron_release` con anti-fraude final (status=CHURNED → VOID) ✅
+- [x] **EventBridge `affiliate-release-commissions-daily`** ENABLED (4 AM UTC = 11 PM CO) ✅
+- [x] **Modelo definido en STATUS.md**: cláusula legal "tasas pueden revisarse con 90 días de aviso" — protección contra cambios de mercado ✅
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
 - [x] `PlatformAdmins` (PK: `email`) — equipo de la plataforma ✅ creada
 - [x] `ErrorLog` (PK: `service`, SK: `sk`, TTL 30d, PITR) ✅ creada
@@ -753,7 +767,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-██████████████████████████░░░░ 80%
+███████████████████████████░░░ 81%
 ### ⏱️ Métricas de desarrollo reales
 
 | Métrica | Valor |
@@ -835,7 +849,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **74% → 76%** — Lemon Squeezy billing completo (checkout/webhook/cancel/resume) + planes Starter/Growth/Agency + login passkey auto-disparo + dashboard/billing + landing actualizada 🦁
 - [x] **76% → 78%** — Meta CAPI individual (report-purchase) + plantilla ventas v2 (nombre/apellido/documento/indicativo/dropdown) + fix CORS Lambda URL + ads fix presupuesto compartido + fix modal análisis 🦁
 - [x] **78% → 80%** — Feature Flags (S1.E) + Quotas (S1.F) + Enforcement rodaje (S1.G) + Message Packs (Bloque 6) 🦁
-- [ ] **80% → 82%** — Frontend usage widgets + Packs checkout UI + Affiliates (S1.I-R) ⭐ ESTÁS AQUÍ
+- [x] **80% → 81%** — Frontend usage widgets + Packs Lemon Squeezy E2E (con plata real ✅) + Affiliates backend completo (4 tablas + 5 endpoints + cron release + cookie tracker) 🦁
+- [ ] **81% → 83%** — Frontend `/dashboard/affiliate` + landing `/affiliates` + cron payout-batch + emails Resend + TyC ⭐ ESTÁS AQUÍ
 - [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
 - [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 
