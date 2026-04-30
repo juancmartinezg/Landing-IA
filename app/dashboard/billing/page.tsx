@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../providers';
 import Link from 'next/link';
-import { getStoredRefCode } from '@/components/AffiliateTracker';
+import { getStoredRefCode } from '../../components/AffiliateTracker';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 interface Plan {
   key: string;
