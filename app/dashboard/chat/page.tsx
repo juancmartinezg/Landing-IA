@@ -325,7 +325,12 @@ export default function ChatPage() {
       });
       setTakenOver(false);
       setNewMessage('');
+      // Limpiar selección y refrescar lista (puede tardar 1-2s en reflejar)
+      setSelectedPhone(null);
+      setMobileView('list');
+      // Refresh inmediato + después de 1.5s (DDB eventual consistency)
       loadBotConvs();
+      setTimeout(() => loadBotConvs(), 1500);
     } catch (err) { console.error('Error release:', err); }
   };
   const handleSendBot = async () => {
@@ -564,6 +569,8 @@ export default function ChatPage() {
                   <button onClick={async () => {
                     await handleRelease(selectedPhone);
                     setTab('bot');
+                    // Refresh extra al cambiar tab
+                    setTimeout(() => loadBotConvs(), 500);
                   }}
                     className="text-[9px] md:text-[10px] px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 font-bold transition-all">
                     🤖 <span className="hidden sm:inline">Devolver al </span>bot
