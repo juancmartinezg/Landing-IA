@@ -119,6 +119,9 @@ export default function CRMPage() {
   const [agentsList, setAgentsList] = useState<any[]>([]);
   const [filterAgent, setFilterAgent] = useState('all');
   const [reportingMeta, setReportingMeta] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
+  const [campaignsList, setCampaignsList] = useState<any[]>([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   useEffect(() => {
     fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' } })
@@ -437,7 +440,11 @@ export default function CRMPage() {
       const res = await fetch(`${API_URL}/leads/bulk-import-purchases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
-        body: JSON.stringify({ rows: salesRows }),
+        body: JSON.stringify({ 
+          rows: selectedCampaign 
+            ? salesRows.map((r: any) => ({ ...r, campaign_id: r.campaign_id || selectedCampaign.campaign_id }))
+            : salesRows,
+        }),
       });
       const data = await res.json();
       setSalesResult(data);
@@ -531,7 +538,18 @@ export default function CRMPage() {
           <button onClick={() => { setShowImport(!showImport); setShowAddLead(false); setShowSalesImport(false); }} className="bg-white/5 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-xl text-xs font-bold transition-all">
             📤 Importar
           </button>
-          <button onClick={() => { setShowSalesImport(!showSalesImport); setShowImport(false); setShowAddLead(false); }}
+          <button onClick={() => { 
+            setShowSalesImport(!showSalesImport); 
+            setShowImport(false); 
+            setShowAddLead(false);
+            if (!showSalesImport && campaignsList.length === 0) {
+              setLoadingCampaigns(true);
+              fetch(`${API_URL}/ads/campaigns`, { headers: { 'client-id': user?.companyId || '' } })
+                .then(r => r.json())
+                .then(data => { setCampaignsList(data.campaigns || []); setLoadingCampaigns(false); })
+                .catch(() => setLoadingCampaigns(false));
+            }
+          }}
             className="bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
             title="Subir historial de ventas para enviar Purchase events a Meta">
             💰 Ventas
@@ -549,12 +567,56 @@ export default function CRMPage() {
               <h3 className="font-bold">💰 Importar ventas históricas</h3>
               <p className="text-[10px] text-gray-500 mt-0.5">Sube tu Excel de ventas — enviamos Purchase events a Meta automáticamente para entrenar tus campañas.</p>
             </div>
-            <button onClick={() => { setShowSalesImport(false); setSalesRows([]); setSalesResult(null); }}
+            <button onClick={() => { setShowSalesImport(false); setSalesRows([]); setSalesResult(null); setSelectedCampaign(null); }}
               className="text-gray-500 hover:text-white text-lg">✕</button>
           </div>
-          {/* Paso 1: descargar plantilla */}
-          <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 mb-4">
-            <p className="text-xs font-bold mb-1">Paso 1 — Descarga la plantilla</p>
+          {/* Paso 0: Seleccionar campaña */}
+          <div className="bg-white/[0.02] border border-indigo-500/10 rounded-xl p-4 mb-4">
+            <p className="text-xs font-bold mb-1">Paso 0 — ¿De qué campaña son estas ventas? <span className="text-gray-500 font-normal">(recomendado)</span></p>
+            <p className="text-[10px] text-gray-500 mb-3">Selecciona la campaña para que Meta atribuya correctamente estas ventas y calcule el ROAS real.</p>
+            {loadingCampaigns ? (
+              <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                <div className="w-3 h-3 border border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                Cargando campañas...
+              </div>
+            ) : campaignsList.length === 0 ? (
+              <p className="text-[10px] text-gray-600">No hay campañas. Puedes continuar sin seleccionar.</p>
+            ) : (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                <div onClick={() => setSelectedCampaign(null)}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer border transition-all ${
+                    !selectedCampaign ? 'border-indigo-500/50 bg-indigo-500/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/5'
+                  }`}>
+                  <span className="text-[10px] text-gray-400">Sin atribución (ventas orgánicas)</span>
+                  {!selectedCampaign && <span className="text-indigo-400 text-[10px] font-bold">✓</span>}
+                </div>
+                {campaignsList.map((c: any) => (
+                  <div key={c.campaign_id} onClick={() => setSelectedCampaign(c)}
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer border transition-all ${
+                      selectedCampaign?.campaign_id === c.campaign_id
+                        ? 'border-indigo-500/50 bg-indigo-500/10'
+                        : 'border-white/5 bg-white/[0.02] hover:bg-white/5'
+                    }`}>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-medium truncate">{c.name}</p>
+                      <p className={`text-[9px] mt-0.5 ${c.connected_to_bot ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                        {c.connected_to_bot ? '✅ Conectada al bot — ROAS medible' : '⚠️ Otro canal — ROAS estimado'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                        c.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'
+                      }`}>{c.status === 'ACTIVE' ? '🟢' : '⏸️'}</span>
+                      {selectedCampaign?.campaign_id === c.campaign_id && <span className="text-indigo-400 font-bold text-[10px]">✓</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {selectedCampaign && (
+              <p className="text-[10px] text-indigo-400 mt-2 font-bold">✓ {selectedCampaign.name}</p>
+            )}
+          </div>
             <p className="text-[10px] text-gray-500 mb-3">Trae dropdown con los servicios de tu catálogo para evitar errores.</p>
             <button onClick={handleDownloadTemplate} disabled={downloadingTemplate}
               className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
