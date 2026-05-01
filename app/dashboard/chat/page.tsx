@@ -560,6 +560,15 @@ export default function ChatPage() {
                     </button>
                   )
                 )}
+                {tab === 'agent' && selectedPhone && (
+                  <button onClick={async () => {
+                    await handleRelease(selectedPhone);
+                    setTab('bot');
+                  }}
+                    className="text-[9px] md:text-[10px] px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 font-bold transition-all">
+                    🤖 <span className="hidden sm:inline">Devolver al </span>bot
+                  </button>
+                )}
                 <span className={`text-[9px] md:text-[10px] px-2 md:px-3 py-1 rounded-full hidden sm:inline-flex ${
                   tab === 'bot' ? (takenOver ? 'bg-yellow-500/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-400') : 'bg-indigo-500/20 text-indigo-400'
                 }`}>
