@@ -616,7 +616,8 @@ export default function CRMPage() {
             {selectedCampaign && (
               <p className="text-[10px] text-indigo-400 mt-2 font-bold">✓ {selectedCampaign.name}</p>
             )}
-          </div>
+          <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 mb-4">
+            <p className="text-xs font-bold mb-1">Paso 1 — Descarga la plantilla</p>
             <p className="text-[10px] text-gray-500 mb-3">Trae dropdown con los servicios de tu catálogo para evitar errores.</p>
             <button onClick={handleDownloadTemplate} disabled={downloadingTemplate}
               className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
