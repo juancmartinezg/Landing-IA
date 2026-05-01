@@ -95,7 +95,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~6,100 líneas, **v33** — remarketing info-abandonment + cart-abandonment marcados)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~6,300 líneas, **v46** — responseSchema + prompt neuroventas + telemetría + payment_guard + interceptor Si inteligente)
 - `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Release con notif (~10,400 líneas, ~104 endpoints, **v85** — release limpia assigned_agent_id)
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~480 líneas, **v4** — mensajes diferenciados por intent + auto-return PAUSED >2h + tablas v2)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
@@ -596,6 +596,30 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Fix**: API v85 ahora hace `REMOVE assigned_agent_id, assigned_agent_name` en `TypebotSessions_v2` + `Leads_CRM_v2`. Frontend `9185c30` limpia `selectedPhone` y refresca lista con doble fetch ✅
 - **Adicional**: API v82 agregó mensaje de "vuelvo a estar disponible" al cliente cuando se devuelve al bot.
 - **Lección 9**: cuando un endpoint cambia el estado de una entidad, limpiar TODOS los campos relacionados (no solo el principal). Test visual en frontend obligatorio.
+### 1 mayo 2026 — Bot estable + UX fina (sesión maratón)
+#### Bug #17 (CRÍTICO 🔴) — Float types en save_session multi-persona
+- **Síntoma**: `trigger_payment_flow` explotaba con `Float types are not supported` al guardar `pax_unit_price` (float) en DynamoDB.
+- **Impacto**: 12 clientes no recibieron link de pago durante ~40 min.
+- **Fix**: convertir `unit_price` a `int()` (COP no usa decimales) — Bot v34 ✅
+#### Bug #18 (ALTO 🟡) — Gemini JSON truncado / malformado
+- **Síntoma**: `maxOutputTokens=800` causaba JSON cortado. Cliente recibía "dame un minuto" sin retorno.
+- **Fix multi-capa**: `maxOutputTokens=1500` (v35) + `responseSchema` fuerza JSON válido (v38) + 3 capas de reparación + fallback suave (v41) ✅
+- **Lección**: `responseSchema` de Gemini hace IMPOSIBLE devolver JSON inválido. Usarlo siempre.
+#### Bug #19 (CRÍTICO 🔴) — "Sí" dispara pago en vez de catálogo + pago sin servicio detectado
+- **Síntoma 1**: cliente pregunta "¿qué cursos ofrecen?" → bot responde "¿te gustaría conocerlos?" → cliente dice "Sí" → bot dispara pago en vez de carrusel.
+- **Síntoma 2**: cliente habla DE pago ("pagaré el lunes") → bot interpreta intent=payment → dispara `trigger_payment_flow` con slug de sesión → "No encontré el servicio".
+- **Fix 1**: interceptor "Sí" inteligente según `last_intent` (catalog→carrusel, booking/payment→pago, otro→Gemini) — Bot v44 ✅
+- **Fix 2**: `payment_guard_v1` — NO disparar pago si Gemini no detectó `detected_service` explícitamente — Bot v46 ✅
+#### Bug #20 (MEDIO 🟢) — Dashboard duplica mensajes del bot
+- **Síntoma**: cada respuesta del bot aparecía 2 veces en `/dashboard/chat`.
+- **Causa**: `update_session_context` Y `_log_outbound` ambos hacían append al history.
+- **Fix**: quitar append de `update_session_context`, dejar solo `_log_outbound` como fuente única — Bot v45 ✅
+#### Mejoras UX aplicadas
+- [x] **responseSchema** (v38): Gemini NUNCA puede devolver JSON inválido — campo `customer_name` incluido en schema ✅
+- [x] **customer_name capture** (v39): prioriza nombre verbal del cliente sobre `wa_profile_name` ✅
+- [x] **Prompt anti-canson** (v43): 15 reglas (6 técnicas + 9 neuroventas) — precio directo, no repetir nombre, cierre cálido, match tono ✅
+- [x] **Telemetría total** (v36+v45): dashboard ve TODOS los outbounds (carruseles, listas, botones, plantillas) sin duplicados ✅
+### Lecciones para el roadmap
 ### Lecciones para el roadmap
 1. **Health checks automáticos por tenant** son CRÍTICOS — webhook URLs, tokens, pixel, etc. (Fase G prioritaria)
 2. **NUNCA aplicar cambios automáticos** que afecten dinero del cliente sin consentimiento explícito (Fase B6.5)
@@ -605,6 +629,9 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 6. **`py_compile OK` ≠ correctness** — variables undefined solo se ven en runtime. Code review manual también.
 7. **🔴 Test E2E obligatorio**: crons que dependen de flags escritos por otra Lambda → test E2E con número real ANTES de marcar como hecho. Si el productor no escribe los flags, el cron es fantasma (Bug #15).
 8. **🔴 Cleanup de campos relacionados**: cuando endpoint cambia estado, limpiar TODOS los campos relacionados. Frontend test visual obligatorio (Bug #16).
+9. **🔴 responseSchema obligatorio**: SIEMPRE usar `responseSchema` en llamadas a Gemini para forzar JSON válido. Sin esto, ~2-5% de respuestas vienen truncadas/malformadas (Bug #18).
+10. **🔴 payment_guard**: NUNCA disparar `trigger_payment_flow` si `detected_service=null`. El cliente puede HABLAR de pago sin QUERER pagar. Solo disparar si Gemini detectó servicio explícito (Bug #19).
+11. **🔴 Telemetría sin duplicados**: si hay un helper que loguea outbounds (`_log_outbound`), NO appendear también en `update_session_context`. Una sola fuente de verdad (Bug #20).
 ---
 ## 🔧 SPRINT ACTUAL — Cierre de pendientes
 ### Frontend / Landing ✅ 100%
@@ -928,7 +955,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **78% → 80%** — Feature Flags (S1.E) + Quotas (S1.F) + Enforcement rodaje (S1.G) + Message Packs (Bloque 6) 🦁
 - [x] **80% → 81%** — Frontend usage widgets + Packs Lemon Squeezy E2E (con plata real ✅) + Affiliates backend completo (4 tablas + 5 endpoints + cron release + cookie tracker) 🦁
 - [x] **81% → 82%** — Remarketing real end-to-end (cart + info abandonment) + Auto-return PAUSED >2h + Botón "Devolver al bot" en tab Agente + 5 bugs auditados (#11-#15) 🦁
-- [ ] **82% → 84%** — Frontend `/dashboard/affiliate` + landing `/affiliates` + cron payout-batch + emails Resend + TyC ⭐ ESTÁS AQUÍ
+- [ ] **82% → 84%** — Frontend `/dashboard/affiliate` + landing `/affiliates` + cron payout-batch + emails Resend + TyC + CloudWatch alarms ⭐ ESTÁS AQUÍ
 - [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
 - [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 
