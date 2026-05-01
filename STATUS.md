@@ -95,8 +95,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~5800 líneas, **v29** — pack consumption + plan_features desde DDB)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt + Feature Flags + Quotas + Message Packs + **Affiliates** (~10,200 líneas, ~102 endpoints, **v78** — affiliate cron release commissions)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~6,000 líneas, **v31** — fix `unit_amount` undefined + contact_id en put_item Leads_CRM_v2)
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt + Feature Flags + Quotas + Message Packs + **Affiliates** + auditoría post-incidente (~10,300 líneas, ~104 endpoints, **v81** — fix demo flow contact_id + Leads_CRM_v2)
 - `WhatsApp_Remarketing` — Follow-up + renewal (~280 líneas, **v1**)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -524,11 +524,38 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 #### Bug #8 (BAJO ⚪) — `dashboard/layout.tsx` TS error
 - **Síntoma**: build falla — `tokenWarning.days_left` no existe en tipo
 - **Fix**: agregar `days_left?: number` al tipo
+### 30 abril 2026 — Bot silencioso + dashboard sin conversaciones
+#### Bug #9 (CRÍTICO 🔴) — `contact_id` faltante en put_item Leads_CRM_v2
+- **Síntoma**: bot respondía correctamente pero leads NO aparecían en CRM. Dashboard de chat mostraba 0 conversaciones.
+- **Causa**: durante implementación de Feature Flags/Message Packs (Bot v28/v29), el `item_to_save` del CRM perdió el campo `contact_id` — solo tenía `phoneNumber`. `Leads_CRM_v2` tiene `contact_id` como PK → `ValidationException` silenciosa en cada mensaje.
+- **Fix**: agregar `"contact_id": sender` al `item_to_save` (Bot v30) ✅
+- **Lección**: al agregar código nuevo sobre tablas migradas, verificar SIEMPRE que el `put_item` incluye la PK correcta. `Leads_CRM_v2` usa `contact_id`, NO `phoneNumber`.
+#### Bug #10 (ALTO 🟡) — `conversations/active` retornaba `[]` siempre
+- **Causa**: endpoint usaba `session_table.scan()` buscando campo `phoneNumber` — incompatible con `TypebotSessions_v2` que usa `contact_id` como PK y tiene GSI por `company_id`.
+- **Fix**: reemplazar scan por `query` con GSI `company_id-last_interaction-index` + fallback `get_item` directo para nombres (API v79/v80) ✅
+### 30 abril 2026 (tarde) — Auditoría completa post-incidente
+> Tras Bugs #9/#10, audit completo de Bot + API buscando otros casos rotos.
+#### Bug #11 (CRÍTICO 🔴) — `unit_amount` undefined en `trigger_payment_flow`
+- **Síntoma**: dict `payment_args` tenía 3 líneas mal indentadas heredadas de un patch viejo, una con `"unit_amount": int(unit_amount)` con variable nunca definida en scope.
+- **Impacto**: cada flujo de pago (Wompi/Bold/PayU/etc) explotaría con `NameError` → cliente sin link de pago.
+- **Fix**: eliminar las 3 líneas mal indentadas (Bot v31) ✅
+- **Lección**: `py_compile OK` no garantiza correctness — variable undefined solo se ve en runtime.
+#### Bug #12 (ALTO 🟡) — Demo de la landing roto desde migración multicanal
+- **Síntoma**: cualquier visitante que probara el demo IA en la landing recibía "Demo expirado" en el primer mensaje.
+- **Causa**: `handle_create_demo` escribía `session_table.put_item({"phoneNumber": f"demo_{demo_id}", ...})` sin `contact_id`. PK migrada a `contact_id` → put silenciosamente fallaba. Luego `handle_demo_chat` leía con `Key={"contact_id": ...}` y nunca encontraba nada.
+- **Fix**: agregar `"contact_id"` + `"channel": "demo"` al put_item (API v81) ✅
+- **Lección**: necesitamos `log_error` en cualquier "Demo expirado" para detectar fallas silenciosas antes.
+#### Bug #13 (BAJO ⚪) — Demo escribía a tabla `Leads_CRM` antigua
+- **Causa**: `handle_create_demo` hardcodeaba `dynamodb.Table("Leads_CRM")` (PK phoneNumber) en vez de `Leads_CRM_v2`.
+- **Fix**: cambiar a `os.environ.get("LEADS_TABLE", "Leads_CRM_v2")` + agregar `contact_id` (API v81) ✅
+- **Lección**: cuando hay tablas v1/v2 paralelas, **siempre usar env var `LEADS_TABLE`**, nunca hardcodear nombre.
 ### Lecciones para el roadmap
 1. **Health checks automáticos por tenant** son CRÍTICOS — webhook URLs, tokens, pixel, etc. (Fase G prioritaria)
 2. **NUNCA aplicar cambios automáticos** que afecten dinero del cliente sin consentimiento explícito (Fase B6.5)
 3. **Test mode antes de producción** para integraciones externas (Meta, Stripe, etc.)
 4. **Rollback en 1 click** debe ser estándar para todo deploy
+5. **🔴 Migración de PK**: cuando se migra PK (ej `phoneNumber` → `contact_id`), hacer grep de TODOS los `put_item`, `get_item`, `update_item`, `scan` y `query` que referencien el campo viejo en AMBAS Lambdas. Nunca asumir que un módulo no afectado es correcto.
+6. **`py_compile OK` ≠ correctness** — variables undefined solo se ven en runtime. Code review manual también.
 ---
 ## 🔧 SPRINT ACTUAL — Cierre de pendientes
 ### Frontend / Landing ✅ 100%
@@ -744,6 +771,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ### Sagrado
 18. **Bucket `certificados-jmc` NO TOCAR**
 19. **PR #5 ROTO** — no usar, no mergear
+20. **🔴 MIGRACIÓN PK**: cuando se migra PK de tabla, grep TODOS los `put_item`/`get_item`/`update_item`/`scan`/`query` con campo viejo en AMBAS Lambdas (Lección Bug #9-#13).
 ---
 ## 🚀 DEPLOY
 ### Frontend
