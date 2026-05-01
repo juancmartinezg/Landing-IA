@@ -95,9 +95,9 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~6,000 líneas, **v31** — fix `unit_amount` undefined + contact_id en put_item Leads_CRM_v2)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + G1 errors + C1-C7 tenants mgmt + Feature Flags + Quotas + Message Packs + **Affiliates** + auditoría post-incidente (~10,300 líneas, ~104 endpoints, **v81** — fix demo flow contact_id + Leads_CRM_v2)
-- `WhatsApp_Remarketing` — Follow-up + renewal (~280 líneas, **v1**)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~6,100 líneas, **v33** — remarketing info-abandonment + cart-abandonment marcados)
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Release con notif (~10,400 líneas, ~104 endpoints, **v85** — release limpia assigned_agent_id)
+- `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~480 líneas, **v4** — mensajes diferenciados por intent + auto-return PAUSED >2h + tablas v2)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
 ### Tablas DynamoDB (19 — todas con PITR)
 - `KnowledgeBase` (PK: `company_id`, SK: `kb_key`, GSI: `phone_number_id-index`)
@@ -449,6 +449,35 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **API v78**: cron `handle_affiliate_cron_release` con anti-fraude final (status=CHURNED → VOID) ✅
 - [x] **EventBridge `affiliate-release-commissions-daily`** ENABLED (4 AM UTC = 11 PM CO) ✅
 - [x] **Modelo definido en STATUS.md**: cláusula legal "tasas pueden revisarse con 90 días de aviso" — protección contra cambios de mercado ✅
+#### Bonus sesión 30 abril (noche) — Remarketing real + Devolver al bot 🦁
+> Auditoría post-incidente reveló que el cron `WhatsApp_Remarketing` corría hace meses sin hacer nada (Bug #15: feature fantasma).
+> El bot NUNCA escribía `remarketing_pending=true`, las env vars apuntaban a tablas viejas, y el flujo de devolver al bot tenía bug #16.
+> Esta sesión cerró el loop completo end-to-end.
+**Cart Abandonment:**
+- [x] **Bot v32**: marca `remarketing_pending=true` + `remarketing_intent="checkout_abandoned"` cuando `trigger_payment_flow` genera link ✅
+- [x] **Bot v32**: desmarca `remarketing_pending=false` + `remarketing_closed=true` cuando webhook confirma PAGADO ✅
+**Info Abandonment:**
+- [x] **Bot v33**: marca `remarketing_pending=true` + `remarketing_intent="info_{intent}"` en `update_session_context` cuando intent ∈ {info, booking, catalog} y hay `detected_service` ✅
+- [x] **Anti-overlap**: si ya hay `remarketing_pending` (cart) o `remarketing_closed=true`, no sobreescribe ✅
+**Cron Remarketing:**
+- [x] **Remarketing v2**: env vars apuntan a `TypebotSessions_v2` + `Leads_CRM_v2` (antes apuntaban a tablas vacías/viejas) + código adaptado a PK `contact_id` ✅
+- [x] **Remarketing v3**: agregada función `process_auto_return_to_bot()` — devuelve sesiones `PAUSED_FOR_HUMAN` >2h sin actividad al bot. Validado: 1 conversación atrapada recuperada en primer test ✅
+- [x] **Remarketing v4**: helper `_resolve_service_name()` (slug → nombre real) + `_get_remarketing_message()` con 4 templates diferenciados:
+  - `checkout_abandoned`: "Te dejé el link de pago para X y vi que no pudiste completarlo. ¿Tuviste algún inconveniente?"
+  - `info_booking`: "Querías reservar X. ¿Te ayudo a completarla? Quedan cupos 🎯"
+  - `info_catalog`: "Vi que estuviste explorando nuestros servicios. ¿Hay alguno en particular?"
+  - `info_info` (default): "Te dejé información sobre X y noté que quedaste con dudas. ¿Te ayudo a aclararlas?"
+- [x] **Stage 0 + Stage 1** con mensajes distintos (segundo intento más blando, sin presión)
+**Devolver al bot (Plan A):**
+- [x] **API v82**: `handle_conversation_release` ahora envía mensaje cordial al cliente ("Tu conversación vuelve al asistente virtual de {brand}") ✅
+- [x] **API v85**: `release` también limpia `assigned_agent_id` y `assigned_agent_name` en `TypebotSessions_v2` + `Leads_CRM_v2` (Bug #16: la conv quedaba en tab Agente fantasma) ✅
+- [x] **Frontend `492ec01`**: botón "🤖 Devolver al bot" agregado al tab "🙋 Agente" (antes solo estaba en tab "🤖 En vivo") ✅
+- [x] **Frontend `9185c30`**: tras release, limpia `selectedPhone` + cambia tab a "En vivo" + doble refresh (`now` + `1500ms` para DDB eventual consistency) ✅
+- [x] **Auto-return safety net**: cron diario devuelve al bot conversaciones sin actividad >2h del agente (evita clientes fantasma esperando) ✅
+**Tests pendientes:**
+- [ ] Test E2E con número real: info abandonment (1h delay temporal hasta validar)
+- [ ] Test E2E con número real: cart abandonment con link de pago no completado
+- [ ] Subir `REMARKETING_DELAY_HOURS` a 24h tras validar (actualmente en 1h para testing)
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
 - [x] `PlatformAdmins` (PK: `email`) — equipo de la plataforma ✅ creada
 - [x] `ErrorLog` (PK: `service`, SK: `sk`, TTL 30d, PITR) ✅ creada
@@ -549,6 +578,24 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Causa**: `handle_create_demo` hardcodeaba `dynamodb.Table("Leads_CRM")` (PK phoneNumber) en vez de `Leads_CRM_v2`.
 - **Fix**: cambiar a `os.environ.get("LEADS_TABLE", "Leads_CRM_v2")` + agregar `contact_id` (API v81) ✅
 - **Lección**: cuando hay tablas v1/v2 paralelas, **siempre usar env var `LEADS_TABLE`**, nunca hardcodear nombre.
+#### Bug #14 (OPERACIONAL 🟠) — Gemini API spending cap reventado
+- **Síntoma**: ~25% de mensajes WhatsApp recibieron respuesta de "alta demanda". 137 errores `429 RESOURCE_EXHAUSTED` en 24h.
+- **Causa**: activar billing en Google Cloud reemplaza el free tier diario (1,500 req/día) por **spending cap manual** que estaba muy bajo. Al gastar centavos llegamos al tope.
+- **Volumen real consumido**: 416 calls el 30 abril = ~$0.04 USD. Cap estaba en cero o por defecto.
+- **Fix**: subir spending cap en Google Cloud Console + alertas 50/75/90% ✅
+- **Lección**: activar billing ≠ acceso ilimitado. Siempre revisar el spending cap configurado.
+#### Bug #15 (CRÍTICO 🔴) — Remarketing fantasma desde siempre
+- **Síntoma**: cron `WhatsApp_Remarketing` corría cada hora sin errores pero `processed: 0` SIEMPRE. Pruebas reales con número personal nunca recibieron seguimiento.
+- **Causa raíz**: el Bot **NUNCA escribía** los campos `remarketing_pending` ni `renewal_date` que el cron buscaba. 0 ocurrencias de "remarketing" en `WhatsApp_Typebot_Bridge` antes de v32.
+- **Adicional**: env vars del cron apuntaban a tablas obsoletas `WhatsApp_Sessions` (0 items) y `Leads_CRM` (vieja), no a `_v2`.
+- **Fix**: implementación end-to-end (Bot v32 cart-abandonment + Bot v33 info-abandonment + Remarketing v2-v4 con env vars correctas + mensajes diferenciados por intent) ✅
+- **Lección 8**: validar END-TO-END nuevas features antes de marcar como "completadas". Crons sin tests E2E son trampas silenciosas.
+#### Bug #16 (ALTO 🟡) — Conversación queda en tab Agente tras devolver al bot
+- **Síntoma**: agente daba "Devolver al bot", la sesión cambiaba a `CHAT_MODE` pero la conversación seguía apareciendo en tab "🙋 Agente" porque mantenía `assigned_agent_id`. El botón quedaba habilitado y la conversación duplicada en ambos tabs.
+- **Causa**: `handle_conversation_release` solo limpiaba `flow_state` y `takeover_by`, nunca tocaba `assigned_agent_id`/`assigned_agent_name`.
+- **Fix**: API v85 ahora hace `REMOVE assigned_agent_id, assigned_agent_name` en `TypebotSessions_v2` + `Leads_CRM_v2`. Frontend `9185c30` limpia `selectedPhone` y refresca lista con doble fetch ✅
+- **Adicional**: API v82 agregó mensaje de "vuelvo a estar disponible" al cliente cuando se devuelve al bot.
+- **Lección 9**: cuando un endpoint cambia el estado de una entidad, limpiar TODOS los campos relacionados (no solo el principal). Test visual en frontend obligatorio.
 ### Lecciones para el roadmap
 1. **Health checks automáticos por tenant** son CRÍTICOS — webhook URLs, tokens, pixel, etc. (Fase G prioritaria)
 2. **NUNCA aplicar cambios automáticos** que afecten dinero del cliente sin consentimiento explícito (Fase B6.5)
@@ -556,6 +603,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 4. **Rollback en 1 click** debe ser estándar para todo deploy
 5. **🔴 Migración de PK**: cuando se migra PK (ej `phoneNumber` → `contact_id`), hacer grep de TODOS los `put_item`, `get_item`, `update_item`, `scan` y `query` que referencien el campo viejo en AMBAS Lambdas. Nunca asumir que un módulo no afectado es correcto.
 6. **`py_compile OK` ≠ correctness** — variables undefined solo se ven en runtime. Code review manual también.
+7. **🔴 Test E2E obligatorio**: crons que dependen de flags escritos por otra Lambda → test E2E con número real ANTES de marcar como hecho. Si el productor no escribe los flags, el cron es fantasma (Bug #15).
+8. **🔴 Cleanup de campos relacionados**: cuando endpoint cambia estado, limpiar TODOS los campos relacionados. Frontend test visual obligatorio (Bug #16).
 ---
 ## 🔧 SPRINT ACTUAL — Cierre de pendientes
 ### Frontend / Landing ✅ 100%
@@ -795,7 +844,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-███████████████████████████░░░ 81%
+████████████████████████████░░ 82%
 ### ⏱️ Métricas de desarrollo reales
 
 | Métrica | Valor |
@@ -878,7 +927,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **76% → 78%** — Meta CAPI individual (report-purchase) + plantilla ventas v2 (nombre/apellido/documento/indicativo/dropdown) + fix CORS Lambda URL + ads fix presupuesto compartido + fix modal análisis 🦁
 - [x] **78% → 80%** — Feature Flags (S1.E) + Quotas (S1.F) + Enforcement rodaje (S1.G) + Message Packs (Bloque 6) 🦁
 - [x] **80% → 81%** — Frontend usage widgets + Packs Lemon Squeezy E2E (con plata real ✅) + Affiliates backend completo (4 tablas + 5 endpoints + cron release + cookie tracker) 🦁
-- [ ] **81% → 83%** — Frontend `/dashboard/affiliate` + landing `/affiliates` + cron payout-batch + emails Resend + TyC ⭐ ESTÁS AQUÍ
+- [x] **81% → 82%** — Remarketing real end-to-end (cart + info abandonment) + Auto-return PAUSED >2h + Botón "Devolver al bot" en tab Agente + 5 bugs auditados (#11-#15) 🦁
+- [ ] **82% → 84%** — Frontend `/dashboard/affiliate` + landing `/affiliates` + cron payout-batch + emails Resend + TyC ⭐ ESTÁS AQUÍ
 - [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
 - [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 
