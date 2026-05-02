@@ -107,8 +107,14 @@ export default function WhatsAppPage() {
         }
       }
     }, {
-      scope: 'business_management,whatsapp_business_management,pages_show_list,pages_read_engagement',
-      return_scopes: true,
+      config_id: META_CONFIG_ID,
+      response_type: 'code',
+      override_default_response_type: true,
+      extras: {
+        setup: {},
+        featureType: '',
+        sessionInfoVersion: '3',
+      },
     });
   };
   const handleDisconnect = async () => {
