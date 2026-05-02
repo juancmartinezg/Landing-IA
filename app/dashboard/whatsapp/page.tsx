@@ -111,7 +111,9 @@ export default function WhatsAppPage() {
       response_type: 'code',
       override_default_response_type: true,
       extras: {
-        version: 'v4',
+        setup: {},
+        featureType: '',
+        sessionInfoVersion: '3',
       },
     });
   };
