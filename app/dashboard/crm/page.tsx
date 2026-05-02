@@ -421,7 +421,8 @@ export default function CRMPage() {
           });
         }
         if (!rows.length) {
-          alert('No encontramos ventas validas. Revisa la plantilla.');
+          const totalRows = jsonRows.length - 1;
+          alert(`No encontramos ventas válidas en el archivo.\n\nFilas procesadas: ${totalRows}\nFilas saltadas: ${totalRows} (todas sin teléfono válido)\n\nVerifica que:\n- La columna "Celular" (columna D) tenga números con indicativo (ej: 573001234567) o sin indicativo (ej: 3001234567)\n- Estás usando la plantilla descargada desde el sistema\n- La hoja se llama "Ventas"`);
           return;
         }
         setSalesRows(rows);
@@ -617,6 +618,7 @@ export default function CRMPage() {
             {selectedCampaign && (
               <p className="text-[10px] text-indigo-400 mt-2 font-bold">✓ {selectedCampaign.name}</p>
             )}
+          </div>
           <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 mb-4">
             <p className="text-xs font-bold mb-1">Paso 1 — Descarga la plantilla</p>
             <p className="text-[10px] text-gray-500 mb-3">Trae dropdown con los servicios de tu catálogo para evitar errores.</p>
