@@ -45,7 +45,7 @@ export default function WhatsAppPage() {
   // Listener para recibir datos de sesion del Embedded Signup
   useEffect(() => {
     const handler = (event: MessageEvent) => {
-      if (event.origin !== 'https://www.facebook.com') return;
+      if (!['https://www.facebook.com', 'https://business.facebook.com'].includes(event.origin)) return;
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'WA_EMBEDDED_SIGNUP') {
@@ -108,8 +108,7 @@ export default function WhatsAppPage() {
       }
     }, {
       config_id: META_CONFIG_ID,
-      response_type: 'code',
-      override_default_response_type: true,
+      response_type: 'token',
       extras: {
         setup: {},
         featureType: '',
