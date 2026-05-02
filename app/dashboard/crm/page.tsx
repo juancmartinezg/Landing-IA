@@ -118,7 +118,8 @@ export default function CRMPage() {
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [agentsList, setAgentsList] = useState<any[]>([]);
   const [filterAgent, setFilterAgent] = useState('all');
-  const [reportingMeta, setReportingMeta] = useState(false);
+  const [syncingMeta, setSyncingMeta] = useState(false);
+  const [syncMetaResult, setSyncMetaResult] = useState<any>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [campaignsList, setCampaignsList] = useState<any[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
@@ -492,7 +493,22 @@ export default function CRMPage() {
     } catch {
       alert('❌ Error de conexión al reportar a Meta.');
     }
-    setReportingMeta(false);
+   // === Sync masivo de ventas pagadas a Meta CAPI ===
+  const handleSyncMeta = async () => {
+    if (!confirm('¿Enviar todas las ventas pagadas a Meta CAPI?\n\nSolo se enviarán las que no se hayan enviado antes (deduplicación automática).')) return;
+    setSyncingMeta(true);
+    setSyncMetaResult(null);
+    try {
+      const res = await fetch(`${API_URL}/leads/sync-meta`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+      });
+      const data = await res.json();
+      setSyncMetaResult(data);
+    } catch {
+      setSyncMetaResult({ error: 'Error de conexión' });
+    }
+    setSyncingMeta(false);
   };
   const handleAddLead = async () => {
     if (!newLead.phone.trim()) return;
@@ -555,6 +571,11 @@ export default function CRMPage() {
             className="bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
             title="Subir historial de ventas para enviar Purchase events a Meta">
             💰 Ventas
+          </button>
+          <button onClick={handleSyncMeta} disabled={syncingMeta}
+            className="bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 hidden sm:block"
+            title="Sincronizar todas las ventas pagadas con Meta CAPI">
+            {syncingMeta ? '⏳ Sincronizando...' : '📤 Sync Meta'}
           </button>
           <button onClick={exportCSV} className="bg-white/5 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hidden sm:block">
             📥 Exportar
@@ -710,6 +731,28 @@ export default function CRMPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+      {syncMetaResult && (
+        <div className={`mb-4 p-4 rounded-2xl border ${syncMetaResult.error ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20'}`}>
+          <div className="flex justify-between items-start">
+            <div>
+              {syncMetaResult.error ? (
+                <p className="text-red-400 text-sm font-bold">❌ {syncMetaResult.error}</p>
+              ) : (
+                <>
+                  <p className="text-blue-400 font-bold text-sm mb-1">📤 Sync Meta completado</p>
+                  <div className="text-xs text-gray-400 space-y-0.5">
+                    <p>📊 Total ventas pagadas: <strong className="text-white">{syncMetaResult.total}</strong></p>
+                    <p>✅ Nuevos eventos enviados: <strong className="text-emerald-400">{syncMetaResult.sent}</strong></p>
+                    <p>♻️ Ya sincronizados: <strong className="text-gray-300">{syncMetaResult.dedup}</strong></p>
+                    {syncMetaResult.failed > 0 && <p>⚠️ Fallidos: <strong className="text-yellow-400">{syncMetaResult.failed}</strong></p>}
+                  </div>
+                </>
+              )}
+            </div>
+            <button onClick={() => setSyncMetaResult(null)} className="text-gray-500 hover:text-white text-lg ml-4">✕</button>
+          </div>
         </div>
       )}
       {/* Filtros */}
