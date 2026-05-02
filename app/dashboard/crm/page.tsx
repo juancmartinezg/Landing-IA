@@ -401,11 +401,12 @@ export default function CRMPage() {
         const rows: any[] = [];
         for (let i = 1; i < jsonRows.length; i++) {
           const r = jsonRows[i];
-          if (!r || !r[0]) continue;
-          const phone = String(r[0] || '').replace(/\D/g, '');
-          if (!phone) continue;
-          // Saltar fila de ejemplo (email placeholder)
+          if (!r) continue;
+          const phone = String(r[3] || '').replace(/\D/g, '');
+          // Saltar fila de ejemplo
           if (i === 1 && String(r[0] || '').toLowerCase() === 'juan carlos') continue;
+          // Saltar filas sin teléfono válido (sin error — simplemente las ignora)
+          if (!phone || phone.length < 7) continue;
           rows.push({
             first_name: String(r[0] || '').trim(),
             last_name: String(r[1] || '').trim(),
