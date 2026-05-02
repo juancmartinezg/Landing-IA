@@ -107,13 +107,8 @@ export default function WhatsAppPage() {
         }
       }
     }, {
-      config_id: META_CONFIG_ID,
-      response_type: 'token',
-      extras: {
-        setup: {},
-        featureType: '',
-        sessionInfoVersion: '3',
-      },
+      scope: 'business_management,whatsapp_business_management,pages_show_list,pages_read_engagement',
+      return_scopes: true,
     });
   };
   const handleDisconnect = async () => {
