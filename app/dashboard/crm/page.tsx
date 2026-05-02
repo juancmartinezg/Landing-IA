@@ -118,6 +118,7 @@ export default function CRMPage() {
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [agentsList, setAgentsList] = useState<any[]>([]);
   const [filterAgent, setFilterAgent] = useState('all');
+  const [reportingMeta, setReportingMeta] = useState(false);
   const [syncingMeta, setSyncingMeta] = useState(false);
   const [syncMetaResult, setSyncMetaResult] = useState<any>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
@@ -493,7 +494,9 @@ export default function CRMPage() {
     } catch {
       alert('❌ Error de conexión al reportar a Meta.');
     }
-   // === Sync masivo de ventas pagadas a Meta CAPI ===
+    setReportingMeta(false);
+  };
+  // === Sync masivo de ventas pagadas a Meta CAPI ===
   const handleSyncMeta = async () => {
     if (!confirm('¿Enviar todas las ventas pagadas a Meta CAPI?\n\nSolo se enviarán las que no se hayan enviado antes (deduplicación automática).')) return;
     setSyncingMeta(true);
