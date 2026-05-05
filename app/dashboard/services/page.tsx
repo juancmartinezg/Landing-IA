@@ -10,7 +10,8 @@ const emptyForm = {
   track_inventory: false, sku: '', stock_quantity: '', stock_min_alert: '5',
   cost_price: '', supplier: '',
   // M11: vender por cantidad (1 compra = N cupos / N unidades del mismo producto)
-  allows_group_booking: false, min_pax: '1', max_pax: '10',
+ allows_group_booking: false, min_pax: '1', max_pax: '10',
+  next_session_date: '', session_available: true,
 };
 export default function ServicesPage() {
   const { user } = useAuth();
@@ -88,6 +89,8 @@ export default function ServicesPage() {
       allows_group_booking: svc.allows_group_booking || false,
       min_pax: String(svc.min_pax ?? '1'),
       max_pax: String(svc.max_pax ?? '10'),
+      next_session_date: svc.next_session_date || '',
+      session_available: svc.session_available !== false,
     });
     setShowForm(true);
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -136,6 +139,10 @@ export default function ServicesPage() {
         payload.max_pax = Math.max(1, parseInt(form.max_pax) || 10);
       } else {
         payload.allows_group_booking = false;
+      }
+      if (form.next_session_date) {
+        payload.next_session_date = form.next_session_date;
+        payload.session_available = form.session_available;
       }
       if (editingSlug) {
         await fetch(`${API_URL}/services`, {
@@ -373,6 +380,22 @@ export default function ServicesPage() {
                 </div>
               </div>
             )}
+          </div>
+          {/* Fecha próxima sesión */}
+          <div className="mt-4 border-t border-white/5 pt-4">
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">📅 Fecha próxima sesión <span className="text-gray-600 font-normal normal-case">(solo para cursos con fecha fija)</span></p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Próxima fecha</label>
+                <input type="date" value={form.next_session_date} onChange={e => setForm({...form, next_session_date: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white" />
+              </div>
+              <div className="flex items-center gap-3 mt-6">
+                <input type="checkbox" checked={form.session_available} onChange={e => setForm({...form, session_available: e.target.checked})}
+                  className="w-4 h-4 rounded bg-white/5 border-white/20 text-indigo-600 focus:ring-indigo-500" />
+                <span className="text-sm font-medium">✅ Disponible para reservar</span>
+              </div>
+            </div>
           </div>
           {/* M11: Vender por cantidad */}
           <div className="mt-4 border-t border-white/5 pt-4">
