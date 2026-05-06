@@ -87,7 +87,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Backend:** AWS Lambda (Python) + Lambda URLs
 - **Datos:** DynamoDB (19 tablas, todas con PITR)
 - **Auth:** AWS Cognito + Google OAuth
-- **IA:** Gemini 2.5 Flash + VAPI (voz)
+- **IA:** Gemini 2.5 Flash Lite (principal) + 2.0 Flash Lite Latest (fallback) + VAPI (voz)
 - **Notificaciones:** Firebase Cloud Messaging (FCM)
 - **Email:** Resend (migrado de SES, gratis 3000/mes)
 - **Storage:** S3 (`clientes-bot-media`)
@@ -95,9 +95,9 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~6,300 líneas, **v46** — responseSchema + prompt neuroventas + telemetría + payment_guard + interceptor Si inteligente)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Release con notif (~10,400 líneas, ~104 endpoints, **v85** — release limpia assigned_agent_id)
-- `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~480 líneas, **v4** — mensajes diferenciados por intent + auto-return PAUSED >2h + tablas v2)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~6,500 líneas, **v85** — flow comercial completo + Gemini fallback + PAX STICKY + clear_pax_data post-pago + reglas universales backend 21-27 multi-tenant)
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Release con notif (~10,400 líneas, ~104 endpoints, **v88** — fix carousel APP_ID + body ratio palabras/vars + sin saltos de línea)
+- `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~480 líneas, **v5** — loguea outbounds en conversation_history (visibilidad dash + contexto Gemini cuando cliente responde))
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
 ### Tablas DynamoDB (19 — todas con PITR)
 - `KnowledgeBase` (PK: `company_id`, SK: `kb_key`, GSI: `phone_number_id-index`)
@@ -596,6 +596,106 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Fix**: API v85 ahora hace `REMOVE assigned_agent_id, assigned_agent_name` en `TypebotSessions_v2` + `Leads_CRM_v2`. Frontend `9185c30` limpia `selectedPhone` y refresca lista con doble fetch ✅
 - **Adicional**: API v82 agregó mensaje de "vuelvo a estar disponible" al cliente cuando se devuelve al bot.
 - **Lección 9**: cuando un endpoint cambia el estado de una entidad, limpiar TODOS los campos relacionados (no solo el principal). Test visual en frontend obligatorio.
+### 5 mayo 2026 — Sesión maratón 15h: Flow comercial multi-tenant + bugs Gemini 🦁
+> 25 deploys, 14 bugs raíz cerrados, 4 horas iniciales en madrugada (carrusel) + 11 horas tarde (flow comercial + Gemini stability).
+> Resultado: bot vendiendo end-to-end con UX humana, multi-tenant strict, fallback Gemini cuando hay 503.
+#### Bug #21 (CRÍTICO 🔴) — GSI corruption tras disconnect/reconnect WhatsApp
+- **Síntoma**: tras desconectar y reconectar WA del dashboard, bot rechazaba webhooks con `Webhook sin tenant resuelto phone_number_id=X`. Item en `KnowledgeBase` correcto, pero `query` al GSI `phone_number_id-index` devolvía vacío.
+- **Causa**: DDB no propagaba consistentemente al GSI cuando el campo cambiaba múltiples veces rápido (DISCONNECTED → real value).
+- **Fix**: re-indexado forzado con valor temporal (`update phone_number_id="TEMP_REINDEX"` → sleep 3s → `update` con valor real → sleep 5s) ✅
+- **Mitigación permanente**: script `~/restore-jmc.sh` blindado con re-indexado automático tras cada restore.
+- **Lección 12**: tras cualquier disconnect/reconnect de WhatsApp, SIEMPRE verificar el GSI con query antes de dar por bueno el reconnect.
+#### Bug #22 (CRÍTICO 🔴) — flow_state stuck en AWAITING_PAX_COUNT post-payment
+- **Síntoma**: tras generar payment link multi-persona, sesión quedaba en `AWAITING_PAX_COUNT`. Cliente escribía cualquier cosa después → bot pedía "¿cuántas personas?" infinitamente. Generaba 4+ payment links por usuario.
+- **Causa**: `handle_pax_count_input` llamaba `trigger_payment_flow` pero NO liberaba `flow_state` a `CHAT_MODE`.
+- **Fix**: agregar `save_session(flow_state=CHAT_MODE)` al final de `handle_pax_count_input` (Bot v48) ✅
+- **Lección 13**: TODO handler que dispara una acción terminal (pago, transferencia humana) DEBE liberar el `flow_state` antes de retornar.
+#### Bug #23 (CRÍTICO 🔴) — Cross-tenant leak en cache de carrusel
+- **Síntoma**: `_carousel_tpl_cache` global, no por tenant. Tenant A pedía catálogo → cacheaba template `catalogo_servicios_v2`. Tenant B (JMC) con su propio template `catalogo_jmc_10cards` recibía el cache equivocado durante 5 min.
+- **Fix**: `_carousel_tpl_cache: dict = {}` keyed por `company_id` (Bot v49) ✅
+- **Lección 14**: TODO cache compartido en multi-tenant DEBE ser keyed por `company_id`. Audit obligatorio antes de cada deploy multi-tenant.
+#### Bug #24 (ALTO 🟡) — intent=catalog no disparaba carrusel
+- **Síntoma**: cliente decía "¿qué cursos tienen?" → Gemini clasificaba `intent=catalog` correctamente → bot solo mandaba el `reply` de Gemini SIN carrusel.
+- **Causa**: guard `if _question_marks == 0` en `process_ai_response` impedía mandar carrusel cuando el reply de Gemini terminaba con pregunta. Pero Gemini SIEMPRE termina con pregunta.
+- **Fix**: quitar el guard. Si `intent=catalog`, SIEMPRE mandar carrusel después del texto (Bot v50) ✅
+#### Bug #25 (CRÍTICO 🔴) — Función `enviar_catalogo_carrusel` duplicada con template hardcoded
+- **Síntoma**: bot v49 con cache por tenant deployed, pero seguía enviando template viejo `catalogo_servicios_v2` (5 cards) en lugar del nuevo `catalogo_jmc_10cards` (10 cards).
+- **Causa**: Python tenía `def enviar_catalogo_carrusel` definida 2 veces. La segunda (línea 1700) sobreescribía la primera (línea 976) con `tpl_name = "catalogo_servicios_v2"` hardcoded. La función "buena" con `_get_best_carousel_template` nunca se llamaba.
+- **Fix**: reemplazar hardcode por `_get_best_carousel_template(company_id)` con fallback a lista (Bot v51) ✅
+- **Lección 15**: hacer grep por funciones duplicadas antes de deploys grandes. Python no avisa, solo usa la última definida.
+#### Bug #26 (CRÍTICO 🔴) — save_session destructivo (put_item pisa todo)
+- **Síntoma**: `pax_confirmed=9` se guardaba correctamente, pero 30 segundos después aparecía como `pax_confirmed=1`. Imposible debuggear hasta encontrar la raíz.
+- **Causa**: `save_session()` usaba `put_item()` que reemplaza el item completo. Cuando OTRO call-site (de los 20+) hacía `save_session({"flow_state": "CHAT_MODE"})` SIN incluir `pax_confirmed`, lo borraba implícitamente.
+- **Fix**: refactor `save_session` a hacer **merge** (read existing + update + write) en lugar de put destructivo (Bot v78) ✅
+- **Impacto**: arregla los 20+ call-sites de un solo cambio. Ningún campo se pierde nunca más.
+- **Riesgo asumido**: sesión nunca se "limpia" automáticamente. Mitigado con `clear_pax_data()` post-pago (v85).
+- **Lección 16**: si una función tiene 20+ call-sites con dicts diferentes, NUNCA usar `put_item` — siempre merge. `update_item` también funciona pero requiere SET dinámico.
+#### Bug #27 (ALTO 🟡) — NIVEL 2 capturaba saludos largos antes de Gemini
+- **Síntoma**: cliente CTW Ad escribía "Hola quiero más información del seminario" → NIVEL 2 (catálogo) hacía match con "seminario" → respondía con info estática plana, ignorando neuroventas del prompt.
+- **Causa**: lógica `service_match = search_catalog(...) if not has_active_conversation else None` capturaba todo mensaje de cliente nuevo, sin importar si era saludo conversacional.
+- **Fix**: detectar saludo + servicio (prefijo "hola/buenos/saludos" + ≥4 palabras) → SKIP NIVEL 2 → Gemini responde con neuroventas (Bot v58/v59) ✅
+- **Detalle clave**: `is_greeting()` original retornaba `False` con mensajes >19 chars. Fix usa prefix matching directo (`startswith("hola")` etc).
+#### Bug #28 (CRÍTICO 🔴) — Guard de `allows_group_booking` antes de normalizar slug
+- **Síntoma**: Gemini detectaba `intent=booking` con `detected_service="Seminario de Tiro Con Pistola 9mm"` (NOMBRE, no slug). `trigger_payment_flow` recibía nombre → buscaba en catálogo por slug → no match → guard `if service.get("allows_group_booking")` no aplicaba (service=None) → disparaba pago directo bypaseando flow comercial.
+- **Causa**: el guard estaba ANTES del bloque `slug_normalize_v1` que resuelve nombre→slug.
+- **Fix**: mover guard `allows_group_booking` DESPUÉS de la normalización (Bot v60) ✅
+- **Lección 17**: guards de validación deben ir DESPUÉS de todas las normalizaciones de input. Si el dato puede llegar en N formatos, normalizar antes de decidir.
+#### Bug #29 (CRÍTICO 🔴) — Gemini 2.5-flash vomita ráfagas de \n con caracteres acentuados
+- **Síntoma**: cuando cliente daba nombre "Juan Martínez" o "Juan Gómez", Gemini respondía con `customer_name: "Juan Mart\n\n\n\n\n\n... (50+ saltos)"`. JSON queda truncado por maxOutputTokens. Reparación falla. Cliente recibe mensaje genérico de "alta demanda".
+- **Causa**: bug del modelo `gemini-2.5-flash` con `responseSchema` + caracteres UTF-8 especiales.
+- **Fix #1 (Bot v70)**: normalizar input quitando acentos antes de enviar a Gemini (input sin tildes, output con tildes — Gemini genera correctamente acentos en español).
+- **Fix #2 (Bot v73)**: cambiar modelo principal a `gemini-2.5-flash-lite` (más barato + sin bug). Fallback a `gemini-flash-lite-latest` si lite falla.
+- **Lección 18**: `responseSchema` no protege contra bugs internos del modelo. Tener fallback automático a otro modelo cuando el principal devuelve malformed.
+#### Bug #30 (CRÍTICO 🔴) — Gemini 2.5-flash 503 caído masivo
+- **Síntoma**: ~30% de requests fallaban con `Gemini 503 - retry automático` x3 → fallback genérico "alta demanda" → UX rota a escala. No era spending cap.
+- **Causa**: caída de Google Cloud en `gemini-2.5-flash` (modelo nuevo, infra inestable). Confirmado con curl directo: `gemini-2.5-flash` → 503, `gemini-flash-lite-latest` → 200.
+- **Fix**: wrapper `call_gemini` con fallback automático: 3 retries en principal → si falla, 1 intento en `flash-lite-latest` → solo si ambos fallan, fallback genérico (Bot v62-v65) ✅
+- **Lección 19**: SaaS production con LLM externo NUNCA debe depender de un solo modelo. Wrapper con fallback automático es regla, no excepción.
+#### Bug #31 (CRÍTICO 🔴) — pax_count perdido al final del flow comercial
+- **Síntoma**: cliente decía "9 personas" → flow OK hasta dar nombre → `Payment Link enviado con monto $140.000` (pax=1) en lugar de $1.260.000 (pax=9 × $140k). Pérdida real $1.120.000 por venta.
+- **Causa**: history truncado a 6 mensajes. Cuando cliente daba nombre en turno 5+, Gemini ya no veía "9 personas" del turno 1. Devolvía `pax_count=null` → código usaba default=1.
+- **Fix multicapa**:
+  - History 6→20 mensajes (Bot v76)
+  - PAX STICKY: guardar `pax_confirmed` en sesión la primera vez, NUNCA sobreescribir (Bot v77)
+  - Re-leer sesión fresca antes de comparar (race condition fix)
+- **Lección 20**: contexto LLM siempre TRUNCADO. Datos críticos del flow (pax, customer_name, slug) deben persistirse en sesión, no depender solo del context window.
+#### Bug #32 (CRÍTICO 🔴) — Intercept "Si/Ok" disparaba pago mid-flow
+- **Síntoma**: cliente confirmaba horario con "Si" → intercept de confirmaciones detectaba `last_intent=booking` → disparaba `trigger_payment_flow` → guard pax se activaba → "¿cuántas personas?" otra vez. Loop infinito.
+- **Causa**: el intercept "Si/Ok" no diferenciaba entre "sí quiero pagar" (catalog→pago) y "sí, ese horario" (mid-flow comercial).
+- **Fix**: guard mid-flow — si hay `pax_confirmed` SIN `customer_name`, "Si" pasa a Gemini (no dispara pago) (Bot v82) ✅
+- **Lección 21**: interceptors basados en keywords cortos ("si/ok") DEBEN tener context-awareness del flow actual.
+#### Bug #33 (ALTO 🟡) — Bot pegado en respuestas vagas
+- **Síntoma**: cliente decía "en la mañana" → bot respondía "Tenemos disponibilidad en 10 AM o 2 PM, ¿cuál prefieres?" (idéntico al turno anterior, sin avanzar). Cliente se frustraba.
+- **Causa**: prompt no enseñaba a Gemini a manejar respuestas ambiguas. Solo seguía script rígido.
+- **Fix**: regla universal backend #26 — pedir precisión a respuestas vagas usando SOLO opciones reales del catálogo del tenant. Regla #27 — resumir todo antes de cerrar (Bot v81-v83) ✅
+- **Multi-tenant**: las reglas van en backend `system_prompt`, no en prompt del cliente. Cualquier tenant nuevo hereda automáticamente.
+#### Bug #34 (CRÍTICO 🔴) — Anticipo calculado sin pax_count
+- **Síntoma**: cliente para 7 personas → bot anuncia anticipo $140.000 (1 persona) en lugar de $980.000 (7 × $140k).
+- **Causa**: `trigger_payment_flow` calculaba `amount = pricing.deposit_required` sin multiplicar por `pax_count`.
+- **Fix**: `amount = deposit_required * pax_count` (multi-tenant: lee del catálogo, sin hardcode 50%) (Bot v79-v80) ✅
+- **Multi-tenant clean**: cada negocio configura `deposit_required` por servicio en su catálogo. Si no tiene → `regular_price * pax` (pago completo).
+#### Mejoras UX aplicadas en sesión 5 mayo
+- [x] **Reglas universales backend** (Bot v75/v81): 7 reglas multi-tenant (#21-27) — pax_count, persistencia, orden cierre, anti-vague, resumen final. Cualquier tenant nuevo hereda automáticamente sin tocar su prompt.
+- [x] **clear_pax_data() post-pago** (Bot v85): borra `pax_confirmed`, `last_service_slug`, `customer_name`, `flow_state` tras Payment Link enviado. Evita herencia entre flows del mismo cliente. ✅
+- [x] **Memoria limpiada**: `ConversationMemory` JMC pasó de 222 a 26 entradas (borradas 196 entradas con hit_count<2 + 5 entradas basura como nombres propios y botones).
+- [x] **save_session ahora hace MERGE** (Bot v78): refactor profundo de la función central de sesión. Ningún campo se pierde por put_item destructivo.
+- [x] **Frontend `a131081`**: fix Embedded Signup `extras: sessionInfoVersion: 3` (era `version: 'v4'` que rompía Meta).
+- [x] **Frontend `4fdd667`**: config_id Embedded Signup restaurado tras fix en Meta Business.
+- [x] **Carrusel JMC 10 cards APPROVED**: template `catalogo_escuela_de_tiro_jmc_10cards` aprobado por Meta y enviándose al cliente. Multi-tenant via `config_pro.carousel_template_name` + `carousel_card_count`.
+- [x] **API v86-v88 (carrusel multi-tenant fix)**: 3 fixes encadenados — endpoint `/uploads` usa `META_APP_ID` (no waba_id), body con ratio palabras/vars válido (Meta error 2388293), sin saltos de línea (Meta error 2388245).
+### Lecciones nuevas (sesión 5 mayo)
+12. **🔴 GSI consistency post-disconnect**: tras cualquier disconnect/reconnect que toque GSI fields, validar con query antes de dar OK. DDB no garantiza propagación inmediata cuando el campo cambia múltiples veces rápido.
+13. **🔴 flow_state liberation**: TODO handler que dispara acción terminal DEBE liberar `flow_state` antes de retornar. Olvidarlo = loop infinito.
+14. **🔴 Multi-tenant cache**: TODO cache compartido en multi-tenant DEBE ser keyed por `company_id`. Audit obligatorio antes de cada deploy.
+15. **🔴 Funciones duplicadas Python**: hacer grep por `def NOMBRE_FUNCION` antes de deploys grandes. Python usa la última definida sin avisar.
+16. **🔴 NUNCA put_item destructivo**: si una función de save tiene 5+ call-sites con dicts diferentes, refactor a merge inmediatamente.
+17. **🔴 Guards después de normalización**: validaciones siempre DESPUÉS de resolver el input a su forma canónica. Si el dato puede llegar en N formatos, normalizar antes de decidir.
+18. **🔴 LLM responseSchema NO protege bugs internos**: tener fallback automático a otro modelo cuando el principal devuelve malformed es regla, no excepción.
+19. **🔴 NUNCA depender de un solo modelo LLM**: wrapper con fallback (`gemini-2.5-flash-lite` → `gemini-flash-lite-latest`) es estándar para production.
+20. **🔴 Datos críticos del flow en sesión, no en context window**: pax, customer_name, slug deben persistirse en DDB. Context LLM siempre truncado.
+21. **🔴 Interceptors keyword-based con context-awareness**: "si/ok/dale" significan cosas distintas según `flow_state`. Si hay flow activo → no interpretar como confirmación de pago.
+22. **🔴 Reglas universales en backend, no en prompt del cliente**: cualquier patrón de neuroventas o flow comercial común a TODOS los tenants va en `system_prompt` del backend. Cliente solo configura su tono y catálogo.
+23. **🔴 cleanup post-acción terminal**: tras Payment Link / handoff humano / scheduling confirmado, limpiar SOLO los campos del flow (no toda la sesión). Mantiene history y profile, evita herencia.
 ### 1 mayo 2026 — Bot estable + UX fina (sesión maratón)
 #### Bug #17 (CRÍTICO 🔴) — Float types en save_session multi-persona
 - **Síntoma**: `trigger_payment_flow` explotaba con `Float types are not supported` al guardar `pax_unit_price` (float) en DynamoDB.
@@ -658,7 +758,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **SES → Resend** (AWS denegó producción) — gratis 3000/mes
 - [x] PWA caching: abre landing en vez de dashboard al reabrir
 - [ ] Advanced Access en Meta (espera 7-30 días, no es trabajo nuestro)
-- [ ] Popup Embedded Signup error "Sorry something went wrong" (bug Meta)
+- [x] Popup Embedded Signup "Sorry something went wrong" — fix `extras: sessionInfoVersion: 3` (frontend `a131081`) + config_id restaurado (`4fdd667`) — pendiente test E2E final con cliente nuevo
 ### Multi-agente — cerrar 100% ✅
 - [x] Polling cada 6s con pausa automática cuando pestaña oculta (ahorra ~70% requests, alcanza ~30 agentes en free tier)
 - [x] Sonido + vibración + notificación SO + badges en `app/dashboard/chat/page.tsx`
@@ -677,6 +777,13 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 > (no es Stripe billing del SaaS — eso es Sprint 1 abajo).
 - [ ] **Stripe** (crítico para US/EU/UK) — pago por transacción
 - [ ] Pasarela personalizada bajo demanda (proceso documentado para integrar nuevas en <48h)
+### 🐛 Pendientes pequeños (próxima sesión)
+- [ ] **Bug memoria caching nombres**: `ConversationMemory` guarda nombres de clientes y confirmaciones cortas como queries. Filtrar antes de cachear (skip si es customer_name capturado, confirmación corta, o número standalone).
+- [ ] **Memoria con contexto/source**: cache key `(normalized_q, source)` donde source ∈ {`catalog_button`, `ad_greeting`, `conversational`}. Mismo servicio, respuestas distintas según contexto. Hoy: clic carrusel y mensaje conversacional sirven misma respuesta.
+- [ ] **Test E2E remarketing**: validar mañana 9 AM Colombia con leads reales. 5 leads quedaron pendientes en queue.
+- [ ] **Subir REMARKETING_DELAY_HOURS** de 1h a 24h tras validar.
+- [ ] **PAX configurable por % anticipo**: `config_pro.deposit_percentage` para cada tenant elegir 30/50/100%. Hoy hardcoded a 50% en bot. Aunque catálogo ya soporta `deposit_required` por servicio.
+- [ ] **Embed Meta validación final**: confirmar que cliente nuevo puede onboardear con frontend `4fdd667` (config_id restaurado).
 #### Bonus sesión 29 abril (tarde/noche) — Meta CAPI + ads + billing
 - [x] **Endpoint `POST /leads/report-purchase`**: reportar venta individual a Meta CAPI desde el CRM con 1 clic — sin importar si vino del bot o de fuera ✅
 - [x] **Botón "📤 Reportar a Meta"** en panel de detalle del lead (acciones rápidas) ✅
@@ -848,6 +955,14 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 18. **Bucket `certificados-jmc` NO TOCAR**
 19. **PR #5 ROTO** — no usar, no mergear
 20. **🔴 MIGRACIÓN PK**: cuando se migra PK de tabla, grep TODOS los `put_item`/`get_item`/`update_item`/`scan`/`query` con campo viejo en AMBAS Lambdas (Lección Bug #9-#13).
+### Reglas nuevas — sesión 5 mayo (regla #6 multi-tenant + LLM stability)
+21. **🔴 save_session = MERGE, nunca put destructivo**: si una función de save tiene 5+ call-sites con dicts diferentes, hacer merge (read+update+write). Bug #26 borró pax_confirmed por culpa de put_item.
+22. **🔴 Multi-tenant cache obligatorio keyed por company_id**: cualquier dict de cache compartido `_cache: dict = {}`. NUNCA `_cache = {"data": ..., "expires": ...}` global. Bug #23 leakeo template entre tenants.
+23. **🔴 LLM con fallback automático a otro modelo**: principal `gemini-2.5-flash-lite` → si 503 o malformed → fallback `gemini-flash-lite-latest`. Bug #29-#30. NUNCA producción con un solo modelo.
+24. **🔴 Reglas comunes a TODOS los tenants → backend `system_prompt`**: pax_count, persistencia, orden cierre, anti-vague. Cliente solo configura tono+catálogo en su prompt. Bug #33 (regla en prompt JMC = no escalable).
+25. **🔴 Datos críticos del flow → sesión DDB, no context LLM**: pax, customer_name, slug, service. Context LLM siempre truncado. Bug #31 perdió pax al final del flow.
+26. **🔴 Validaciones DESPUÉS de normalizar input**: si el dato puede llegar como nombre o slug, normalizar primero, validar después. Bug #28 saltó guard porque service=None pre-normalización.
+27. **🔴 cleanup post-acción terminal**: tras Payment Link / handoff humano / scheduling confirmado, llamar `clear_pax_data()` o equivalente. Mantiene history y profile, evita herencia entre flows del mismo cliente. Bug solucionado en v85.
 ---
 ## 🚀 DEPLOY
 ### Frontend
@@ -938,7 +1053,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
 | 🤝 Programa Afiliados (movido a Sprint 1) | 0% — bloqueante crecimiento |
 | 🔧 Pendiente: Sprint 1 ampliado (Stripe+Wompi+Quotas+Afiliados) + E (Impersonate) + F-J + multicanal | 2% |
-**Última medición:** 29 abril 2026 — Meta CAPI completo (report-purchase individual + plantilla ventas v2 + fix CORS Lambda URL) + API v69
+**Última medición:** 5 mayo 2026 — Flow comercial completo end-to-end (info → pax → horario → día → nombre → link con monto correcto) + Gemini fallback (2.5-flash-lite + flash-lite-latest) + 14 bugs raíz cerrados (#21-#34) + reglas universales backend multi-tenant (Bot v85, API v88, Remarketing v5)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -955,7 +1070,9 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **78% → 80%** — Feature Flags (S1.E) + Quotas (S1.F) + Enforcement rodaje (S1.G) + Message Packs (Bloque 6) 🦁
 - [x] **80% → 81%** — Frontend usage widgets + Packs Lemon Squeezy E2E (con plata real ✅) + Affiliates backend completo (4 tablas + 5 endpoints + cron release + cookie tracker) 🦁
 - [x] **81% → 82%** — Remarketing real end-to-end (cart + info abandonment) + Auto-return PAUSED >2h + Botón "Devolver al bot" en tab Agente + 5 bugs auditados (#11-#15) 🦁
-- [ ] **82% → 84%** — Frontend `/dashboard/affiliate` + landing `/affiliates` + cron payout-batch + emails Resend + TyC + CloudWatch alarms ⭐ ESTÁS AQUÍ
+- [ ] **82% → 84%** — Frontend `/dashboard/affiliate` + landing `/affiliates` + cron payout-batch + emails Resend + TyC + CloudWatch alarms
+- [x] **82% → 84%** — Sesión 5 mayo: Flow comercial completo end-to-end + 14 bugs raíz cerrados + Gemini fallback + multi-tenant strict (Bot v47-v85, API v86-v88, Remarketing v5) 🦁
+- [ ] **84% → 86%** — Frontend Affiliate dashboard + landing pública + cron payout + emails + TyC ⭐ ESTÁS AQUÍ
 - [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
 - [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 
