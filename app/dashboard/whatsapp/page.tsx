@@ -4,7 +4,7 @@ import { useAuth } from '../../providers';
 import Link from 'next/link';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const META_APP_ID = '27398458396409385';
-const META_CONFIG_ID = '694128837119269';
+const META_CONFIG_ID = '997214322992918';
 export default function WhatsAppPage() {
   const { user } = useAuth();
   const [config, setConfig] = useState<any>(null);
