@@ -34,11 +34,8 @@ export default function ServicesPage() {
   const [campLoading, setCampLoading] = useState(false);
   const [selectedCamps, setSelectedCamps] = useState<string[]>([]);
   const [savingAssign, setSavingAssign] = useState(false);
-
-2 — Agregar funciones y load. Busca:
-tsx  const toggleCarouselService = (slug: string) => {
-Agrega antes:
-tsx  const loadCarousels = () => {
+  const toggleCarouselService = (slug: string) => {
+  const loadCarousels = () => {
     if (!user?.companyId) return;
     fetch(`${API_URL}/templates/carousel`, { headers: { 'client-id': user?.companyId || '' } })
       .then(r => r.json())
