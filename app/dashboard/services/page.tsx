@@ -34,7 +34,6 @@ export default function ServicesPage() {
   const [campLoading, setCampLoading] = useState(false);
   const [selectedCamps, setSelectedCamps] = useState<string[]>([]);
   const [savingAssign, setSavingAssign] = useState(false);
-  const toggleCarouselService = (slug: string) => {
   const loadCarousels = () => {
     if (!user?.companyId) return;
     fetch(`${API_URL}/templates/carousel`, { headers: { 'client-id': user?.companyId || '' } })
