@@ -993,12 +993,12 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ### ⏱️ Métricas de desarrollo reales
 | Métrica | Valor |
 |---|---|
-| **Horas invertidas hasta hoy** | ~480h |
-| **Horas pendientes (completo)** | ~600h |
+| **Horas invertidas hasta hoy** | ~507h |
+| **Horas pendientes (completo)** | ~573h |
 | **Total proyecto completo** | ~1,080h |
-| **Equivalente invertido** | ~3 meses full-time senior |
-| **Equivalente pendiente** | ~4 meses full-time senior |
-| **MVP cobrable (Sprint 1)** | ~120h adicionales |
+| **Equivalente invertido** | ~3.4 meses full-time senior |
+| **Equivalente pendiente** | ~3.8 meses full-time senior |
+| **MVP cobrable (Sprint 1)** | ~93h adicionales |
 
 #### Desglose horas invertidas
 | Bloque | Horas |
@@ -1013,8 +1013,10 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | Bloque M CAPI completo | ~30h |
 | Sesión 28 abril (8 bugs + B6.5 + madrugada) | ~12h |
 | Sesión 29 abril (flows + migración multicanal) | ~8h |
+| Sesión 5 mayo (flow comercial + carrusel + bugs Gemini) | ~15h |
+| Sesión 6-7 mayo (embed + debounce + fragmentación + anti-silencio + WABA migración) | ~12h |
 | Debugging, rollbacks, incidentes varios | ~20h |
-| **Total** | **~480h** |
+| **Total** | **~507h** |
 
 #### Desglose horas pendientes
 | Bloque | Horas |
@@ -1032,10 +1034,11 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | QA, testing, pulido antes de lanzamiento | ~40h |
 | **Total** | **~600h** |
 
-> 💡 **Nota:** Lo que está hecho es la infraestructura más compleja. Lo que falta tiene más features pero menor complejidad técnica por feature. El MVP cobrable (Sprint 1) está a ~120h de distancia.
+> 💡 **Nota:** Lo que está hecho es la infraestructura más compleja. Lo que falta tiene más features pero menor complejidad técnica por feature. El MVP cobrable (Sprint 1) está a ~93h de distancia.
+
 #### 🧠 Porcentaje real por dificultad técnica
 
-> El 74% mide *cantidad de features*. Por dificultad técnica real, el proyecto está al **~87%**.
+> El 86% mide *cantidad de features*. Por dificultad técnica real, el proyecto está al **~92%**.
 
 | Nivel | Componentes | Estado |
 |---|---|---|
@@ -1047,7 +1050,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 > 💡 **En palabras simples:** el 26% de features que falta representa solo el ~13% de la dificultad técnica total. El motor del Ferrari está construido — lo que falta es la tapicería, el GPS y el aire acondicionado.
 | Categoría | % |
 |---|---|
-| ✅ Infraestructura construida | **76%** |
+| ✅ Infraestructura construida | **86%** |
 | 🔴 Stripe billing (para cobrar) | 0% — bloqueante |
 | 🔴 Feature Flags por plan | 0% — bloqueante |
 | 🟡 Multicanal (IG/Messenger/Telegram) | 0% — Sprint 2 |
