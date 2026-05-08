@@ -95,7 +95,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,100 líneas, **v103** — multi-carousel por campaign_id: _get_best_carousel_template busca carrusel asignado a campaña CTW, fallback a default activo) — debounce async + anti-silencio + fragmentación mensajes + typing/read receipts + cascada 3 modelos LLM + LLM_BASE_URL preparado para LLM propio + fecha multi-tenant + guard carrusel mid-flow + JSON malformado escala cascada)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~6,960 líneas, **v120** — cleanup carrusel duplicada + multi-tenant tokens en enviar_catalogo_carrusel/_enviar_catalogo_template_carousel/_enviar_catalogo_lista + _media_id_cache keyed por (url, phone_id) + env var PHONE_NUMBER_ID actualizada al WABA nuevo post-migración) — multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + LLM_BASE_URL preparado + fecha multi-tenant + guard mid-flow + JSON malformado escala cascada
 - `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif (~10,700 líneas, ~108 endpoints, **v93** — multi-carousel GET/PUT/activate/DELETE + carousels_catalog + campaign_ids + emails afiliados + cron payout mensual)— /meta/exchange auto-onboarding (subscribe_apps + register PIN + GSI re-index) + fix exchange prioriza waba_id/phone_number_id del frontend)
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent: checkout 45min/3h, booking 2h/5h, catalog 4h/8h, info 6h/12h) — loguea outbounds en conversation_history + DELAY acepta float para rescate temprano 15min)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
@@ -683,6 +683,26 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **Frontend `4fdd667`**: config_id Embedded Signup restaurado tras fix en Meta Business.
 - [x] **Carrusel JMC 10 cards APPROVED**: template `catalogo_escuela_de_tiro_jmc_10cards` aprobado por Meta y enviándose al cliente. Multi-tenant via `config_pro.carousel_template_name` + `carousel_card_count`.
 - [x] **API v86-v88 (carrusel multi-tenant fix)**: 3 fixes encadenados — endpoint `/uploads` usa `META_APP_ID` (no waba_id), body con ratio palabras/vars válido (Meta error 2388293), sin saltos de línea (Meta error 2388245).
+### 8 mayo 2026 (madrugada) — Cleanup carrusel multi-tenant + WABA env var post-migración 🦁
+> Sesión corta ~1h. Auditoría reveló que el carrusel se rompió tras onboarding pilot multi-carousel. 4 deploys separados (Regla #5).
+#### Bug #35 (CRÍTICO 🔴) — `enviar_catalogo_carrusel` duplicada regresó (Bug #25 reincidencia)
+- **Síntoma**: carrusel JMC no salía. `_get_best_carousel_template` devolvía el template correcto (10 cards APPROVED), pero el payload usaba `catalogo_servicios_v2` (5 cards hardcoded).
+- **Causa**: al agregar kwargs `dynamic_token`/`dynamic_phone_id` a call sites, alguien duplicó `enviar_catalogo_carrusel` (línea 2149) en vez de modificar la original (línea 1088). La duplicada hardcodeaba `tpl_name = "catalogo_servicios_v2"`. Python usa la última definida → `_get_best_carousel_template` quedó muerto.
+- **Fix**: Bot v117 borró la duplicada (139 líneas). La "buena" en línea 1088 delega a `_enviar_catalogo_template_carousel` con multi-carousel awareness.
+- **Lección 28**: **Bug #25 regresó exactamente igual que la 1ra vez**. Agregar hook pre-commit: `grep -c "^def NOMBRE"` antes de cada deploy.
+#### Bug #35.1 (BLOQUEANTE) — Kwargs rotos tras borrar duplicada
+- **Síntoma**: al borrar la duplicada, call sites llamaban `enviar_catalogo_carrusel(..., dynamic_token=..., dynamic_phone_id=...)` pero la "buena" no aceptaba esos kwargs → `TypeError: got an unexpected keyword argument 'dynamic_token'`.
+- **Fix**: Bot v118 agregó los kwargs a la firma.
+- **Lección 29**: borrar código duplicado es más riesgoso de lo que parece. Plan correcto: 1) agregar kwargs a la buena; 2) py_compile + tests; 3) borrar la mala. No al revés.
+#### Bug #36 (MULTI-TENANT 🟥) — `_media_id_cache` global cross-tenant
+- **Síntoma**: silente. Cache de media_ids subidos a Meta estaba keyed solo por `image_url`. Los media_ids están atados al `phone_number_id` que hizo el upload. Tenant A sube imagen → cachea media_id. Tenant B con misma URL (S3 default) intentaría enviar template con media_id de A → Meta rechaza.
+- **Fix**: Bot v119 cambió la key a `(image_url, phone_id)`. Multi-tenant safe.
+- **Lección 30**: cualquier cache que guarde un ID emitido por API externa (Meta, Stripe, etc.) debe estar keyed por el contexto del emisor, no solo por el input.
+#### Bug #37 (OPERACIONAL 🟠) — Env var `PHONE_NUMBER_ID` quedó en WABA viejo tras migración
+- **Síntoma**: tras Bot v119 multi-tenant OK, seguía fallando `Meta media upload failed: Object with ID '1048898704969876' does not exist`. El config_pro de JMC tenía el phone nuevo (`1050792924791062`), pero el código caía al fallback `PHONE_NUMBER_ID` env var.
+- **Causa**: migración WABA del 6 mayo actualizó `config_pro` pero NUNCA tocó la env var del Lambda. El fallback default apuntaba al phone viejo durante 2 días sin que nadie lo notara (carrusel era el único feature que lo usaba en runtime).
+- **Fix**: Bot v120 — env var `PHONE_NUMBER_ID=1050792924791062`. Multi-tenant code de v119 sigue válido — esto solo arregla el fallback default.
+- **Lección 31**: tras migración de WABA (o cualquier integración externa con ID), auditar TODAS las env vars de TODAS las Lambdas. Las que apuntan al valor viejo siguen "funcionando" hasta que necesitan operación privilegiada (upload, template lookup) y revientan.
 ### Lecciones nuevas (sesión 5 mayo)
 12. **🔴 GSI consistency post-disconnect**: tras cualquier disconnect/reconnect que toque GSI fields, validar con query antes de dar OK. DDB no garantiza propagación inmediata cuando el campo cambia múltiples veces rápido.
 13. **🔴 flow_state liberation**: TODO handler que dispara acción terminal DEBE liberar `flow_state` antes de retornar. Olvidarlo = loop infinito.
@@ -968,6 +988,11 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 25. **🔴 Datos críticos del flow → sesión DDB, no context LLM**: pax, customer_name, slug, service. Context LLM siempre truncado. Bug #31 perdió pax al final del flow.
 26. **🔴 Validaciones DESPUÉS de normalizar input**: si el dato puede llegar como nombre o slug, normalizar primero, validar después. Bug #28 saltó guard porque service=None pre-normalización.
 27. **🔴 cleanup post-acción terminal**: tras Payment Link / handoff humano / scheduling confirmado, llamar `clear_pax_data()` o equivalente. Mantiene history y profile, evita herencia entre flows del mismo cliente. Bug solucionado en v85.
+### Reglas nuevas — sesión 8 mayo (post-migración WABA)
+28. **🔴 Grep duplicadas antes de deploy**: `grep -c "^def NOMBRE"` en funciones críticas antes de cualquier deploy. Bug #25 regresó como Bug #35 por NO hacer este check. Ideal: hook pre-commit automático.
+29. **🔴 Orden correcto para borrar código duplicado**: 1) agregar los kwargs nuevos a la función "buena"; 2) py_compile + tests; 3) borrar la mala. NUNCA borrar primero — los call sites quedan rotos.
+30. **🔴 Cache de IDs externos keyed por contexto del emisor**: media_ids de Meta, tokens de Stripe, file_ids de Google, etc. NUNCA keyed solo por input. Siempre `(input, emisor_id)`.
+31. **🔴 Auditoría env vars post-migración de integraciones**: tras migrar WABA, Stripe account, Meta pixel, etc., revisar TODAS las env vars de TODAS las Lambdas. El valor viejo puede seguir "funcionando" durante días hasta que lo uses en una operación privilegiada.
 ---
 ## 🚀 DEPLOY
 ### Frontend
@@ -1060,7 +1085,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
 | 🤝 Programa Afiliados (movido a Sprint 1) | 0% — bloqueante crecimiento |
 | 🔧 Pendiente: Sprint 1 ampliado (Stripe+Wompi+Quotas+Afiliados) + E (Impersonate) + F-J + multicanal | 2% |
-**Última medición:** 8 mayo 2026 — Affiliate module completo (dashboard + landing + cron payout v91 + emails v92 + TyC) + PIN embed WhatsApp + Multi-carousel backend/bot/frontend (API v93, Bot v103) + Remarketing delays variables por intent v7 (checkout 45min, booking 2h, catalog 4h, info 6h)
+**Última medición:** 8 mayo 2026 — Affiliate module completo (dashboard + landing + cron payout v91 + emails v92 + TyC) + PIN embed WhatsApp + Multi-carousel backend/bot/frontend (API v93, Bot v103) + Remarketing delays variables por intent v7 + **Cleanup sesión madrugada (Bot v117→v120)**: borrada duplicada `enviar_catalogo_carrusel` (Bug #25 reincidencia), `_media_id_cache` multi-tenant, env var PHONE_NUMBER_ID actualizada post-migración WABA
+
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
