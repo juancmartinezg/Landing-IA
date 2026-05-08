@@ -728,6 +728,7 @@ export default function LandingPage() {
                 <a href="#planes" className="block text-xs text-gray-500 hover:text-white transition-colors">Precios</a>
                 <a href="#para-quien" className="block text-xs text-gray-500 hover:text-white transition-colors">Casos de uso</a>
                 <a href="#como-funciona" className="block text-xs text-gray-500 hover:text-white transition-colors">Cómo funciona</a>
+                <Link href="/affiliates" className="block text-xs text-gray-500 hover:text-white transition-colors">Programa de afiliados</Link>
                 <a href="https://wa.me/573022205845" className="block text-xs text-gray-500 hover:text-white transition-colors">Contacto</a>
               </div>
             </div>
