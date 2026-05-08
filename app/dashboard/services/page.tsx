@@ -34,24 +34,6 @@ export default function ServicesPage() {
   const [campLoading, setCampLoading] = useState(false);
   const [selectedCamps, setSelectedCamps] = useState<string[]>([]);
   const [savingAssign, setSavingAssign] = useState(false);
-  Perfecto. Veo exactamente qué hay. El panel de carrusel actual solo crea. Necesito agregar debajo del panel de creación la sección de gestión. Los cambios son:
-1 — Agregar estados para carruseles y campañas. Busca:
-tsx  const [showCarousel, setShowCarousel] = useState(false);
-  const [carouselSelected, setCarouselSelected] = useState<string[]>([]);
-  const [creatingCarousel, setCreatingCarousel] = useState(false);
-Reemplaza por:
-tsx  const [showCarousel, setShowCarousel] = useState(false);
-  const [carouselSelected, setCarouselSelected] = useState<string[]>([]);
-  const [creatingCarousel, setCreatingCarousel] = useState(false);
-  const [carousels, setCarousels] = useState<any[]>([]);
-  const [carLoading, setCarLoading] = useState(true);
-  const [activating, setActivating] = useState<string | null>(null);
-  const [deletingCar, setDeletingCar] = useState<string | null>(null);
-  const [assignTarget, setAssignTarget] = useState<any | null>(null);
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [campLoading, setCampLoading] = useState(false);
-  const [selectedCamps, setSelectedCamps] = useState<string[]>([]);
-  const [savingAssign, setSavingAssign] = useState(false);
 
 2 — Agregar funciones y load. Busca:
 tsx  const toggleCarouselService = (slug: string) => {
