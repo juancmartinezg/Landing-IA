@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 export default function TerminosCondiciones() {
-  const lastUpdate = "26 de Abril de 2026";
+  const lastUpdate = "8 de Mayo de 2026";
   return (
     <div className="min-h-screen bg-[#0B0F1A] text-gray-300 font-sans p-6 md:p-20">
       <div className="max-w-5xl mx-auto bg-white/[0.02] border border-white/5 p-8 md:p-16 rounded-[3rem] shadow-2xl">
@@ -182,9 +182,56 @@ export default function TerminosCondiciones() {
               Estos Términos se rigen por las leyes de la República de Colombia. Cualquier disputa será resuelta inicialmente mediante negociación directa de buena fe. De no ser posible, las partes se someten a la jurisdicción de los jueces competentes de la ciudad de Medellín, Colombia, renunciando a cualquier otro fuero.
             </p>
           </div>
-          {/* 12. Contacto */}
+          {/* 13. Programa de Afiliados */}
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+              <span className="text-indigo-500">13.</span> Programa de Afiliados
+            </h2>
+            <p className="mb-4">
+              El Programa de Afiliados de <strong>clientes.bot</strong> permite a personas naturales o jurídicas ganar comisiones por referir nuevos clientes a la plataforma. Al registrarte como afiliado aceptas las siguientes condiciones adicionales:
+            </p>
+            <ul className="list-disc ml-6 space-y-3">
+              <li>
+                <strong className="text-indigo-400">Comisiones:</strong> El afiliado gana el <strong>40% del MRR</strong> del referido durante los primeros 12 meses, y el <strong>30% recurring forever</strong> a partir del mes 13, mientras el referido mantenga su suscripción activa.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Hold de 30 días:</strong> Toda comisión queda retenida 30 días calendario desde la fecha de pago del referido, para cubrir posibles reembolsos o chargebacks.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Anti-fraude:</strong> Si un referido cancela su suscripción antes de cumplir 60 días desde su primer pago, la comisión asociada se anula automáticamente (VOID). Esto aplica incluso si la comisión ya fue liberada del hold pero aún no fue pagada.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Pago mínimo:</strong> El pago se procesa el día 5 de cada mes. Si el saldo acumulado es inferior a <strong>$50 USD</strong>, se acumula para el período siguiente sin pérdida.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Medios de pago:</strong> Stripe Connect (USD, cuentas internacionales) o transferencia bancaria vía Wompi (COP, Colombia). El afiliado es responsable de mantener sus datos de pago actualizados.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Cookie de atribución:</strong> La atribución se realiza mediante cookie de 90 días. Si un usuario hace clic en el link del afiliado y se suscribe dentro de ese período, la comisión es atribuida al afiliado, incluso si el usuario regresa directamente al sitio.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Conducta del afiliado:</strong> Está prohibido hacer publicidad engañosa, spam, compra de tráfico fraudulento, auto-referidos o cualquier práctica que distorsione artificialmente las conversiones. El incumplimiento resulta en suspensión inmediata y pérdida de comisiones pendientes.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Revisión de tasas:</strong> Las tasas de comisión pueden revisarse con un mínimo de <strong>90 días de aviso previo</strong> por correo electrónico. Las comisiones ya generadas bajo las tasas anteriores se pagarán bajo los términos originales vigentes al momento de su generación.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Impuestos:</strong> El afiliado es responsable de declarar y pagar los impuestos que correspondan en su jurisdicción sobre los ingresos recibidos por comisiones. <strong>clientes.bot</strong> no retiene ni gestiona impuestos de afiliados.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Terminación:</strong> Cualquiera de las partes puede terminar la participación en el programa con 30 días de aviso. Las comisiones ya liberadas se pagarán en el siguiente ciclo; las comisiones en hold al momento de la terminación se procesan normalmente si el referido no cancela.
+              </li>
+            </ul>
+            <p className="mt-4 text-xs text-gray-500 bg-white/5 p-4 rounded-xl border border-white/5">
+              Para registrarte como afiliado visita{' '}
+              <Link href="/affiliates" className="text-indigo-400 hover:underline">clientes.bot/affiliates</Link>.
+              Para consultas sobre pagos escribe a <strong>soporte@clientes.bot</strong>.
+            </p>
+          </div>
+
+          {/* 14. Contacto */}
           <div className="bg-white/5 p-6 rounded-2xl">
-            <h2 className="text-xl font-bold text-white mb-3">12. Contacto</h2>
+            <h2 className="text-xl font-bold text-white mb-3">14. Contacto</h2>
             <p className="text-sm text-gray-400">
               <strong>SGC Technology S.A.S.</strong><br />
               Correo: <strong>soporte@clientes.bot</strong><br />
