@@ -12,6 +12,9 @@ export default function WhatsAppPage() {
   const [connecting, setConnecting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
+  const [pinState, setPinState] = useState<{ required: boolean; phoneNumberId: string }>({ required: false, phoneNumberId: '' });
+  const [pin, setPin] = useState('');
+  const [submittingPin, setSubmittingPin] = useState(false);
   const sessionData = useRef<any>(null);
   const showToast = (msg: string) => {
     setToast(msg);
@@ -83,6 +86,10 @@ export default function WhatsAppPage() {
         if (res.ok && data.success) {
           window.location.href = '/dashboard/whatsapp';
           return;
+        } else if (res.ok && data.requires_pin) {
+          setConnecting(false);
+          setPinState({ required: true, phoneNumberId: data.phone_number_id || '' });
+          return;
         } else {
           showToast('Error: ' + (data.error || 'No se pudo conectar'));
         }
@@ -92,6 +99,27 @@ export default function WhatsAppPage() {
       setConnecting(false);
     }
   }, [config, user]);
+  const handlePinSubmit = async () => {
+    if (pin.length !== 6) return showToast('El PIN debe tener 6 dígitos');
+    setSubmittingPin(true);
+    try {
+      const res = await fetch(`${API_URL}/meta/register-pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ phone_number_id: pinState.phoneNumberId, pin }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        window.location.href = '/dashboard/whatsapp';
+        return;
+      } else {
+        showToast('PIN incorrecto: ' + (data.error || 'Intenta de nuevo'));
+      }
+    } catch {
+      showToast('Error enviando el PIN');
+    }
+    setSubmittingPin(false);
+  };  
   const handleConnect = () => {
     const FB = (window as any).FB;
     if (!FB) return showToast('SDK no cargado');
@@ -141,6 +169,39 @@ export default function WhatsAppPage() {
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-[#1a1f2e] border border-white/10 rounded-xl px-5 py-3 text-sm font-medium shadow-xl">
           {toast}
+        </div>
+      )}
+      {pinState.required && (
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-[#1a1f2e] border border-white/10 rounded-3xl p-8 text-center max-w-sm w-full">
+            <p className="text-4xl mb-4">🔐</p>
+            <h3 className="text-xl font-bold text-white mb-2">Ingresa tu PIN de WhatsApp</h3>
+            <p className="text-gray-400 text-sm mb-6">
+              Meta requiere un PIN de 6 dígitos para registrar este número.<br />
+              Encuéntralo en la app de WhatsApp Business → Configuración → Cuenta → PIN de dos pasos.
+            </p>
+            <input
+              type="number"
+              maxLength={6}
+              value={pin}
+              onChange={e => setPin(e.target.value.slice(0, 6))}
+              placeholder="000000"
+              className="w-full text-center text-2xl font-mono tracking-[0.5em] bg-white/[0.05] border border-white/10 rounded-2xl px-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500/50 mb-4"
+            />
+            <button
+              onClick={handlePinSubmit}
+              disabled={submittingPin || pin.length !== 6}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold text-sm transition-all disabled:opacity-50 mb-3"
+            >
+              {submittingPin ? 'Verificando...' : 'Confirmar PIN'}
+            </button>
+            <button
+              onClick={() => { setPinState({ required: false, phoneNumberId: '' }); setPin(''); }}
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Cancelar y volver
+            </button>
+          </div>
         </div>
       )}
       {connecting && (
