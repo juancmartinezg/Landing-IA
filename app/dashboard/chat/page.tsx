@@ -453,6 +453,9 @@ export default function ChatPage() {
                         <div className="w-9 h-9 md:w-10 md:h-10 bg-emerald-600/20 rounded-full flex items-center justify-center text-xs md:text-sm font-bold text-emerald-400 shrink-0">
                           {(conv.name || 'U').charAt(0).toUpperCase()}
                         </div>
+                        <div className="absolute -bottom-0.5 -right-0.5 text-[10px]">
+                          {conv.channel === 'instagram' ? '📸' : conv.channel === 'facebook' ? '💬' : '💚'}
+                        </div>
                         {phonesWithNew.has(conv.phone) && selectedPhone !== conv.phone && (
                           <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-[#080B14]" />
                         )}
@@ -547,7 +550,9 @@ export default function ChatPage() {
                   {(selectedName || 'U').charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-bold text-sm truncate">{selectedName || 'Sin nombre'}</p>
+                  <p className="font-bold text-sm truncate">
+                    {botConvs.find(c => c.phone === selectedPhone)?.channel_icon || '💚'} {selectedName || 'Sin nombre'}
+                  </p>
                   <p className="text-[10px] md:text-[11px] text-gray-500 truncate">{selectedDetail}</p>
                 </div>
               </div>
