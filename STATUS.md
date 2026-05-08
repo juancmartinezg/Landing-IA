@@ -95,9 +95,9 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~6,800 líneas, **v102** — debounce async + anti-silencio + fragmentación mensajes + typing/read receipts + cascada 3 modelos LLM + LLM_BASE_URL preparado para LLM propio + fecha multi-tenant + guard carrusel mid-flow + JSON malformado escala cascada)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Release con notif (~10,500 líneas, ~104 endpoints, **v90** — /meta/exchange auto-onboarding (subscribe_apps + register PIN + GSI re-index) + fix exchange prioriza waba_id/phone_number_id del frontend)
-- `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~480 líneas, **v6** — loguea outbounds en conversation_history + DELAY acepta float para rescate temprano 15min)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,100 líneas, **v103** — multi-carousel por campaign_id: _get_best_carousel_template busca carrusel asignado a campaña CTW, fallback a default activo) — debounce async + anti-silencio + fragmentación mensajes + typing/read receipts + cascada 3 modelos LLM + LLM_BASE_URL preparado para LLM propio + fecha multi-tenant + guard carrusel mid-flow + JSON malformado escala cascada)
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif (~10,700 líneas, ~108 endpoints, **v93** — multi-carousel GET/PUT/activate/DELETE + carousels_catalog + campaign_ids + emails afiliados + cron payout mensual)— /meta/exchange auto-onboarding (subscribe_apps + register PIN + GSI re-index) + fix exchange prioriza waba_id/phone_number_id del frontend)
+- `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent: checkout 45min/3h, booking 2h/5h, catalog 4h/8h, info 6h/12h) — loguea outbounds en conversation_history + DELAY acepta float para rescate temprano 15min)
 - `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
 ### Tablas DynamoDB (19 — todas con PITR)
 - `KnowledgeBase` (PK: `company_id`, SK: `kb_key`, GSI: `phone_number_id-index`)
@@ -118,7 +118,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Meta App:** `27398458396409385`
 - **WABA:** `2891074877943438` (migrado desde `948932884157315` — portfolio Escuela de Tiro Jose Maria Cordoba)
 - **Pixel:** `1102373681952908`
-- **EventBridge crons:** `ads-daily-optimize` ENABLED (6 AM diario), `meta-token-renewal` ENABLED (domingos 5 AM UTC), `promote-memory-every-5min` ENABLED, `remarketing-every-hour` ENABLED
+- **EventBridge crons:** `ads-daily-optimize` ENABLED (6 AM diario), `meta-token-renewal` ENABLED (domingos 5 AM UTC), `promote-memory-every-5min` ENABLED, `remarketing-every-hour` ENABLED, `affiliate-payout-batch-monthly` ENABLED (día 5 cada mes 8 AM UTC)
 ---
 ## ✅ MÓDULOS COMPLETADOS
 ### 🤖 Bot WhatsApp
@@ -781,8 +781,10 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **Bug memoria caching nombres**: filtros anti-PII + anti-mid-flow aplicados (Bot v88). Skip si es customer_name, confirmación corta, cédula, o flow activo. ✅
 - [ ] **Memoria con contexto/source**: cache key `(normalized_q, source)` donde source ∈ {`catalog_button`, `ad_greeting`, `conversational`}. Mismo servicio, respuestas distintas según contexto.
 - [x] **Remarketing rescate temprano**: `REMARKETING_DELAY_HOURS` bajado de 1h a 0.25h (15 min). Remarketing v6 acepta float. ✅
-- [ ] **Frontend manejo PIN en embed**: mostrar input de 6 dígitos solo cuando backend responde `requires_pin: true`.
-- [ ] **Auto-vincular template**: `/templates/carousel` debe guardar `carousel_template_name` + `carousel_card_count` en `config_pro` automáticamente al crear.
+- [x] **Frontend manejo PIN en embed**: modal 6 dígitos cuando backend responde `requires_pin: true` + POST /meta/register-pin ✅
+- [x] **Auto-vincular template**: carousels_catalog guardado en POST /templates/carousel + migrate script para templates existentes ✅
+- [x] **Multi-carousel frontend services**: lista + activar default + asignar campañas + eliminar en /dashboard/services ✅
+- [x] **Multi-carousel frontend ads**: selector de carrusel por campaña en wizard paso 1 + asignación post-publicación ✅
 - [ ] **Selector templates aprobados en frontend**: dropdown en `/dashboard/templates` para elegir cuál template usar por defecto.
 - [ ] **Debouncing con SQS**: el debounce async actual funciona pero tiene edge cases de race condition. Para escala (100+ msg/min) migrar a SQS con delay.
 - [ ] **Marketing API Access Tier**: reactivar al menos 1 campaña para acumular 500+ calls en 15 días (requisito Meta).
@@ -989,7 +991,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-██████████████████████████████░ 86%
+████████████████████████████████░ 88%
 ### ⏱️ Métricas de desarrollo reales
 | Métrica | Valor |
 |---|---|
@@ -1058,7 +1060,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
 | 🤝 Programa Afiliados (movido a Sprint 1) | 0% — bloqueante crecimiento |
 | 🔧 Pendiente: Sprint 1 ampliado (Stripe+Wompi+Quotas+Afiliados) + E (Impersonate) + F-J + multicanal | 2% |
-**Última medición:** 7 mayo 2026 — Debounce async (consolida ráfagas) + anti-silencio (fallback texto plano) + fragmentación mensajes largos + typing/read receipts + cascada 3 modelos LLM + Embed Signup funcional E2E con auto-onboarding + Lambda timeout 60s + 20+ bugs cerrados (#21-#40+) (Bot v102, API v90, Remarketing v6)
+**Última medición:** 8 mayo 2026 — Affiliate module completo (dashboard + landing + cron payout v91 + emails v92 + TyC) + PIN embed WhatsApp + Multi-carousel backend/bot/frontend (API v93, Bot v103) + Remarketing delays variables por intent v7 (checkout 45min, booking 2h, catalog 4h, info 6h)
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -1078,7 +1080,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [ ] **82% → 84%** — Frontend `/dashboard/affiliate` + landing `/affiliates` + cron payout-batch + emails Resend + TyC + CloudWatch alarms
 - [x] **82% → 84%** — Sesión 5 mayo: Flow comercial completo + 14 bugs raíz + Gemini fallback + multi-tenant strict (Bot v47-v85, API v86-v88, Remarketing v5) 🦁
 - [x] **84% → 86%** — Sesión 6-7 mayo: Debounce async + anti-silencio + fragmentación + typing + cascada 3 LLM + Embed E2E + auto-onboarding API + Lambda 60s + WABA migrado (Bot v85-v102, API v89-v90, Remarketing v6) 🦁
-- [ ] **86% → 88%** — Frontend Affiliate dashboard + landing pública + cron payout + emails + TyC + Frontend PIN embed ⭐ ESTÁS AQUÍ
+- [x] **86% → 88%** — Frontend Affiliate dashboard + landing pública + cron payout mensual v91 + emails Resend afiliados v92 + TyC sección 13 + PIN embed + Multi-carousel backend v93 + bot campaign_id v103 + Remarketing delays variables v7 🦁
+- [ ] **88% → 90%** — Memoria con contexto/source + Auto-vincular template carousel + Selector templates aprobados + Test E2E remarketing ⭐ ESTÁS AQUÍ
 - [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
 - [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 
