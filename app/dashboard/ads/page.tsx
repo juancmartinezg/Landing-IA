@@ -133,7 +133,14 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
   useEffect(() => {
     loadAdsInit();
     loadRecommendationsCount();
-  }, []);
+    // Cargar carruseles aprobados para asignar a campaña
+    if (user?.companyId) {
+      fetch(`${API_URL}/templates/carousel`, { headers: h })
+        .then(r => r.json())
+        .then(d => setCarousels((d.carousels || []).filter((c: any) => c.status === 'APPROVED')))
+        .catch(() => {});
+    }
+  }, [user]);
   // B6.5.8: cargar contador para banner
   const loadRecommendationsCount = async () => {
     try {
@@ -230,6 +237,8 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
     try {
       const svc = services.find(s => s.slug === wiz.service_slug);
       const campName = svc ? `${svc.name} - ${new Date().toLocaleDateString()}` : `Campaña ${new Date().toLocaleDateString()}`;
+      // Si el cliente eligió un carrusel específico, lo asignamos tras publicar
+      const carouselToAssign = wizCarousel || '';
       const budgetDaily = Math.max(5000, parseInt(wiz.budget_daily || '15000'));
       const res = await fetch(`${API_URL}/ads/campaigns/publish`, {
         method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
@@ -237,7 +246,21 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
       });
       const data = await res.json();
       if (res.ok) {
-        showToast('✅ ¡Campaña publicada!'); setTab('campaigns'); setWizStep(1); setVariants([]);
+        showToast('✅ ¡Campaña publicada!');
+        // Asignar carrusel específico a esta campaña si el cliente eligió uno
+        if (carouselToAssign && data.campaign_id) {
+          const existingCarousel = carousels.find((c: any) => c.template_name === carouselToAssign);
+          const currentCampaignIds = existingCarousel?.campaign_ids || [];
+          fetch(`${API_URL}/templates/carousel/activate`, {
+            method: 'PUT',
+            headers: { ...h, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              template_name: carouselToAssign,
+              campaign_ids: [...currentCampaignIds, data.campaign_id],
+            }),
+          }).catch(() => {});
+        }
+        setTab('campaigns'); setWizStep(1); setVariants([]); setWizCarousel('');
         localStorage.removeItem('ads_wiz_step'); localStorage.removeItem('ads_wiz_data'); localStorage.removeItem('ads_wiz_variants');
         fetch(`${API_URL}/ads/campaigns`, { headers: h }).then(r => r.json()).then(d => setCampaigns(d.campaigns || []));
       } else showToast(data.error || 'Error');
@@ -290,6 +313,8 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
   const [adPreview, setAdPreview] = useState<any>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [viewingAd, setViewingAd] = useState<any>(null);
+  const [carousels, setCarousels] = useState<any[]>([]);
+  const [wizCarousel, setWizCarousel] = useState<string>('');
   const [savedAudiences, setSavedAudiences] = useState<any[]>([]);
   const [savingAudience, setSavingAudience] = useState(false);
   const [audienceName, setAudienceName] = useState('');
@@ -1125,7 +1150,31 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setWizStep(2)} className="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold transition-all">Siguiente →</button>
+                {carousels.length > 0 && (
+                  <div className="mt-4 border-t border-white/5 pt-4">
+                    <label className="text-xs text-gray-400 mb-2 block">
+                      🎠 Carrusel de WhatsApp para esta campaña
+                    </label>
+                    <p className="text-[10px] text-gray-600 mb-2">
+                      Cuando un lead llegue por este anuncio, el bot enviará este carrusel.
+                    </p>
+                    <div className="space-y-2">
+                      <button onClick={() => setWizCarousel('')}
+                        className={`w-full p-3 rounded-xl text-left transition-all border text-sm ${!wizCarousel ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                        <p className="font-medium">⚡ Usar carrusel activo por defecto</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">El que tengas activado en Catálogo</p>
+                      </button>
+                      {carousels.map((c: any) => (
+                        <button key={c.template_name} onClick={() => setWizCarousel(c.template_name)}
+                          className={`w-full p-3 rounded-xl text-left transition-all border ${wizCarousel === c.template_name ? 'border-purple-500 bg-purple-600/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}`}>
+                          <p className="text-sm font-bold">{c.label}</p>
+                          <p className="text-[10px] text-gray-500">🃏 {c.card_count} cards</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button onClick={() => setWizStep(2)} className="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-sm font-bold transition-all mt-4">Siguiente →</button>
               </div>
             )}
             {wizStep === 2 && (

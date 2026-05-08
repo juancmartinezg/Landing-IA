@@ -25,6 +25,103 @@ export default function ServicesPage() {
   const [showCarousel, setShowCarousel] = useState(false);
   const [carouselSelected, setCarouselSelected] = useState<string[]>([]);
   const [creatingCarousel, setCreatingCarousel] = useState(false);
+  const [carousels, setCarousels] = useState<any[]>([]);
+  const [carLoading, setCarLoading] = useState(true);
+  const [activating, setActivating] = useState<string | null>(null);
+  const [deletingCar, setDeletingCar] = useState<string | null>(null);
+  const [assignTarget, setAssignTarget] = useState<any | null>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [campLoading, setCampLoading] = useState(false);
+  const [selectedCamps, setSelectedCamps] = useState<string[]>([]);
+  const [savingAssign, setSavingAssign] = useState(false);
+  Perfecto. Veo exactamente qué hay. El panel de carrusel actual solo crea. Necesito agregar debajo del panel de creación la sección de gestión. Los cambios son:
+1 — Agregar estados para carruseles y campañas. Busca:
+tsx  const [showCarousel, setShowCarousel] = useState(false);
+  const [carouselSelected, setCarouselSelected] = useState<string[]>([]);
+  const [creatingCarousel, setCreatingCarousel] = useState(false);
+Reemplaza por:
+tsx  const [showCarousel, setShowCarousel] = useState(false);
+  const [carouselSelected, setCarouselSelected] = useState<string[]>([]);
+  const [creatingCarousel, setCreatingCarousel] = useState(false);
+  const [carousels, setCarousels] = useState<any[]>([]);
+  const [carLoading, setCarLoading] = useState(true);
+  const [activating, setActivating] = useState<string | null>(null);
+  const [deletingCar, setDeletingCar] = useState<string | null>(null);
+  const [assignTarget, setAssignTarget] = useState<any | null>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [campLoading, setCampLoading] = useState(false);
+  const [selectedCamps, setSelectedCamps] = useState<string[]>([]);
+  const [savingAssign, setSavingAssign] = useState(false);
+
+2 — Agregar funciones y load. Busca:
+tsx  const toggleCarouselService = (slug: string) => {
+Agrega antes:
+tsx  const loadCarousels = () => {
+    if (!user?.companyId) return;
+    fetch(`${API_URL}/templates/carousel`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(r => r.json())
+      .then(d => { setCarousels(d.carousels || []); setCarLoading(false); })
+      .catch(() => setCarLoading(false));
+  };
+
+  useEffect(() => { if (user?.companyId) loadCarousels(); }, [user]);
+
+  useEffect(() => {
+    if (!assignTarget || !user?.companyId) return;
+    setCampLoading(true);
+    setSelectedCamps(assignTarget.campaign_ids || []);
+    fetch(`${API_URL}/ads/campaigns`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(r => r.json())
+      .then(d => { setCampaigns(d.campaigns || []); setCampLoading(false); })
+      .catch(() => { setCampaigns([]); setCampLoading(false); });
+  }, [assignTarget]);
+
+  const handleActivateCarousel = async (c: any) => {
+    setActivating(c.template_name);
+    try {
+      const res = await fetch(`${API_URL}/templates/carousel/activate`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ template_name: c.template_name, set_default: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) { showToast(`✅ "${c.label}" activado como default`); loadCarousels(); }
+      else showToast('Error: ' + (data.error || 'No se pudo activar'));
+    } catch { showToast('Error de conexión'); }
+    setActivating(null);
+  };
+
+  const handleDeleteCarousel = async (c: any) => {
+    if (!confirm(`¿Eliminar "${c.label}" de tu lista? El template sigue en Meta.`)) return;
+    setDeletingCar(c.template_name);
+    try {
+      const res = await fetch(`${API_URL}/templates/carousel`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ template_name: c.template_name }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) { showToast('Eliminado'); loadCarousels(); }
+      else showToast('Error: ' + (data.error || 'No se pudo eliminar'));
+    } catch { showToast('Error de conexión'); }
+    setDeletingCar(null);
+  };
+
+  const handleSaveAssign = async () => {
+    if (!assignTarget) return;
+    setSavingAssign(true);
+    try {
+      const res = await fetch(`${API_URL}/templates/carousel/activate`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ template_name: assignTarget.template_name, campaign_ids: selectedCamps }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) { showToast('✅ Campañas asignadas'); setAssignTarget(null); loadCarousels(); }
+      else showToast('Error: ' + (data.error || 'No se pudo guardar'));
+    } catch { showToast('Error de conexión'); }
+    setSavingAssign(false);
+  };
   const toggleCarouselService = (slug: string) => {
     setCarouselSelected(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
   };
@@ -484,6 +581,113 @@ export default function ServicesPage() {
           </div>
         </div>
       )}
+      {/* ── Lista de carruseles existentes ── */}
+      {(carousels.length > 0 || carLoading) && (
+        <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold">🎠 Mis carruseles</h3>
+            <button onClick={loadCarousels} className="text-[10px] text-gray-500 hover:text-white transition-colors">🔄 Actualizar</button>
+          </div>
+          {carLoading ? (
+            <p className="text-xs text-gray-500">Cargando...</p>
+          ) : (
+            <div className="space-y-3">
+              {carousels.map((c) => (
+                <div key={c.template_name}
+                  className={`flex items-center gap-3 p-4 rounded-xl border transition-all flex-wrap ${
+                    c.active ? 'border-indigo-500/30 bg-indigo-500/5' : 'border-white/5 bg-white/[0.02]'
+                  }`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-bold truncate">{c.label}</p>
+                      {c.active && <span className="text-[9px] bg-indigo-600 text-white px-2 py-0.5 rounded-full font-bold">⚡ Default</span>}
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${
+                        c.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400' :
+                        c.status === 'PENDING'  ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {c.status === 'APPROVED' ? '✅ Aprobado' : c.status === 'PENDING' ? '⏳ Pendiente' : '❌ Rechazado'}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                      🃏 {c.card_count} cards · 📢 {c.campaign_ids?.length || 0} campaña{c.campaign_ids?.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0 flex-wrap">
+                    {!c.active && c.status === 'APPROVED' && (
+                      <button onClick={() => handleActivateCarousel(c)} disabled={activating === c.template_name}
+                        className="text-[10px] px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-bold transition-all disabled:opacity-50">
+                        {activating === c.template_name ? '...' : '⚡ Activar'}
+                      </button>
+                    )}
+                    <button onClick={() => setAssignTarget(c)}
+                      className="text-[10px] px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg font-bold transition-all">
+                      📢 Campañas
+                    </button>
+                    <button onClick={() => handleDeleteCarousel(c)} disabled={deletingCar === c.template_name}
+                      className="text-[10px] px-3 py-1.5 bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-gray-500 rounded-lg transition-all disabled:opacity-50">
+                      {deletingCar === c.template_name ? '...' : 'Quitar'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Modal: Asignar campañas ── */}
+      {assignTarget && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setAssignTarget(null)}>
+          <div className="bg-[#0B0F1A] border border-white/10 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e: any) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-bold">Asignar campañas</h3>
+              <button onClick={() => setAssignTarget(null)} className="text-gray-500 hover:text-white">✕</button>
+            </div>
+            <p className="text-xs text-gray-400 mb-5">
+              Leads de estas campañas verán <strong className="text-white">"{assignTarget.label}"</strong>.
+              Si no hay campaña asignada, el bot usa el carrusel default.
+            </p>
+            {campLoading ? (
+              <div className="text-center py-8 text-gray-500 text-sm">Cargando campañas...</div>
+            ) : campaigns.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-sm">No hay campañas activas en Meta Ads.</div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1 mb-4">
+                {campaigns.map((camp: any) => (
+                  <label key={camp.id}
+                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                      selectedCamps.includes(camp.id)
+                        ? 'bg-purple-500/10 border border-purple-500/30'
+                        : 'bg-white/[0.02] border border-white/5 hover:border-white/10'
+                    }`}>
+                    <input type="checkbox" checked={selectedCamps.includes(camp.id)}
+                      onChange={(e: any) => {
+                        if (e.target.checked) setSelectedCamps((p: any) => [...p, camp.id]);
+                        else setSelectedCamps((p: any) => p.filter((x: any) => x !== camp.id));
+                      }}
+                      className="w-4 h-4 accent-purple-500" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{camp.name}</p>
+                      <p className="text-[10px] text-gray-500 font-mono">{camp.id}</p>
+                    </div>
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${
+                      camp.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-gray-400'
+                    }`}>{camp.status}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <button onClick={handleSaveAssign} disabled={savingAssign}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-sm transition-all disabled:opacity-50">
+              {savingAssign ? 'Guardando...' : 'Guardar asignación'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-12 text-gray-500">Cargando...</div>
       ) : services.length === 0 ? (
