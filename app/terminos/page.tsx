@@ -182,7 +182,7 @@ export default function TerminosCondiciones() {
               Estos Términos se rigen por las leyes de la República de Colombia. Cualquier disputa será resuelta inicialmente mediante negociación directa de buena fe. De no ser posible, las partes se someten a la jurisdicción de los jueces competentes de la ciudad de Medellín, Colombia, renunciando a cualquier otro fuero.
             </p>
           </div>
-          {/* 13. Programa de Afiliados */}
+          {/* 12. Programa de Afiliados */}
           <div>
             <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
               <span className="text-indigo-500">13.</span> Programa de Afiliados
@@ -229,7 +229,7 @@ export default function TerminosCondiciones() {
             </p>
           </div>
 
-          {/* 14. Contacto */}
+          {/* 13. Contacto */}
           <div className="bg-white/5 p-6 rounded-2xl">
             <h2 className="text-xl font-bold text-white mb-3">14. Contacto</h2>
             <p className="text-sm text-gray-400">
