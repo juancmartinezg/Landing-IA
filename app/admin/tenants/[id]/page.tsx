@@ -3,6 +3,7 @@ import { useAuth } from '../../../providers';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import FeaturesTab from './FeaturesTab';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 interface TenantDetail {
   tenant_id: string;
@@ -54,7 +55,7 @@ export default function AdminTenantDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<'config' | 'metrics' | 'errors' | 'timeline'>('metrics');
+  const [tab, setTab] = useState<'config' | 'metrics' | 'errors' | 'timeline' | 'features'>('metrics');
   const fetchDetail = async () => {
     if (!user?.email || !tenantId) return;
     setRefreshing(true);
@@ -178,6 +179,7 @@ export default function AdminTenantDetailPage() {
         {[
           { id: 'metrics', label: '📊 Métricas', count: null },
           { id: 'config', label: '⚙️ Config', count: Object.keys(cfg).length },
+          { id: 'features', label: '🎛️ Features', count: null },
           { id: 'errors', label: '🐛 Errores', count: data.errors_recent.length },
           { id: 'timeline', label: '📜 Timeline', count: data.timeline.length },
         ].map(t => (
@@ -400,6 +402,8 @@ export default function AdminTenantDetailPage() {
           </div>
         )
       )}
+      {/* ===== TAB: FEATURES (D-5) ===== */}
+      {tab === 'features' && <FeaturesTab tenantId={tenantId} />}
       {/* Footer info */}
       <p className="text-[10px] text-gray-600 text-center">
         Generado {formatTime(data._generated_at)}
