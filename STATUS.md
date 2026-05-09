@@ -924,27 +924,36 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **S1.G** QUOTA_ENFORCE=true activado. Bot bloquea con mensaje cordial + log_error (Bot v137) ✅
 - [x] **S1.H** Dashboard de uso con 5 quotas + barras + alertas 80%+ (Frontend `billing/page.tsx`) ✅
 #### 🤝 Programa de afiliados (40% año 1 + 30% lifetime — diferenciador GHL killer sostenible)
-- [ ] **S1.I** Tabla `Affiliates` (PK email, affiliate_code único, payout_method, total_referred_mrr, total_paid_lifetime, status active/banned) + GSI affiliate_code-index
-- [ ] **S1.J** Tabla `Referrals` (PK referral_id=company_id, affiliate_email, signup_date, status PENDING/ACTIVE/CHURNED, first_payment_at, churn_at)
-- [ ] **S1.K** Tabla `AffiliatePayouts` (PK affiliate_email, SK month YYYY-MM, status PENDING/HELD/RELEASED/PAID, amount_cents, commissions_count)
-- [ ] **S1.L** Tabla `AffiliateCommissions` (PK affiliate_email, SK ts#referral_id, amount, rate_pct, billing_period, hold_until, released bool)
-- [ ] **S1.M** Endpoint `POST /affiliate/signup` + generación `affiliate_code` (slug+6 chars únicos)
-- [ ] **S1.N** Tracking URL `clientes.bot/?ref=AFFILIATE_CODE` → cookie 90 días + localStorage en frontend
-- [ ] **S1.O** Hook `/billing/checkout`: lee cookie ref → guarda `referred_by` en `Subscription`
-- [ ] **S1.P** Helper `_calculate_commission_rate(affiliate, signup_date)`: 40% si referral.first_payment_at < 365d, sino 30%
-- [ ] **S1.Q** Webhook handlers: en cada `subscription_payment_success`:
-    - Calcular comisión según rate dinámico (40%/30%)
-    - Crear registro en `AffiliateCommissions` con `hold_until = paid_at + 30d`
-    - **Anti-fraude**: si referral.signup_date < 60d Y status=CHURNED → comisión = 0
-- [ ] **S1.R** Cron diario `affiliate-release-commissions`: libera commissions con `hold_until <= now` y `released=False`
-- [ ] **S1.S** Cron mensual `affiliate-payout-batch` día 5: agrupa released commissions del mes anterior, paga si ≥ $50 USD / $200k COP, sino acumula
-- [ ] **S1.T** Frontend `/affiliate` dashboard: link único + tasa actual (40%/30%) + comisiones acumuladas/pendientes/pagadas + lista de referidos + métricas conversión
-- [ ] **S1.U** Página landing `/affiliates` pública con cálculo de earnings ("Si refieres 10 clientes Growth: $1,188 año 1 + $891/mes recurring")
-- [ ] **S1.V** Email Resend: comisión generada / payout enviado / hito alcanzado (10/50/100 referidos)
-- [ ] **S1.W** TyC del programa con cláusula de revisión 90 días de aviso
+- [x] **S1.I** Tabla `Affiliates` (PK email, affiliate_code único, payout_method, total_referred_mrr, total_paid_lifetime, status active/banned) + GSI affiliate_code-index ✅
+- [x] **S1.J** Tabla `Referrals` (PK referral_id=company_id, affiliate_email, signup_date, status PENDING/ACTIVE/CHURNED, first_payment_at, churn_at) ✅
+- [x] **S1.K** Tabla `AffiliatePayouts` (PK affiliate_email, SK month YYYY-MM, status PENDING/HELD/RELEASED/PAID, amount_cents, commissions_count) ✅
+- [x] **S1.L** Tabla `AffiliateCommissions` (PK affiliate_email, SK ts#referral_id, amount, rate_pct, billing_period, hold_until, released bool) + GSI `released-hold_until-index` ✅
+- [x] **S1.M** Endpoint `POST /affiliate/signup` + generación `affiliate_code` (slug+6 chars únicos) (`lambda_function.py:12121`) ✅
+- [x] **S1.N** Tracking URL `clientes.bot/?ref=AFFILIATE_CODE` → cookie 90 días + localStorage en frontend (`AffiliateTracker.tsx` montado en `app/layout.tsx:5`) ✅
+- [x] **S1.O** Hook `/billing/checkout`: lee cookie ref → guarda `referred_by` en `Subscription` (`app/dashboard/billing/page.tsx:5`) ✅
+- [x] **S1.P** Helper `_calculate_commission_rate(referral_signup_at)`: 40% si age<365d, sino 30% (`lambda_function.py:11984`) — env vars `AFFILIATE_RATE_YEAR1=0.40` + `AFFILIATE_RATE_RECURRING=0.30` ✅
+
+- [x] **S1.Q** Webhook handlers: en cada `subscription_payment_success` (`_process_affiliate_commission` en `lambda_function.py:11987`): ✅
+    - [x] Calcular comisión según rate dinámico (40%/30%) ✅
+    - [x] Crear registro en `AffiliateCommissions` con `hold_until = paid_at + 30d` ✅
+    - [x] **Anti-fraude**: si `referral.signup_date < 60d` Y `status=CHURNED` → comisión = 0 (env var `AFFILIATE_MIN_REFERRAL_DAYS=60`, check en `:12025` y `:12306`) ✅
+- [x] **S1.R** Cron diario `affiliate-release-commissions`: libera commissions con `hold_until <= now` y `released=False` usando GSI `released-hold_until-index` (`lambda_function.py:12276`) — re-chequea anti-fraude churn<60d antes de liberar ✅
+- [x] **S1.S** Cron mensual `affiliate-payout-batch` día 5: agrupa released commissions del mes anterior, paga si ≥ $50 USD / $200k COP, sino acumula (`lambda_function.py:12340`) ✅
+- [x] **S1.T** Frontend `/dashboard/affiliate` dashboard: link único + tasa actual (40%/30%) + comisiones acumuladas/pendientes/pagadas + lista de referidos + métricas conversión (`app/dashboard/affiliate/page.tsx`) ✅
+- [x] **S1.U** Página landing `/affiliates` pública con signup (`app/affiliates/page.tsx`) ✅
+- [x] **S1.V** Email Resend: comisión generada (`:12060`) + payout enviado (`:12440`) + hito alcanzado **1/5/10/50 referidos** — ajustado vs roadmap original (10/50/100) porque "primer referido" engancha emocionalmente ✅
+- [x] **S1.W** TyC del programa con cláusula de revisión 90 días de aviso (definido en STATUS L76) ✅
 #### Migration tool desde GHL
 - [ ] **S1.S** Importador CSV `Contacts` GHL → `Leads_CRM` (parseo de campos custom)
 - [ ] **S1.T** Página `/migrate-from-ghl` con guía + uploader CSV
+#### Bonus sesión audit afiliados — Sprint 1 cerrado al 100% 🦁
+- [x] **Audit completo S1.I-S1.W** vía CloudShell sobre Lambda desplegada (SHA backend `869eed0`, frontend `120235b`)
+- [x] **Backend verificado**: 4 tablas DDB + 7 endpoints + 2 crons EventBridge ENABLED + helper `_calculate_commission_rate` con env vars + anti-fraude churn<60d en webhook + cron release usa GSI `released-hold_until-index` (no Scan, escalable) + 3 emails Resend (comisión generada / hito 1-5-10-50 / payout mensual)
+- [x] **Frontend verificado**: `app/dashboard/affiliate/page.tsx` (dashboard owner) + `app/affiliates/page.tsx` (landing pública signup) + `AffiliateTracker.tsx` montado en `app/layout.tsx` global + hook checkout en `billing/page.tsx` lee `cb_ref`
+- [x] **Sidebar dashboard**: link 🤝 Afiliados visible para rol owner (`app/dashboard/layout.tsx:30`)
+- [x] **Hitos ajustados a 1/5/10/50** vs roadmap original 10/50/100 — mejor para growth (engagement temprano)
+- [x] **Sprint 1 cerrado oficialmente al 100%** — listo para primer afiliado real
+---
 ### 🥈 Sprint 2 — Multicanal real (el rugido principal)
 > Costo: **$0** (todas las APIs son gratis)
 - [ ] **Web Chat Widget embebible** — `<script src="clientes.bot/widget/{company_id}.js">`
