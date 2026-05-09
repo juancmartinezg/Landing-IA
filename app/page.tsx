@@ -171,7 +171,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
               <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 hover:scale-105 px-8 py-4 rounded-2xl font-bold text-base transition-all shadow-xl shadow-indigo-600/25 inline-flex items-center justify-center gap-2">
-                🚀 Comenzar gratis — 7 días
+                🚀 Comenzar gratis — 14 días
               </Link>
               <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('open-chat-widget'))} className="bg-white/5 hover:bg-white/10 border border-white/10 px-8 py-4 rounded-2xl font-bold text-base transition-all inline-flex items-center justify-center gap-2">
                 💬 Ver demo en vivo
@@ -577,7 +577,7 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <p className="text-[11px] text-indigo-400 uppercase tracking-[0.3em] font-bold mb-4">Precios transparentes</p>
             <h2 className="text-3xl md:text-5xl font-black mb-4">Elige tu plan</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto mb-8">7 días gratis. Sin tarjeta de crédito. Cancela cuando quieras.</p>
+            <p className="text-gray-400 max-w-2xl mx-auto mb-8">14 días gratis. Sin tarjeta de crédito. Cancela cuando quieras.</p>
             {/* Toggle mensual/anual */}
             <div className="inline-flex items-center gap-2 bg-white/5 rounded-xl p-1 mb-4">
               <button onClick={() => setBillingAnnual(false)} className={`text-sm px-5 py-2 rounded-lg font-medium transition-all ${!billingAnnual ? 'bg-white/10 text-white' : 'text-gray-500'}`}>Mensual</button>
@@ -662,7 +662,7 @@ export default function LandingPage() {
               { q: '¿Pierdo acceso a mi WhatsApp personal?', a: 'Si usas tu número personal, se convertirá en Business API y ya no podrás usar la app normal de WhatsApp con ese número. Recomendamos usar una línea dedicada.' },
               { q: '¿Qué pasa si el bot no sabe responder?', a: 'El bot transfiere automáticamente la conversación a un agente humano de tu equipo, quien recibe notificación por email y push en su celular.' },
               { q: '¿Funciona en mi país?', a: 'Sí. Funcionamos a nivel global. Integramos pasarelas internacionales (Stripe, PayPal) y locales según tu mercado (Bold, Wompi, MercadoPago, OpenPay, PayU y más).' },
-              { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, sin penalidad. Los 7 días de prueba son completamente gratis y no pedimos tarjeta de crédito para empezar.' },
+              { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, sin penalidad. Los 14 días de prueba son completamente gratis y no pedimos tarjeta de crédito para empezar.' },
               { q: '¿Necesito conocimientos técnicos?', a: 'No. Todo se configura con clicks. El wizard te guía paso a paso. Si necesitas ayuda, nuestro equipo te asiste por WhatsApp.' },
               { q: '¿Puedo gestionar varios negocios?', a: 'Sí, con el plan Agency puedes gestionar negocios ilimitados desde un solo dashboard con tu propia marca.' },
               { q: '¿Qué pasa si mi pasarela de pagos no está en la lista?', a: 'Sin problema. Escríbenos a soporte@clientes.bot y la integramos sin costo adicional. Solo necesitamos las credenciales de su API.' },
@@ -690,13 +690,13 @@ export default function LandingPage() {
             <p className="text-gray-400 mb-8 max-w-lg mx-auto">Únete a los negocios que ya automatizan sus ventas con IA. Configura en 2 minutos, sin código, sin complicaciones.</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
               <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 hover:scale-105 px-8 py-4 rounded-2xl font-bold transition-all shadow-xl shadow-indigo-600/25 inline-flex items-center justify-center gap-2">
-                🚀 Comenzar gratis — 7 días
+                🚀 Comenzar gratis — 14 días
               </Link>
               <a href="https://wa.me/573022205845?text=Hola%2C%20quiero%20info%20de%20clientes.bot" target="_blank" rel="noopener noreferrer" className="bg-[#25D366] hover:bg-[#1da851] px-8 py-4 rounded-2xl font-bold transition-all inline-flex items-center justify-center gap-2">
                 💬 Hablar por WhatsApp
               </a>
             </div>
-            <p className="text-[10px] text-gray-600">Sin tarjeta • 7 días gratis • Soporte incluido</p>
+            <p className="text-[10px] text-gray-600">Sin tarjeta • 14 días gratis • Soporte incluido</p>
           </div>
         </div>
       </section>
