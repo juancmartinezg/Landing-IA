@@ -108,7 +108,7 @@ export default function BillingPage() {
       window.history.replaceState({}, '', '/dashboard/billing');
     }
     Promise.all([
-      fetch(`${API_URL}/billing/plans`, { headers: { 'client-id': user.companyId } }).then(r => r.json()),
+      fetch(`${API_URL}/billing/plans-public`).then(r => r.json()),
       fetch(`${API_URL}/billing/me`, { headers: { 'client-id': user.companyId } }).then(r => r.json()),
       fetch(`${API_URL}/billing/features`, { headers: { 'client-id': user.companyId } }).then(r => r.json()),
       fetch(`${API_URL}/billing/packs`, { headers: { 'client-id': user.companyId } }).then(r => r.json()),
