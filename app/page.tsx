@@ -1,8 +1,48 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ChatWidget from './components/ChatWidget';
 import InstallPWAPrompt from './components/InstallPWAPrompt';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+// === Plan card data type (de /billing/plans-public) ===
+interface PlanCard {
+  key: string;
+  name: string;
+  subtitle: string;
+  price_usd: number;
+  price_cop: number;
+  price_annual: number;
+  popular: boolean;
+  btn_label: string;
+  btn_href_type: 'checkout' | 'whatsapp';
+  btn_href_whatsapp?: string;
+  color_theme: string;
+  features_ui: Array<{
+    label: string;
+    included: boolean;
+    tooltip_title: string;
+    tooltip_desc: string;
+  }>;
+}
+// Tema de colores derivado del color_theme del backend
+const COLOR_THEMES: Record<string, { color: string; btnClass: string }> = {
+  indigo: {
+    color: 'border-white/10 hover:border-indigo-500/30',
+    btnClass: 'bg-white/5 hover:bg-indigo-600 border border-white/10 hover:border-indigo-500',
+  },
+  indigo_popular: {
+    color: 'border-indigo-500/50 bg-indigo-600',
+    btnClass: 'bg-white text-indigo-600 hover:bg-gray-100 font-black shadow-lg',
+  },
+  amber: {
+    color: 'border-amber-500/30 hover:border-amber-500/50',
+    btnClass: 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20',
+  },
+  slate: {
+    color: 'border-slate-500/30 hover:border-slate-500/50',
+    btnClass: 'bg-slate-600 hover:bg-slate-500 text-white',
+  },
+};
 
 // Tooltip component para el botón "?"
 function FeatureTooltip({ title, desc }: { title: string; desc: string }) {
@@ -32,8 +72,19 @@ function FeatureTooltip({ title, desc }: { title: string; desc: string }) {
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [billingAnnual, setBillingAnnual] = useState(false);
-
-  const plans = [
+  const [plans, setPlans] = useState<PlanCard[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  useEffect(() => {
+    fetch(`${API_URL}/billing/plans-public`)
+      .then(r => r.json())
+      .then(data => {
+        if (data?.plans) setPlans(data.plans);
+        setPlansLoading(false);
+      })
+      .catch(() => setPlansLoading(false));
+  }, []);
+  // Fallback estático mientras carga (para SEO + 1er render)
+  const plansFallback: PlanCard[] = [
     {
       key: 'starter',
       name: 'Starter',
@@ -115,7 +166,29 @@ export default function LandingPage() {
         { label: 'Onboarding personalizado', included: true, tooltip: { title: 'Configuración asistida', desc: 'Un especialista de nuestro equipo te ayuda a configurar el bot, CRM y campañas en la primera semana. Incluido sin costo adicional.' } },
       ],
     },
-  ];
+  ] as any;
+  // Si la API trae planes, usar esos; si no, fallback
+  const displayPlans: PlanCard[] = plans.length > 0
+    ? plans
+    : (plansFallback as any).map((p: any) => ({
+        key: p.key,
+        name: p.name,
+        subtitle: p.subtitle,
+        price_usd: p.price_monthly,
+        price_cop: 0,
+        price_annual: p.price_annual,
+        popular: p.popular,
+        btn_label: p.btnLabel,
+        btn_href_type: p.key === 'agency' ? 'whatsapp' : 'checkout',
+        btn_href_whatsapp: 'https://wa.me/573022205845',
+        color_theme: p.popular ? 'indigo_popular' : (p.key === 'agency' ? 'amber' : 'indigo'),
+        features_ui: (p.features || []).map((f: any) => ({
+          label: f.label,
+          included: f.included,
+          tooltip_title: f.tooltip?.title || '',
+          tooltip_desc: f.tooltip?.desc || '',
+        })),
+      }));
 
   return (
     <div className="min-h-screen bg-[#0B0F1A] text-white selection:bg-indigo-500/30 scroll-smooth">
@@ -586,48 +659,51 @@ export default function LandingPage() {
               </button>
             </div>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {plans.map((plan) => (
-              <div key={plan.key} className={`rounded-3xl border p-8 flex flex-col text-left transition-all relative ${plan.popular ? 'bg-indigo-600 shadow-2xl shadow-indigo-600/30 scale-[1.03] z-10' : 'bg-white/[0.03]'} ${plan.color}`}>
+            {displayPlans.map((plan) => {
+              const theme = COLOR_THEMES[plan.color_theme] || COLOR_THEMES.indigo;
+              const priceMonthly = plan.price_usd;
+              const href = plan.btn_href_type === 'whatsapp'
+                ? (plan.btn_href_whatsapp || 'https://wa.me/573022205845')
+                : '/auth/login';
+              return (
+              <div key={plan.key} className={`rounded-3xl border p-8 flex flex-col text-left transition-all relative ${plan.popular ? 'bg-indigo-600 shadow-2xl shadow-indigo-600/30 scale-[1.03] z-10' : 'bg-white/[0.03]'} ${theme.color}`}>
                 {plan.popular && (
                   <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">⭐ Más popular</div>
                 )}
                 <h3 className="text-lg font-bold mb-1">{plan.name}</h3>
                 <p className={`text-[10px] uppercase tracking-widest mb-6 ${plan.popular ? 'text-indigo-200' : 'text-gray-500'}`}>{plan.subtitle}</p>
                 <div className="mb-1">
-                  <span className="text-4xl font-black">${billingAnnual ? Math.round(plan.price_annual / 12) : plan.price_monthly}</span>
+                  <span className="text-4xl font-black">${billingAnnual ? Math.round(plan.price_annual / 12) : priceMonthly}</span>
                   <span className={`text-sm font-medium ml-1 ${plan.popular ? 'opacity-70' : 'text-gray-600'}`}>/mes</span>
                 </div>
                 {billingAnnual && (
                   <p className="text-[10px] text-emerald-400 mb-1">Facturado anualmente — ${plan.price_annual}/año</p>
                 )}
                 <p className={`text-[10px] mb-6 ${plan.popular ? 'text-indigo-200' : 'text-gray-600'}`}>USD • {billingAnnual ? 'facturación anual' : 'facturación mensual'}</p>
-
                 <ul className="space-y-2.5 mb-8 flex-1 text-sm">
-                  {plan.features.map((f, i) => (
+                  {plan.features_ui.map((f, i) => (
                     <li key={i} className={`flex items-start gap-2 ${!f.included ? (plan.popular ? 'opacity-40' : 'text-gray-600') : plan.popular ? 'text-white' : 'text-gray-300'}`}>
                       <span className={`mt-0.5 shrink-0 ${f.included ? (plan.popular ? 'text-white' : 'text-emerald-400') : 'text-gray-600'}`}>
                         {f.included ? '✓' : '—'}
                       </span>
                       <span className="flex-1">{f.label}</span>
-                      {f.tooltip && (
-                        <FeatureTooltip title={f.tooltip.title} desc={f.tooltip.desc} />
+                      {f.tooltip_title && (
+                        <FeatureTooltip title={f.tooltip_title} desc={f.tooltip_desc} />
                       )}
                     </li>
                   ))}
                 </ul>
-
                 <Link
-                  href={plan.key === 'agency' ? 'https://wa.me/573022205845?text=Hola%2C%20quiero%20info%20del%20plan%20Agency%20de%20clientes.bot' : '/auth/login'}
-                  className={`w-full py-3.5 rounded-2xl text-center text-sm font-bold transition-all ${plan.btnClass}`}
+                  href={href}
+                  className={`w-full py-3.5 rounded-2xl text-center text-sm font-bold transition-all ${theme.btnClass}`}
                 >
-                  {plan.btnLabel}
+                  {plan.btn_label}
                 </Link>
               </div>
-            ))}
+              );
+            })}
           </div>
-
           {/* En camino */}
           <div className="mt-16 max-w-3xl mx-auto text-center">
             <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-8">
