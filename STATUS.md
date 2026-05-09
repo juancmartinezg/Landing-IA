@@ -95,10 +95,10 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,400 líneas, **v136** — Memoria source-aware: _detect_msg_source (catalog_button/ad_greeting/conversational) + _mk_sk + search_memory cascada 3 niveles (exacto→conversational→legacy) + register_candidate guarda last_ai_answer + Memoria APRENDIDA escribe SK con #source, backward-compat items viejos) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif (~10,800 líneas, ~110 endpoints, **v122** — Fix Bug #9 reincidencia x2 (/leads/import + ARIA create_lead) + auto-asign leads agente + bulk-import-purchases blindado (is_buyer/cerrado_ganado/channel/created_at GSI fix CRÍTICO)) — conversations/active FB/IG + multi-carousel GET/PUT + carousels_catalog + emails afiliados + cron payout
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,400 líneas, **v138** — QUOTA_ENFORCE=true + respeta TRIAL_EXPIRED + Memoria source-aware: _detect_msg_source + _mk_sk + search_memory cascada 3 niveles + register_candidate guarda last_ai_answer + Memoria APRENDIDA SK con #source) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif (~11,200 líneas, ~114 endpoints, **v133** — Trial 14d auto + cron trial-expire + email warning 1-3d + guard owner_lifetime + webhook sync config_pro.plan + /billing/plans-public (fuente única DDB) + /admin/plan-features editor super_admin + fix router /billing/me + fix Bug #9 reincidencia x3 + bulk-import-purchases blindado con created_at GSI) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
-- `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os latente + SOURCE_THRESHOLDS (human_agent=2, resto=3) + preserva source en SK al promover + skip si last_ai_answer vacío)
+- `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os + SOURCE_THRESHOLDS human_agent=2 + preserva source SK)
 ### Tablas DynamoDB (19 — todas con PITR)
 - `KnowledgeBase` (PK: `company_id`, SK: `kb_key`, GSI: `phone_number_id-index`)
 - `TypebotSessions` (PK: `phoneNumber`, TTL 24h)
@@ -118,7 +118,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Meta App:** `27398458396409385`
 - **WABA:** `2891074877943438` (migrado desde `948932884157315` — portfolio Escuela de Tiro Jose Maria Cordoba)
 - **Pixel:** `1102373681952908`
-- **EventBridge crons:** `ads-daily-optimize` ENABLED (6 AM diario), `meta-token-renewal` ENABLED (domingos 5 AM UTC), `promote-memory-every-5min` ENABLED, `remarketing-every-hour` ENABLED, `affiliate-payout-batch-monthly` ENABLED (día 5 cada mes 8 AM UTC)
+- **EventBridge crons:** `ads-daily-optimize` ENABLED (6 AM diario), `meta-token-renewal` ENABLED (domingos 5 AM UTC), `promote-memory-every-5min` ENABLED, `remarketing-every-hour` ENABLED, `affiliate-payout-batch-monthly` ENABLED (día 5 cada mes 8 AM UTC), `trial-expire-daily` ENABLED (8 AM UTC = 3 AM CO — expira trials 14d + email warning 1-3d)
+
 ---
 ## ✅ MÓDULOS COMPLETADOS
 ### 🤖 Bot WhatsApp
@@ -747,6 +748,34 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Diagnóstico clave**: `scan` completo mostraba 112 items con company_id=JMC, pero `query` GSI solo 17. Diferencia = los 12 nuevos + huérfanos viejos.
 - **Fix**: API v122 — agregar `"created_at": event_time or _now_ts` + `paid_at` al `put_item`. Re-subir plantilla → puts sobreescriben items huérfanos con SK correcto → entran al GSI. Resultado verificado: `paid_count=83`, `total_revenue=$23,380,000 COP`.
 - **Lección 35**: tras crear/modificar GSI, validar que TODOS los `put_item` y `update_item` incluyan los atributos definidos en KeySchema. Sin SK del GSI = item huérfano silente. Auditar describe-table → KeySchema antes de tocar puts.
+### 8-9 mayo 2026 (noche-madrugada) — Sprint 1 COMPLETO: Trial + Quotas + Billing E2E + Admin Editor 🦁
+> Sesión maratón ~7h. Cerró Sprint 1 completo: trial 14d auto, quotas enforcement ON, billing E2E con Lemon Squeezy (test real con tarjeta), banner trial, email warning, cron expire, landing+dashboard dinámicos desde DDB, admin editor de planes con features_ui+tooltips. 30 deploys (Bot v137-v138 + API v123-v133 + 8 commits frontend).
+#### Sprint 1 — Billing + Trial completado
+- [x] **Trial 14d auto**: `handle_onboarding` crea Subscription con `status=trialing` + `trial_ends_at=now+14d` + `plan=starter` (API v123). Guard `owner_lifetime` para JMC (API v124). JMC backfill `enterprise_lifetime` manual.
+- [x] **Cron `trial-expire-daily`**: EventBridge 8AM UTC. Scan GSI `status-index` → marca `trial_expired` en Subscription + `TRIAL_EXPIRED` en config_pro. Bot silencia (v138). Email final al expirar.
+- [x] **Email warning trial**: pasada 2 del cron busca trials 1-3d antes de expirar → email Resend "te quedan X días" + antispam `trial_warning_sent_at` 23h (API v126).
+- [x] **Banner trial dashboard**: layout.tsx lee `/billing/me` → banner azul/naranja/rojo según días restantes (Frontend `6fd482f`).
+- [x] **QUOTA_ENFORCE=true**: Bot v137 bloquea con mensaje cordial + log_error. JMC enterprise (limit=-1) no afectado.
+- [x] **Fix router `/billing/me`**: caía en `handle_get_me` genérico por `endswith("/me")`. Excluido `/billing` del match (API v127).
+- [x] **Webhook sync `config_pro.plan`**: cuando LS notifica subscription_created/updated, actualiza `config_pro.plan` automáticamente. Antes `/billing/features` leía plan viejo (API v129).
+- [x] **Test E2E REAL**: registro `mailadministrador@gmail.com` → onboarding "Servicios Profesionales" → trial auto → banner visible → pago Growth $297 con tarjeta test LS → webhook → status=active → plan=growth → quotas 25.000 msg ✅
+- [x] **Cleanup**: 3 tenants prueba eliminados (CO_63A6F367, CO_979BE374, CO_9343055D) + tenant test CO_48B17BE3 post-test.
+- [x] **LS trial quitado**: 6 variants en LS dashboard sin "Free trial" (evita 28d gratis).
+#### Planes dinámicos — fuente única de verdad DDB
+- [x] **Catálogo completo en DDB**: `KnowledgeBase[__PLATFORM__/plan_features]` con `features_ui[]` (label, included, tooltip_title, tooltip_desc), subtitle, btn_label, color_theme, popular flag, quotas, precios USD/COP/anual. Enterprise hidden_in_landing.
+- [x] **Endpoint `/billing/plans-public`** (público, sin auth): devuelve catálogo enriquecido con variant_ids LS + trial_days (API v131).
+- [x] **Landing dinámica**: `app/page.tsx` consume `/billing/plans-public` con fallback estático. Cards renderizadas desde API con tooltips (Frontend `d6433c9`).
+- [x] **Dashboard billing dinámico**: `app/dashboard/billing/page.tsx` consume mismo endpoint. features_ui con tooltips compartidos. PLAN_ICONS/PLAN_COLORS renombrados starter/growth/agency (Frontend `5e5b6af`).
+- [x] **Propagación instantánea confirmada**: cambio DDB "2,000→3,000 conversaciones" → visible en API en <5s sin redeploy. Revertido a 2,000.
+- [x] **Plan features alineados con landing**: env var PLAN_FEATURES_JSON + DDB sincronizados (Starter 2000msg/500leads/2agents/0voz, Growth 10000/-1/5/100, Agency -1/-1/-1/500) (API v130).
+#### Admin editor de planes
+- [x] **GET/PUT `/admin/plan-features`** (super_admin only): lee/escribe catálogo completo DDB. Validación estructura (3 planes core + name + quotas + features_ui). Invalida cache. Audit log (API v132-v133).
+- [x] **Frontend `/admin/plan-features`**: tabs por plan (starter/growth/agency/enterprise), form completo (nombre, subtitle, precios, quotas con -1=ilimitado, features_ui editables con ↑↓🗑️ + tooltip inline, flags popular/hidden, color theme, btn_label/type). Botón "Guardar todos los planes" (Frontend `b620208`).
+- [x] **Sidebar admin**: link 💎 Planes agregado (Frontend `d672b95`).
+#### Bug #45 (OPERACIONAL 🟠) — Router `/billing/me` caía en `/me` genérico
+- **Síntoma**: `/billing/me` devolvía `{error: "email es requerido"}` → banner trial no aparecía.
+- **Causa**: router `endswith("/me")` matcheaba antes que `/billing/me`. Faltaba exclusión.
+- **Fix**: API v127 — agregar `and "/billing" not in path` al guard de `/me` genérico.
 ### Lecciones nuevas (sesión 8 mayo tarde-noche)
 32. **🔴 Auditoría preventiva post-migración PK**: cuando reincide un bug 2+ veces (Bug #9 reincidió 3 veces), hacer `grep -r "put_item.*Leads_CRM"` automatizado y verificar todos incluyen `contact_id`. La deuda no se cura sola.
 33. **🔴 GSI requirements obligatorios**: cualquier `put_item` o `update_item` debe incluir TODOS los atributos del KeySchema del GSI. Item sin SK del GSI = invisible para queries → reportes vacíos sin error.
@@ -849,7 +878,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [ ] Pasarela personalizada bajo demanda (proceso documentado para integrar nuevas en <48h)
 ### 🐛 Pendientes pequeños (próxima sesión)
 - [x] **Bug memoria caching nombres**: filtros anti-PII + anti-mid-flow aplicados (Bot v88). Skip si es customer_name, confirmación corta, cédula, o flow activo. ✅
-- [ ] **Memoria con contexto/source**: cache key `(normalized_q, source)` donde source ∈ {`catalog_button`, `ad_greeting`, `conversational`}. Mismo servicio, respuestas distintas según contexto.
+- [x] **Memoria con contexto/source**: cache key `(normalized_q, source)` donde source ∈ {`catalog_button`, `ad_greeting`, `conversational`}. search_memory cascada 3 niveles + register_candidate guarda last_ai_answer + cleanup 615 entries (Bot v136, promote-cron v2) ✅
 - [x] **Remarketing rescate temprano**: `REMARKETING_DELAY_HOURS` bajado de 1h a 0.25h (15 min). Remarketing v6 acepta float. ✅
 - [x] **Frontend manejo PIN en embed**: modal 6 dígitos cuando backend responde `requires_pin: true` + POST /meta/register-pin ✅
 - [x] **Auto-vincular template**: carousels_catalog guardado en POST /templates/carousel + migrate script para templates existentes ✅
@@ -880,20 +909,20 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [ ] **S1.1** Tabla `Subscriptions` gateway-agnostic (PK company_id, gateway, gateway_subscription_id, status, plan, trial_ends_at, next_billing_date)
 - [ ] **S1.2** Catálogo `PLAN_FEATURES_JSON` env var (Solo/Pro/Agency/Enterprise → features + quotas)
 - [ ] **S1.3** Helper `_resolve_billing_gateway(country)` → `wompi` (CO) o `stripe` (resto del mundo)
-- [ ] **S1.4** Endpoints: `/billing/checkout`, `/billing/portal`, `/billing/me`, `/billing/cancel`
-- [ ] **S1.5** Webhooks separados Stripe + Wompi → formato canónico interno (`subscription.active/past_due/canceled`)
-- [ ] **S1.6** Trial 14 días simulado (cron diario revisa `trial_ends_at` y cobra al día 15)
-- [ ] **S1.7** Email Resend: cobro OK / cobro falla / trial_ending día 12 / trial_expired
+- [x] **S1.4** Endpoints: `/billing/checkout`, `/billing/portal`, `/billing/me`, `/billing/cancel` — via Lemon Squeezy (API v123+) ✅
+- [x] **S1.5** Webhook LS → formato canónico + sync config_pro.plan automático (API v129) ✅
+- [x] **S1.6** Trial 14d auto en onboarding + cron `trial-expire-daily` + guard owner_lifetime JMC (API v123-v125, Bot v138) ✅
+- [x] **S1.7** Email Resend: trial warning 1-3d + email final al expirar + antispam 23h (API v126) ✅
 #### Frontend billing
-- [ ] **S1.A** Página `/pricing` pública con detección país (toggle COP/USD) + 3 planes + comparativa GHL
-- [ ] **S1.B** Página `/dashboard/billing` (plan actual + invoices + upgrade/downgrade + cancelar)
-- [ ] **S1.C** Banner "trial expira en X días" en dashboard cliente
-- [ ] **S1.D** Modal annual discount (-20%) en upgrade
+- [x] **S1.A** Landing dinámica consume `/billing/plans-public` (DDB fuente única) + trial 14d + toggle anual -20% (Frontend `d6433c9`) ✅
+- [x] **S1.B** `/dashboard/billing` dinámico con features_ui + tooltips + checkout LS + cancel/resume + packs (Frontend `5e5b6af`) ✅
+- [x] **S1.C** Banner trial en dashboard layout: azul 14d → naranja 3d → rojo expirado (Frontend `6fd482f`) ✅
+- [x] **S1.D** Toggle annual -20% en landing + dashboard ✅
 #### Feature Flags + Quotas (Fase D adelantada)
-- [ ] **S1.E** Helper `has_feature(company_id, feature)` con override individual
-- [ ] **S1.F** Quotas tracking (mensajes/mes, leads, agentes, voz_min) en tabla `TenantQuotas`
-- [ ] **S1.G** Enforcement en bot/API: rechaza si excede + banner upgrade
-- [ ] **S1.H** Dashboard de uso por tenant (cards quota usado/total)
+- [x] **S1.E** Helper `has_feature(company_id, feature)` con override individual (API v70) ✅
+- [x] **S1.F** Quotas tracking en tabla `TenantQuotas` (API v71) ✅
+- [x] **S1.G** QUOTA_ENFORCE=true activado. Bot bloquea con mensaje cordial + log_error (Bot v137) ✅
+- [x] **S1.H** Dashboard de uso con 5 quotas + barras + alertas 80%+ (Frontend `billing/page.tsx`) ✅
 #### 🤝 Programa de afiliados (40% año 1 + 30% lifetime — diferenciador GHL killer sostenible)
 - [ ] **S1.I** Tabla `Affiliates` (PK email, affiliate_code único, payout_method, total_referred_mrr, total_paid_lifetime, status active/banned) + GSI affiliate_code-index
 - [ ] **S1.J** Tabla `Referrals` (PK referral_id=company_id, affiliate_email, signup_date, status PENDING/ACTIVE/CHURNED, first_payment_at, churn_at)
@@ -1066,16 +1095,16 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-█████████████████████████████████░ 90%
+██████████████████████████████████░ 94%
 ### ⏱️ Métricas de desarrollo reales
 | Métrica | Valor |
 |---|---|
-| **Horas invertidas hasta hoy** | ~507h |
-| **Horas pendientes (completo)** | ~573h |
+| **Horas invertidas hasta hoy** | ~545h |
+| **Horas pendientes (completo)** | ~535h |
 | **Total proyecto completo** | ~1,080h |
-| **Equivalente invertido** | ~3.4 meses full-time senior |
-| **Equivalente pendiente** | ~3.8 meses full-time senior |
-| **MVP cobrable (Sprint 1)** | ~93h adicionales |
+| **Equivalente invertido** | ~3.6 meses full-time senior |
+| **Equivalente pendiente** | ~3.5 meses full-time senior |
+| **MVP cobrable (Sprint 1)** | ✅ COMPLETADO — trial + billing + quotas E2E |
 
 #### Desglose horas invertidas
 | Bloque | Horas |
@@ -1093,15 +1122,17 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | Sesión 5 mayo (flow comercial + carrusel + bugs Gemini) | ~15h |
 | Sesión 6-7 mayo (embed + debounce + fragmentación + anti-silencio + WABA migración) | ~12h |
 | Sesión 8 mayo (multicanal FB/IG completo + fixes + affiliate module) | ~18h |
+| Sesión 8-9 mayo noche (Sprint 1 completo: trial+billing+quotas+admin editor+30 deploys) | ~7h |
+| Sesión 8 mayo tarde (memoria source-aware + 6 bugs CRM + cleanup 615 entries) | ~3h |
 | Debugging, rollbacks, incidentes varios | ~20h |
-| **Total** | **~525h** |
+| **Total** | **~545h** |
 
 #### Desglose horas pendientes
 | Bloque | Horas |
 |---|---|
-| Sprint 1 — Stripe + Wompi + billing completo | ~60h |
-| Sprint 1 — Feature Flags + Quotas | ~20h |
-| Sprint 1 — Programa de afiliados completo | ~40h |
+| ~~Sprint 1 — billing completo~~ | ~~60h~~ ✅ COMPLETADO (LS) |
+| ~~Sprint 1 — Feature Flags + Quotas~~ | ~~20h~~ ✅ COMPLETADO |
+| Sprint 1 — Programa de afiliados (frontend falta) | ~10h |
 | Sprint 2 — Multicanal IG/FB (backend listo, falta webhooks + bandeja) | ~40h |
 | Admin Panel C8-C12 + D-K completo | ~120h |
 | Sprint 3 — IA superpoderes | ~60h |
@@ -1129,14 +1160,15 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | Categoría | % |
 |---|---|
 | ✅ Infraestructura construida | **86%** |
-| 🔴 Stripe billing (para cobrar) | 0% — bloqueante |
-| 🔴 Feature Flags por plan | 0% — bloqueante |
+| ✅ Billing LS completo (trial+checkout+webhook+quotas) | 100% ✅ |
+| ✅ Feature Flags + Quotas enforcement | 100% ✅ |
 | 🟡 Multicanal (IG/Messenger/Telegram) | 0% — Sprint 2 |
 | 🟡 Admin Panel completo (D-J) | ~15% |
 | 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
 | 🤝 Programa Afiliados (movido a Sprint 1) | 0% — bloqueante crecimiento |
 | 🔧 Pendiente: Sprint 1 ampliado (Stripe+Wompi+Quotas+Afiliados) + E (Impersonate) + F-J + multicanal | 2% |
-**Última medición:** 8 mayo 2026 (tarde-noche) — Memoria source-aware completada (Bot v136 + promote-cron v2): _detect_msg_source + cascada 3 niveles + register_candidate guarda last_ai_answer + Memoria APRENDIDA SK con #source. **6 bugs CRM cerrados en cadena** (API v117→v122): Bug #38/#40 reincidencias contact_id (Bug #9 3 veces), Bug #39 auto-asign agente, Bug #41 chulito sobreescrito, Bug #42 pagos manuales no en analytics, Bug #44 CRÍTICO created_at faltante en GSI StudentPaymentState (los 12 leads importados eran invisibles → fix → paid_count 0→83, revenue $0→$23.38M COP). Cleanup masivo 615 entries memoria
+**Última medición:** 9 mayo 2026 — **Sprint 1 COMPLETADO** 🍾 Trial 14d auto + cron expire + email warning + QUOTA_ENFORCE=true + billing E2E con LS (test real Growth $297) + webhook sync config_pro.plan + landing+dashboard dinámicos desde DDB (fuente única) + admin editor `/admin/plan-features` con features_ui+tooltips + propagación instantánea confirmada. 30 deploys (Bot v136-v138, API v117-v133, promote-cron v2, 8 commits frontend). Sesión anterior: memoria source-aware + 6 bugs CRM (Bug #9 reincidió 3x) + cleanup 615 entries
+
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -1158,10 +1190,10 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **84% → 86%** — Sesión 6-7 mayo: Debounce async + anti-silencio + fragmentación + typing + cascada 3 LLM + Embed E2E + auto-onboarding API + Lambda 60s + WABA migrado (Bot v85-v102, API v89-v90, Remarketing v6) 🦁
 - [x] **86% → 88%** — Frontend Affiliate dashboard + landing pública + cron payout mensual v91 + emails Resend afiliados v92 + TyC sección 13 + PIN embed + Multi-carousel backend v93 + bot campaign_id v103 + Remarketing delays variables v7 🦁
 - [x] **88% → 90%** — Multicanal completo Instagram DM + Facebook Messenger (Bot v104-v114, API v95-v96) + fix handle_add_service duplicada sync prompt (API v94) + conversations/active con canal icon 🦁
-- [x] **90% → 92%** — Memoria source-aware (Bot v136 + promote-cron v2) + 6 bugs CRM masivos cerrados (Bug #9 reincidió 3 veces, Bug #44 fix CRÍTICO created_at GSI con paid_count 0→83 y revenue $23.38M COP) + cleanup memoria 615 entries (97 CM + 518 candidatos) — API v117-v122 🦁
-- [ ] **92% → 94%** — Hook agente humano aprende (memoria source=human_agent threshold=2) + Web Chat Widget + Selector templates aprobados + Test E2E remarketing ⭐ ESTÁS AQUÍ
-- [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
-- [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
+- [x] **90% → 92%** — Memoria source-aware (Bot v136 + promote-cron v2) + 6 bugs CRM masivos cerrados (Bug #9 reincidió 3 veces, Bug #44 fix CRÍTICO created_at GSI con paid_count 0→83 y revenue $23.38M COP) + cleanup memoria 615 entries — API v117-v122 🦁
+- [x] **92% → 94%** — Sprint 1 COMPLETADO 🍾 Trial 14d E2E + QUOTA_ENFORCE=true + billing LS E2E (test real $297) + cron trial-expire + email warning + landing+dashboard dinámicos DDB + admin editor planes + 7 bugs más (Bug #45 router /billing/me) — Bot v137-v138, API v123-v133, 8 commits frontend 🦁
+- [ ] **94% → 96%** — Feature Flags toggles por tenant (D3-D4) + Impersonate "Ver como cliente" (E1-E4) + Hook agente humano memoria + Web Chat Widget ⭐ ESTÁS AQUÍ
+- [ ] **96% → 100%** — Sprints 3-7 + Admin D-K completo + RUGIDO 🦁
 
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
