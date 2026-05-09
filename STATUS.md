@@ -95,10 +95,10 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~6,960 líneas, **v120** — cleanup carrusel duplicada + multi-tenant tokens en enviar_catalogo_carrusel/_enviar_catalogo_template_carousel/_enviar_catalogo_lista + _media_id_cache keyed por (url, phone_id) + env var PHONE_NUMBER_ID actualizada al WABA nuevo post-migración) — multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + LLM_BASE_URL preparado + fecha multi-tenant + guard mid-flow + JSON malformado escala cascada
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif (~10,700 líneas, ~108 endpoints, **v93** — multi-carousel GET/PUT/activate/DELETE + carousels_catalog + campaign_ids + emails afiliados + cron payout mensual)— /meta/exchange auto-onboarding (subscribe_apps + register PIN + GSI re-index) + fix exchange prioriza waba_id/phone_number_id del frontend)
-- `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent: checkout 45min/3h, booking 2h/5h, catalog 4h/8h, info 6h/12h) — loguea outbounds en conversation_history + DELAY acepta float para rescate temprano 15min)
-- `promote-memory-candidates` — Auto-promoción memoria (~150 líneas, **v1**)
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,400 líneas, **v136** — Memoria source-aware: _detect_msg_source (catalog_button/ad_greeting/conversational) + _mk_sk + search_memory cascada 3 niveles (exacto→conversational→legacy) + register_candidate guarda last_ai_answer + Memoria APRENDIDA escribe SK con #source, backward-compat items viejos) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif (~10,800 líneas, ~110 endpoints, **v122** — Fix Bug #9 reincidencia x2 (/leads/import + ARIA create_lead) + auto-asign leads agente + bulk-import-purchases blindado (is_buyer/cerrado_ganado/channel/created_at GSI fix CRÍTICO)) — conversations/active FB/IG + multi-carousel GET/PUT + carousels_catalog + emails afiliados + cron payout
+- `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
+- `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os latente + SOURCE_THRESHOLDS (human_agent=2, resto=3) + preserva source en SK al promover + skip si last_ai_answer vacío)
 ### Tablas DynamoDB (19 — todas con PITR)
 - `KnowledgeBase` (PK: `company_id`, SK: `kb_key`, GSI: `phone_number_id-index`)
 - `TypebotSessions` (PK: `phoneNumber`, TTL 24h)
@@ -135,6 +135,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] Transcripción de voz (Gemini)
 - [x] CRM automático (Leads_CRM)
 - [x] Configuración dinámica (config_pro manda todo)
+- [x] **Multicanal**: Instagram DM + Facebook Messenger activos (Bot v114) — misma IA Gemini, catalog lista texto, pago, historial por canal
 ### ⚙️ API SaaS (~80 endpoints)
 - [x] Config, onboarding, services CRUD
 - [x] Leads CRUD + tags + score + stage + notas + recordatorios + AI insight + CSV import
@@ -703,6 +704,55 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Causa**: migración WABA del 6 mayo actualizó `config_pro` pero NUNCA tocó la env var del Lambda. El fallback default apuntaba al phone viejo durante 2 días sin que nadie lo notara (carrusel era el único feature que lo usaba en runtime).
 - **Fix**: Bot v120 — env var `PHONE_NUMBER_ID=1050792924791062`. Multi-tenant code de v119 sigue válido — esto solo arregla el fallback default.
 - **Lección 31**: tras migración de WABA (o cualquier integración externa con ID), auditar TODAS las env vars de TODAS las Lambdas. Las que apuntan al valor viejo siguen "funcionando" hasta que necesitan operación privilegiada (upload, template lookup) y revientan.
+### 8 mayo 2026 (tarde-noche) — Memoria source-aware + 6 bugs CRM masivos 🦁
+> Sesión ~3h. Empezamos con memoria source-aware (hito 88→90% checklist), terminamos cerrando 6 bugs CRM/Reportes que llevaban semanas latentes (Bug #9 reincidió x2). 8 deploys (Bot v136 + API v117-v122 + promote-cron v2). 615 entries de memoria limpiadas (97 CM + 518 candidatos).
+#### Memoria source-aware (Bot v136 + promote-cron v2)
+- [x] **Bot v136 — `_detect_msg_source`**: detecta contexto del mensaje (`catalog_button`/`ad_greeting`/`conversational`) basado en prefijos de botones (svc_/info_/btn_/book_/cc_/date_/time_) y `source_first_campaign_id` en sesión.
+- [x] **`search_memory` cascada 3 niveles**: 1) `q#source` exacto → 2) `q#conversational` fallback → 3) `q` legacy (items viejos sin `#source`). Backward-compat total.
+- [x] **`register_candidate` guarda `last_ai_answer`**: bug fantasma cerrado. Antes el cron promote escribía `answer=""` porque el bot nunca guardaba la respuesta de Gemini al candidato. Ahora sí.
+- [x] **Memoria APRENDIDA con SK `#source`**: bloque inline de auto-aprendizaje (línea 5134+) usa `_mk_sk(normalized, source)` + escribe `"source": f"gemini:{source}"`.
+- [x] **promote-cron v2 — `SOURCE_THRESHOLDS`**: human_agent=2 hits, resto=3 hits. Respuestas humanas se promueven más rápido.
+- [x] **Fix latente**: promote-cron tenía `os.environ` sin `import os` → `NameError` si se ejecutaba. Arreglado en mismo deploy.
+- [x] **Cron promote preserva source**: SK incluye `#source` original. Valores `auto_promoted:gemini:conversational`, `auto_promoted:human_agent`, etc.
+- [x] **Cleanup masivo**: 97 entries ConversationMemory JMC borradas (PII, mid-flow, single words, respuestas del bot cacheadas como preguntas) + 518 candidatos viejos sin `#source`. Backup en S3 `clientes-bot-backups-235565749479/pre-clean/`. JMC aprende desde cero con SK source-aware.
+#### Bug #38 (CRÍTICO 🔴) — handle_import_leads sin contact_id (Bug #9 REINCIDENCIA)
+- **Síntoma**: asesor no podía agregar leads desde CRM. `ValidationException — Missing the key contact_id`. 2 leads perdidos antes del fix (3226152560 Johanna Ximena, 3104209902).
+- **Causa**: `item_data` solo tenía `phoneNumber`. PK `Leads_CRM_v2` es `contact_id`. **Bug #9 reincidió** desde migración multicanal 29 abril.
+- **Fix**: API v117 — agregar `contact_id` + `channel="whatsapp"`.
+- **Lección 32**: Bug #9 regresa cada vez que se edita un endpoint sin saber de la migración. Necesario hook pre-commit que grep `put_item.*Leads_CRM` + verificar `contact_id`.
+#### Bug #39 (UX 🟡) — Leads creados por agente quedan huérfanos
+- **Síntoma**: asesor crea lead → se guarda → asesor NO lo ve (filtro `assigned_agent_id` lo oculta).
+- **Fix**: API v118 — si `agent_role=="agent"` y hay `agent_id`, auto-asigna `assigned_agent_id` al creador.
+#### Bug #40 (CRÍTICO 🔴) — ARIA create_lead sin contact_id (Bug #9 3ra REINCIDENCIA)
+- **Síntoma**: silente. "ARIA crea un lead para el 3001234567" → explota con mismo `ValidationException`. Nadie lo notó porque ARIA no muestra errores al usuario.
+- **Causa**: `_execute_agent_action` action=`create_lead` (línea 5849) solo tenía `phoneNumber` en lead_data.
+- **Fix**: API v119 — agregar `contact_id` + `channel` + preservar campos PK en filtro `_required`.
+- **Lección 33**: cuando un bug reincide 3 veces en endpoints distintos, no es bug — es deuda arquitectónica. **Auditoría obligatoria** de TODOS los `put_item` a `Leads_CRM_v2` cada vez que se toca endpoint nuevo.
+#### Bug #41 (UX 🟡) — Chulito "pagado" sobreescrito a "nuevo"
+- **Síntoma**: lead creado con ☑️ "pagado" → `is_buyer=true` OK pero `lead_stage="nuevo"` ❌. Aparecía como nuevo en dashboard.
+- **Causa**: bloque "Crear nuevo" (`else:`) sobreescribía `lead_stage="nuevo"` ciegamente después que chulito ya había puesto `cerrado_ganado`.
+- **Fix**: API v120 — guardar default solo si `not item_data.get("is_buyer")`.
+#### Bug #42 (CRÍTICO 🔴) — Pagos manuales no aparecen en /analytics
+- **Síntoma**: asesor marca lead pagado via CRM → `is_buyer=true` en `Leads_CRM_v2` pero **NADA** en `StudentPaymentState`. `/analytics` mostraba `paid_count=0` y `total_revenue=0` con 80+ compradores reales.
+- **Causa**: `handle_import_leads` solo escribía a `Leads_CRM_v2`. `/analytics` lee revenue de `StudentPaymentState` (otra tabla). Sin escritura cruzada → reportes mienten.
+- **Fix**: API v120 — cuando `is_buyer=true` en lead nuevo, también persistir registro en `StudentPaymentState` con `status="PAGADO"` + amount + service.
+- **Lección 34**: cuando hay 2 fuentes de verdad para un mismo dato (CRM + Payments), TODA escritura debe tocar AMBAS tablas. Sino los reportes mienten silenciosamente.
+#### Bug #43 (UX 🟡) — bulk-import-purchases con lead_stage="CLIENTE" + sin is_buyer
+- **Síntoma**: tras subir plantilla v2 ventas, leads importados NO aparecían en filtro "compradores" del CRM (lead_stage=cerrado_ganado o is_buyer=true).
+- **Causa**: `update_item` ponía `lead_stage="CLIENTE"` (no `cerrado_ganado`) y NO marcaba `is_buyer=true`. Tampoco seteaba `phoneNumber`+`channel` (PKs requeridas si lead no existía).
+- **Fix**: API v121 — update_item ahora setea `phoneNumber` + `channel="whatsapp"` (con `if_not_exists`) + `lead_stage="cerrado_ganado"` + `lead_status="CERRADO GANADO"` + `is_buyer=true` + `import_source`.
+#### Bug #44 (CRÍTICO 🔴) — bulk-import-purchases SIN created_at → GSI no indexa
+- **Síntoma**: 12 leads importados con `imported: 12, errors: 0` ✅ pero al hacer query GSI `company_id-index` aparecían 0 nuevos. Reportes seguían vacíos.
+- **Causa**: GSI `company_id-index` de `StudentPaymentState` tiene **`created_at` como Sort Key**. DDB no indexa items que no tengan el SK del GSI. El `put_item` original no incluía `created_at` → 12 items huérfanos no indexados.
+- **Diagnóstico clave**: `scan` completo mostraba 112 items con company_id=JMC, pero `query` GSI solo 17. Diferencia = los 12 nuevos + huérfanos viejos.
+- **Fix**: API v122 — agregar `"created_at": event_time or _now_ts` + `paid_at` al `put_item`. Re-subir plantilla → puts sobreescriben items huérfanos con SK correcto → entran al GSI. Resultado verificado: `paid_count=83`, `total_revenue=$23,380,000 COP`.
+- **Lección 35**: tras crear/modificar GSI, validar que TODOS los `put_item` y `update_item` incluyan los atributos definidos en KeySchema. Sin SK del GSI = item huérfano silente. Auditar describe-table → KeySchema antes de tocar puts.
+### Lecciones nuevas (sesión 8 mayo tarde-noche)
+32. **🔴 Auditoría preventiva post-migración PK**: cuando reincide un bug 2+ veces (Bug #9 reincidió 3 veces), hacer `grep -r "put_item.*Leads_CRM"` automatizado y verificar todos incluyen `contact_id`. La deuda no se cura sola.
+33. **🔴 GSI requirements obligatorios**: cualquier `put_item` o `update_item` debe incluir TODOS los atributos del KeySchema del GSI. Item sin SK del GSI = invisible para queries → reportes vacíos sin error.
+34. **🔴 Doble fuente de verdad = doble escritura**: si CRM lee de tabla A pero Reportes lee de tabla B, TODA mutación debe tocar ambas. Si no, las dos pantallas muestran datos distintos.
+35. **🔴 Auto-asignación leads a creador**: si filtro por rol oculta items, auto-asignar al creador. Sino el agente no ve lo que acaba de crear → frustración inmediata.
+36. **🔴 Source-aware memory** (memoria contextual): mismo `normalized_q` puede tener respuestas distintas según contexto (chat libre vs botón vs CTW Ad). Cache key compuesta `(q, source)` con cascada de fallback es la solución correcta.
 ### Lecciones nuevas (sesión 5 mayo)
 12. **🔴 GSI consistency post-disconnect**: tras cualquier disconnect/reconnect que toque GSI fields, validar con query antes de dar OK. DDB no garantiza propagación inmediata cuando el campo cambia múltiples veces rápido.
 13. **🔴 flow_state liberation**: TODO handler que dispara acción terminal DEBE liberar `flow_state` antes de retornar. Olvidarlo = loop infinito.
@@ -869,11 +919,11 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ### 🥈 Sprint 2 — Multicanal real (el rugido principal)
 > Costo: **$0** (todas las APIs son gratis)
 - [ ] **Web Chat Widget embebible** — `<script src="clientes.bot/widget/{company_id}.js">`
-- [ ] **Instagram DM** — webhook Meta + lógica del bot
-- [ ] **Facebook Messenger** — webhook Meta + lógica del bot
+- [x] **Instagram DM** — Bot v104-v114: Gemini responde, catálogo lista texto, pago, historial, IG echo filter ✅
+- [x] **Facebook Messenger** — Bot v104-v114: mismo flujo IG, subscribed_apps v22 ✅
 - [ ] **Telegram** — Bot API gratis
 - [ ] **Email transaccional** (Resend, gratis 3000/mes)
-- [ ] **Bandeja unificada** — todas las conversaciones en 1 pantalla, con filtro por canal
+- [x] **Bandeja unificada** — conversations/active incluye FB/IG, channel icon 💚💬📸 en dashboard ✅
 - [ ] **SMS Twilio** (opcional, pago por SMS al cliente final)
 ### 🥉 Sprint 3 — IA superpoderes
 > Costo: **$0** (todo usa Gemini Flash gratis hasta 1500 req/día)
@@ -1016,7 +1066,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-████████████████████████████████░ 88%
+█████████████████████████████████░ 90%
 ### ⏱️ Métricas de desarrollo reales
 | Métrica | Valor |
 |---|---|
@@ -1042,8 +1092,9 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | Sesión 29 abril (flows + migración multicanal) | ~8h |
 | Sesión 5 mayo (flow comercial + carrusel + bugs Gemini) | ~15h |
 | Sesión 6-7 mayo (embed + debounce + fragmentación + anti-silencio + WABA migración) | ~12h |
+| Sesión 8 mayo (multicanal FB/IG completo + fixes + affiliate module) | ~18h |
 | Debugging, rollbacks, incidentes varios | ~20h |
-| **Total** | **~507h** |
+| **Total** | **~525h** |
 
 #### Desglose horas pendientes
 | Bloque | Horas |
@@ -1085,8 +1136,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
 | 🤝 Programa Afiliados (movido a Sprint 1) | 0% — bloqueante crecimiento |
 | 🔧 Pendiente: Sprint 1 ampliado (Stripe+Wompi+Quotas+Afiliados) + E (Impersonate) + F-J + multicanal | 2% |
-**Última medición:** 8 mayo 2026 — Affiliate module completo (dashboard + landing + cron payout v91 + emails v92 + TyC) + PIN embed WhatsApp + Multi-carousel backend/bot/frontend (API v93, Bot v103) + Remarketing delays variables por intent v7 + **Cleanup sesión madrugada (Bot v117→v120)**: borrada duplicada `enviar_catalogo_carrusel` (Bug #25 reincidencia), `_media_id_cache` multi-tenant, env var PHONE_NUMBER_ID actualizada post-migración WABA
-
+**Última medición:** 8 mayo 2026 (tarde-noche) — Memoria source-aware completada (Bot v136 + promote-cron v2): _detect_msg_source + cascada 3 niveles + register_candidate guarda last_ai_answer + Memoria APRENDIDA SK con #source. **6 bugs CRM cerrados en cadena** (API v117→v122): Bug #38/#40 reincidencias contact_id (Bug #9 3 veces), Bug #39 auto-asign agente, Bug #41 chulito sobreescrito, Bug #42 pagos manuales no en analytics, Bug #44 CRÍTICO created_at faltante en GSI StudentPaymentState (los 12 leads importados eran invisibles → fix → paid_count 0→83, revenue $0→$23.38M COP). Cleanup masivo 615 entries memoria
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -1107,7 +1157,9 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **82% → 84%** — Sesión 5 mayo: Flow comercial completo + 14 bugs raíz + Gemini fallback + multi-tenant strict (Bot v47-v85, API v86-v88, Remarketing v5) 🦁
 - [x] **84% → 86%** — Sesión 6-7 mayo: Debounce async + anti-silencio + fragmentación + typing + cascada 3 LLM + Embed E2E + auto-onboarding API + Lambda 60s + WABA migrado (Bot v85-v102, API v89-v90, Remarketing v6) 🦁
 - [x] **86% → 88%** — Frontend Affiliate dashboard + landing pública + cron payout mensual v91 + emails Resend afiliados v92 + TyC sección 13 + PIN embed + Multi-carousel backend v93 + bot campaign_id v103 + Remarketing delays variables v7 🦁
-- [ ] **88% → 90%** — Memoria con contexto/source + Auto-vincular template carousel + Selector templates aprobados + Test E2E remarketing ⭐ ESTÁS AQUÍ
+- [x] **88% → 90%** — Multicanal completo Instagram DM + Facebook Messenger (Bot v104-v114, API v95-v96) + fix handle_add_service duplicada sync prompt (API v94) + conversations/active con canal icon 🦁
+- [x] **90% → 92%** — Memoria source-aware (Bot v136 + promote-cron v2) + 6 bugs CRM masivos cerrados (Bug #9 reincidió 3 veces, Bug #44 fix CRÍTICO created_at GSI con paid_count 0→83 y revenue $23.38M COP) + cleanup memoria 615 entries (97 CM + 518 candidatos) — API v117-v122 🦁
+- [ ] **92% → 94%** — Hook agente humano aprende (memoria source=human_agent threshold=2) + Web Chat Widget + Selector templates aprobados + Test E2E remarketing ⭐ ESTÁS AQUÍ
 - [ ] **80% → 90%** — Multicanal (Sprint 2) + Admin completo (D-J)
 - [ ] **90% → 100%** — Sprints 3-7 + RUGIDO 🦁
 

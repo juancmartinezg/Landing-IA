@@ -40,6 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showReminders, setShowReminders] = useState(false);
   const [unreadChats, setUnreadChats] = useState(0);
   const [tokenWarning, setTokenWarning] = useState<{status: string, message: string, needs_reconnect: boolean, days_left?: number} | null>(null);
+  const [trialInfo, setTrialInfo] = useState<{status: string, trial_ends_at: number, days_left: number} | null>(null);
   useEffect(() => {
     if (!loading && !user) {
       const stored = localStorage.getItem('cb_user');
@@ -86,11 +87,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             } else if (data.days_left && data.days_left <= 7) {
               setTokenWarning(data);
             }
-            sessionStorage.setItem('cb_token_checked', '1');
+             sessionStorage.setItem('cb_token_checked', '1');
           })
           .catch(() => {});
       }
-      // Contar chats que necesitan atencion      
+      // Banner trial: leer estado de suscripción
+      fetch(`${API_URL}/billing/me`, { headers: { 'client-id': user.companyId } })
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'trialing' && data.trial_ends_at) {
+            const trialEnds = typeof data.trial_ends_at === 'number'
+              ? data.trial_ends_at
+              : Math.floor(new Date(data.trial_ends_at).getTime() / 1000);
+            const daysLeft = Math.max(0, Math.ceil((trialEnds - Date.now() / 1000) / 86400));
+            setTrialInfo({ status: 'trialing', trial_ends_at: trialEnds, days_left: daysLeft });
+          } else if (data.status === 'trial_expired') {
+            setTrialInfo({ status: 'trial_expired', trial_ends_at: 0, days_left: 0 });
+          }
+        })
+        .catch(() => {});
+      // Contar chats que necesitan atencion        
       fetch(`${API_URL}/conversations/active`, { headers: { 'client-id': user.companyId } })
         .then(res => res.json())
         .then(data => {
@@ -325,6 +341,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
             <button onClick={() => setTokenWarning(null)}
               className="text-gray-500 hover:text-white text-sm shrink-0">✕</button>
+          </div>
+        )}
+        {/* Banner de trial 14 días */}
+        {trialInfo && (
+          <div className={`px-4 py-2.5 flex items-center justify-between gap-3 ${
+            trialInfo.status === 'trial_expired'
+              ? 'bg-red-500/10 border-b border-red-500/20'
+              : trialInfo.days_left <= 3
+                ? 'bg-orange-500/10 border-b border-orange-500/20'
+                : 'bg-indigo-500/10 border-b border-indigo-500/20'
+          }`}>
+            <p className={`text-xs font-medium flex-1 ${
+              trialInfo.status === 'trial_expired'
+                ? 'text-red-400'
+                : trialInfo.days_left <= 3
+                  ? 'text-orange-400'
+                  : 'text-indigo-400'
+            }`}>
+              {trialInfo.status === 'trial_expired'
+                ? '🔴 Tu prueba gratuita expiró. Activa un plan para seguir usando clientes.bot.'
+                : trialInfo.days_left === 0
+                  ? '⏰ Tu prueba expira hoy — activa tu plan ahora.'
+                  : trialInfo.days_left <= 3
+                    ? `⏰ Te quedan ${trialInfo.days_left} día${trialInfo.days_left === 1 ? '' : 's'} de prueba — activa tu plan.`
+                    : `🎁 Estás en prueba gratuita: ${trialInfo.days_left} días restantes.`
+              }
+            </p>
+            <Link href="/dashboard/billing"
+              className={`text-[10px] px-3 py-1.5 rounded-lg font-bold whitespace-nowrap transition-all ${
+                trialInfo.status === 'trial_expired'
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : trialInfo.days_left <= 3
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                    : 'bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400'
+              }`}>
+              {trialInfo.status === 'trial_expired' ? 'Activar plan' : 'Ver planes'}
+            </Link>
           </div>
         )}
         {/* Page Content */}
