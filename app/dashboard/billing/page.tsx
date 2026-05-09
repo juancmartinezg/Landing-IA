@@ -4,22 +4,33 @@ import { useAuth } from '../../providers';
 import Link from 'next/link';
 import { getStoredRefCode } from '../../components/AffiliateTracker';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+interface PlanFeatureUI {
+  label: string;
+  included: boolean;
+  tooltip_title: string;
+  tooltip_desc: string;
+}
 interface Plan {
   key: string;
   name: string;
-  price_monthly: number;
+  subtitle: string;
+  price_usd: number;
+  price_cop: number;
   price_annual: number;
+  popular: boolean;
+  btn_label: string;
+  btn_href_type: 'checkout' | 'whatsapp';
+  btn_href_whatsapp?: string;
+  color_theme: string;
   variant_monthly: string;
   variant_annual: string;
-  annual_savings: number;
-  features: {
-    sub_accounts: number;
-    messages_per_month: number;
-    leads: number;
-    agents: number;
+  features_ui: PlanFeatureUI[];
+  quotas: {
+    messages_whatsapp: number;
+    leads_total: number;
+    agents_active: number;
     voice_minutes: number;
-    white_label: boolean;
-    api_access: boolean;
+    subaccounts: number;
   };
 }
 interface Subscription {
@@ -65,11 +76,35 @@ const QUOTA_LABELS: Record<string, { icon: string; label: string; unit: string }
   voice_minutes:     { icon: '🎙️', label: 'Minutos de voz IA',   unit: 'min' },
   subaccounts:       { icon: '🏢', label: 'Sub-cuentas',          unit: 'cuentas' },
 };
-const PLAN_ICONS: Record<string, string> = { solo: '🚀', pro: '⭐', agency: '🦁' };
+const PLAN_ICONS: Record<string, string> = { starter: '🚀', growth: '⭐', agency: '🦁' };
+// Tooltip compartido con landing
+function FeatureTooltip({ title, desc }: { title: string; desc: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex ml-1 align-middle">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-4 h-4 rounded-full bg-white/10 hover:bg-indigo-500/40 text-[9px] font-black text-gray-400 hover:text-white transition-all flex items-center justify-center border border-white/10 hover:border-indigo-500/50"
+        aria-label="Más info"
+      >?</button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-6 top-0 z-50 w-56 bg-[#1a1f2e] border border-white/10 rounded-xl p-3 shadow-2xl text-left">
+            <p className="text-[10px] font-bold text-white mb-1">{title}</p>
+            <p className="text-[10px] text-gray-400 leading-relaxed">{desc}</p>
+            <button onClick={() => setOpen(false)} className="absolute top-2 right-2 text-gray-600 hover:text-white text-xs">✕</button>
+          </div>
+        </>
+      )}
+    </span>
+  );
+}
 const PLAN_COLORS: Record<string, { border: string; badge: string; btn: string; glow: string }> = {
-  solo:   { border: 'border-indigo-500/30',  badge: 'bg-indigo-500/20 text-indigo-400',   btn: 'bg-indigo-600 hover:bg-indigo-500',   glow: 'shadow-indigo-500/20' },
-  pro:    { border: 'border-emerald-500/40', badge: 'bg-emerald-500/20 text-emerald-400', btn: 'bg-emerald-600 hover:bg-emerald-500', glow: 'shadow-emerald-500/20' },
-  agency: { border: 'border-amber-500/30',   badge: 'bg-amber-500/20 text-amber-400',     btn: 'bg-amber-600 hover:bg-amber-500',     glow: 'shadow-amber-500/20' },
+  starter: { border: 'border-indigo-500/30',  badge: 'bg-indigo-500/20 text-indigo-400',   btn: 'bg-indigo-600 hover:bg-indigo-500',   glow: 'shadow-indigo-500/20' },
+  growth:  { border: 'border-emerald-500/40', badge: 'bg-emerald-500/20 text-emerald-400', btn: 'bg-emerald-600 hover:bg-emerald-500', glow: 'shadow-emerald-500/20' },
+  agency:  { border: 'border-amber-500/30',   badge: 'bg-amber-500/20 text-amber-400',     btn: 'bg-amber-600 hover:bg-amber-500',     glow: 'shadow-amber-500/20' },
 };
 
 function fmt(n: number) { return n === -1 ? 'Ilimitado' : n.toLocaleString(); }
@@ -394,18 +429,17 @@ export default function BillingPage() {
       {/* Planes */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {plans.map((plan) => {
-          const colors = PLAN_COLORS[plan.key] || PLAN_COLORS.solo;
+          const colors = PLAN_COLORS[plan.key] || PLAN_COLORS.starter;
           const isCurrent = currentPlanKey === plan.key;
           const variantKey = annual ? `${plan.key}_annual` : `${plan.key}_monthly`;
           const isLoadingPlan = checkingOut === variantKey;
-
+          const priceMonthly = plan.price_usd;
           return (
             <div key={plan.key}
               className={`relative rounded-2xl border p-5 flex flex-col gap-4 transition-all shadow-xl ${colors.border} ${colors.glow} ${
                 isCurrent ? 'bg-white/[0.06]' : 'bg-white/[0.02] hover:bg-white/[0.04]'
-              } ${plan.key === 'pro' ? 'ring-1 ring-emerald-500/30' : ''}`}>
-
-              {plan.key === 'pro' && (
+              } ${plan.popular ? 'ring-1 ring-emerald-500/30' : ''}`}>
+              {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded-full">⭐ MÁS POPULAR</span>
                 </div>
@@ -415,42 +449,41 @@ export default function BillingPage() {
                   <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${colors.badge}`}>Tu plan actual</span>
                 </div>
               )}
-
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-2xl">{PLAN_ICONS[plan.key]}</span>
+                  <span className="text-2xl">{PLAN_ICONS[plan.key] || '📦'}</span>
                   <span className="font-bold text-lg">{plan.name}</span>
                 </div>
+                {plan.subtitle && (
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">{plan.subtitle}</p>
+                )}
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold">${annual ? plan.price_annual : plan.price_monthly}</span>
-                  <span className="text-gray-500 text-sm">/{annual ? 'año' : 'mes'}</span>
+                  <span className="text-3xl font-bold">${annual ? Math.round(plan.price_annual / 12) : priceMonthly}</span>
+                  <span className="text-gray-500 text-sm">/mes</span>
                 </div>
                 {annual && (
                   <p className="text-emerald-400 text-xs mt-1">
-                    Ahorras ${(plan.price_monthly * 12 - plan.price_annual).toLocaleString()}/año
+                    Facturado anualmente — ${plan.price_annual.toLocaleString()}/año
                   </p>
                 )}
               </div>
-
-              <div className="space-y-2 flex-1">
-                {[
-                  { label: 'Sub-cuentas',     value: fmt(plan.features.sub_accounts) },
-                  { label: 'Mensajes/mes',     value: fmt(plan.features.messages_per_month) },
-                  { label: 'Leads CRM',        value: fmt(plan.features.leads) },
-                  { label: 'Agentes humanos',  value: fmt(plan.features.agents) },
-                  { label: 'Voz IA (min/mes)', value: fmt(plan.features.voice_minutes) },
-                  { label: 'White-label',      value: plan.features.white_label ? '✅' : '❌' },
-                  { label: 'API pública',      value: plan.features.api_access ? '✅' : '❌' },
-                ].map((f, i) => (
-                  <div key={i} className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500">{f.label}</span>
-                    <span className="font-medium text-white">{f.value}</span>
-                  </div>
+              <ul className="space-y-2 flex-1 text-sm">
+                {plan.features_ui.map((f, i) => (
+                  <li key={i} className={`flex items-start gap-2 ${!f.included ? 'text-gray-600' : 'text-gray-300'}`}>
+                    <span className={`mt-0.5 shrink-0 ${f.included ? 'text-emerald-400' : 'text-gray-600'}`}>
+                      {f.included ? '✓' : '—'}
+                    </span>
+                    <span className="flex-1 text-xs">{f.label}</span>
+                    {f.tooltip_title && (
+                      <FeatureTooltip title={f.tooltip_title} desc={f.tooltip_desc} />
+                    )}
+                  </li>
                 ))}
-              </div>
-
+              </ul>
               <button
-                onClick={() => handleCheckout(plan)}
+                onClick={() => plan.btn_href_type === 'whatsapp'
+                  ? window.open(plan.btn_href_whatsapp || 'https://wa.me/573022205845', '_blank')
+                  : handleCheckout(plan)}
                 disabled={isCurrent || !!checkingOut}
                 className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${
                   isCurrent
@@ -462,7 +495,7 @@ export default function BillingPage() {
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Redirigiendo...
                   </span>
-                ) : isCurrent ? 'Plan actual' : sub ? 'Cambiar a este plan' : 'Comenzar ahora'}
+                ) : isCurrent ? 'Plan actual' : plan.btn_label}
               </button>
             </div>
           );

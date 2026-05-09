@@ -68,7 +68,6 @@ function FeatureTooltip({ title, desc }: { title: string; desc: string }) {
     </span>
   );
 }
-
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [billingAnnual, setBillingAnnual] = useState(false);
