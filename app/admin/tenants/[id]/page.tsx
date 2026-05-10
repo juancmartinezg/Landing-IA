@@ -166,6 +166,7 @@ export default function AdminTenantDetailPage() {
             className="text-xs px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg disabled:opacity-50 transition-all">
             {refreshing ? '⏳' : '🔄 Actualizar'}
           </button>
+          <ImpersonateButton tenantId={data.tenant_id} brandName={brand} user={user} />
           <StatusActionsPanel
             tenantId={data.tenant_id}
             currentStatus={status}
@@ -660,5 +661,62 @@ function StatusActionsPanel({ tenantId, currentStatus, user, onChanged }: any) {
         </div>
       )}
     </>
+  );
+}
+// ============================================================
+// E-6: Botón "Ver como cliente" (impersonate read-only)
+// ============================================================
+function ImpersonateButton({ tenantId, brandName, user }: any) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const handleImpersonate = async () => {
+    if (!confirm(
+      `¿Ver dashboard de "${brandName}" como super admin?\n\n` +
+      `Modo: solo lectura (TTL 1h).\n` +
+      `El cliente no recibe notificación.\n` +
+      `Toda acción queda en audit log.`
+    )) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/impersonate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'client-id': user?.sub || user?.email || '',
+          'x-user-email': user?.email || '',
+        },
+        body: JSON.stringify({ tenant_id: tenantId }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(`Error: ${json.error || res.status}`);
+        setLoading(false);
+        return;
+      }
+      // Guardar ticket + datos en localStorage para el banner
+      localStorage.setItem('cb_impersonate_ticket', json.ticket);
+      localStorage.setItem('cb_impersonate_info', JSON.stringify({
+        tenant_id: json.tenant_id,
+        brand_name: json.brand_name,
+        mode: json.mode,
+        expires_at: json.expires_at,
+        admin_email: user?.email || '',
+      }));
+      // Redirect al dashboard del cliente impersonado
+      router.push('/dashboard');
+    } catch (e: any) {
+      alert(`Error de conexión: ${e.message}`);
+      setLoading(false);
+    }
+  };
+  return (
+    <button
+      onClick={handleImpersonate}
+      disabled={loading}
+      className="text-xs px-4 py-2 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 rounded-lg font-bold transition-all disabled:opacity-50"
+      title="Ver el dashboard del cliente como super admin (solo lectura)"
+    >
+      {loading ? '⏳' : '👁 Ver como cliente'}
+    </button>
   );
 }

@@ -40,8 +40,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showReminders, setShowReminders] = useState(false);
   const [unreadChats, setUnreadChats] = useState(0);
   const [tokenWarning, setTokenWarning] = useState<{status: string, message: string, needs_reconnect: boolean, days_left?: number} | null>(null);
-  const [trialInfo, setTrialInfo] = useState<{status: string, trial_ends_at: number, days_left: number} | null>(null);
+const [trialInfo, setTrialInfo] = useState<{status: string, trial_ends_at: number, days_left: number} | null>(null);
+  // E-7: estado del impersonate (banner rojo cuando hay ticket activo)
+  const [impersonateInfo, setImpersonateInfo] = useState<{tenant_id: string, brand_name: string, mode: string, expires_at: number, admin_email: string} | null>(null);
   useEffect(() => {
+    // Leer ticket impersonate del localStorage al cargar
+    try {
+      const ticket = localStorage.getItem('cb_impersonate_ticket');
+      const infoRaw = localStorage.getItem('cb_impersonate_info');
+      if (ticket && infoRaw) {
+        const info = JSON.parse(infoRaw);
+        // Verificar que no haya expirado
+        if (info.expires_at && info.expires_at * 1000 > Date.now()) {
+          setImpersonateInfo(info);
+        } else {
+          localStorage.removeItem('cb_impersonate_ticket');
+          localStorage.removeItem('cb_impersonate_info');
+        }
+      }
+    } catch {}
+  }, []);
+  const exitImpersonate = () => {
+    if (!impersonateInfo) return;
+    if (!confirm(`Salir del modo impersonate de "${impersonateInfo.brand_name}"?`)) return;
+    localStorage.removeItem('cb_impersonate_ticket');
+    localStorage.removeItem('cb_impersonate_info');
+    setImpersonateInfo(null);
+    router.push(`/admin/tenants/${encodeURIComponent(impersonateInfo.tenant_id)}`);
+  };  useEffect(() => {
     if (!loading && !user) {
       const stored = localStorage.getItem('cb_user');
       if (!stored) {
@@ -314,7 +340,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="text-[10px] text-gray-500">{user?.email}</p>
             </div>
           </div>
-        </header>
+       </header>
+        {/* Banner E-7: impersonate (super admin viendo dashboard del cliente) */}
+        {impersonateInfo && (
+          <div className="px-4 py-3 bg-gradient-to-r from-red-600 to-rose-600 border-b-2 border-red-400 flex items-center justify-between gap-3 sticky top-16 z-10">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <span className="text-2xl shrink-0">👁</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate">
+                  Viendo como <span className="bg-white/20 px-2 py-0.5 rounded">{impersonateInfo.brand_name}</span>
+                  <span className="ml-2 text-[10px] bg-white/20 px-2 py-0.5 rounded uppercase tracking-widest">
+                    {impersonateInfo.mode === 'read_only' ? '🔒 Solo lectura' : '✏️ Escritura'}
+                  </span>
+                </p>
+                <p className="text-[10px] text-white/80 mt-0.5">
+                  Super admin: <span className="font-mono">{impersonateInfo.admin_email}</span>
+                  {' · '}
+                  Expira en {Math.max(0, Math.ceil((impersonateInfo.expires_at - Date.now() / 1000) / 60))} min
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={exitImpersonate}
+              className="text-xs px-4 py-2 bg-white text-red-600 hover:bg-red-50 font-bold rounded-lg whitespace-nowrap shrink-0 transition-all"
+            >
+              Salir
+            </button>
+          </div>
+        )}
         {/* Banner de token Meta expirado */}
         {tokenWarning && (
           <div className={`px-4 py-2.5 flex items-center justify-between gap-3 ${

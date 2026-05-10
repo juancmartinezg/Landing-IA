@@ -62,6 +62,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 (init.headers as any)['x-agent-id'] = u.agentId || u.email || '';
               }
             }
+            // E-8: si hay ticket impersonate activo, inyectar header automaticamente
+            const impTicket = localStorage.getItem('cb_impersonate_ticket');
+            if (impTicket && !(init.headers as any)['X-Impersonate-Ticket']) {
+              init = init || {};
+              init.headers = { ...(init.headers || {}) };
+              (init.headers as any)['X-Impersonate-Ticket'] = impTicket;
+            }
           }
         } catch {}
         return originalFetch.call(this, input, init);
