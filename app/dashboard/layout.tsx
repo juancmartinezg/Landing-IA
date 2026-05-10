@@ -96,9 +96,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       clearInterval(interval);
     };
   }, [impersonateInfo]);
-  const exitImpersonate = () => {
+  const exitImpersonate = async () => {
     if (!impersonateInfo) return;
     if (!confirm(`Salir del modo impersonate de "${impersonateInfo.brand_name}"?`)) return;
+    // E-12.C: si estaba en read_write, avisar al backend para cerrar sesion + email resumen
+    if (impersonateInfo.mode === 'read_write') {
+      try {
+        await fetch(`${API_URL}/support/exit`, { method: 'POST' });
+      } catch {
+        // Silencioso — no bloqueamos el exit por un fallo de red
+      }
+    }
     localStorage.removeItem('cb_impersonate_ticket');
     localStorage.removeItem('cb_impersonate_info');
     setImpersonateInfo(null);
