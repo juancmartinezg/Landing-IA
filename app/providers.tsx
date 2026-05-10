@@ -87,6 +87,23 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         // ✅ FIX: setUser inmediatamente con lo que hay en localStorage
         // El dashboard carga al instante sin esperar fetch a /me
         if (parsed.companyId) {
+          // E-VIRTUALIZE: si hay ticket impersonate activo, sustituir companyId
+          // para que TODO el frontend (filtros, fetches, displays) use el
+          // tenant impersonado en vez del companyId original del admin
+          try {
+            const impInfoRaw = localStorage.getItem('cb_impersonate_info');
+            const impTicket = localStorage.getItem('cb_impersonate_ticket');
+            if (impInfoRaw && impTicket) {
+              const impInfo = JSON.parse(impInfoRaw);
+              if (impInfo.expires_at && impInfo.expires_at * 1000 > Date.now() && impInfo.tenant_id) {
+                parsed.companyId = impInfo.tenant_id;
+                parsed.role = 'owner';  // admin tiene acceso owner al impersonar
+                parsed._originalCompanyId = parsed.companyId;
+                parsed._isImpersonating = true;
+                parsed._impersonateBrand = impInfo.brand_name;
+              }
+            }
+          } catch {}
           setUser(parsed);
           setLoading(false);
 
