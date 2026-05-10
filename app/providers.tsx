@@ -56,8 +56,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               const u = JSON.parse(stored);
               init = init || {};
               init.headers = { ...(init.headers || {}) };
-              if (u.role && !(init.headers as any)['x-role']) (init.headers as any)['x-role'] = u.role;
-              if (u.agentId && !(init.headers as any)['x-agent-id']) (init.headers as any)['x-agent-id'] = u.agentId;
+             if (u.role && !(init.headers as any)['x-role']) (init.headers as any)['x-role'] = u.role;
+              // x-agent-id: agentId si existe (agentes), sino email (owner/admin) para audit
+              if (!(init.headers as any)['x-agent-id']) {
+                (init.headers as any)['x-agent-id'] = u.agentId || u.email || '';
+              }
             }
           }
         } catch {}
