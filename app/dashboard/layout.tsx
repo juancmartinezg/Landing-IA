@@ -40,8 +40,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showReminders, setShowReminders] = useState(false);
   const [unreadChats, setUnreadChats] = useState(0);
   const [tokenWarning, setTokenWarning] = useState<{status: string, message: string, needs_reconnect: boolean, days_left?: number} | null>(null);
-const [trialInfo, setTrialInfo] = useState<{status: string, trial_ends_at: number, days_left: number} | null>(null);
+  const [trialInfo, setTrialInfo] = useState<{status: string, trial_ends_at: number, days_left: number} | null>(null);
   // E-7: estado del impersonate (banner rojo cuando hay ticket activo)
+  const [impersonateInfo, setImpersonateInfo] = useState<{tenant_id: string, brand_name: string, mode: string, expires_at: number, admin_email: string} | null>(null);
+  // E-9: modal de pedir escritura
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  // E-9: modal de pedir escritura
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [impersonateInfo, setImpersonateInfo] = useState<{tenant_id: string, brand_name: string, mode: string, expires_at: number, admin_email: string} | null>(null);
   useEffect(() => {
     // Leer ticket impersonate del localStorage al cargar
@@ -361,12 +366,28 @@ const [trialInfo, setTrialInfo] = useState<{status: string, trial_ends_at: numbe
               </div>
             </div>
             <button
+              onClick={() => setShowSupportModal(true)}
+              disabled={impersonateInfo.mode !== 'read_only'}
+              className="text-xs px-4 py-2 bg-yellow-400 text-red-900 hover:bg-yellow-300 font-bold rounded-lg whitespace-nowrap shrink-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title={impersonateInfo.mode === 'read_only' ? 'Solicitar acceso de escritura al cliente' : 'Ya tienes escritura'}
+            >
+              {impersonateInfo.mode === 'read_only' ? '✏️ Pedir escritura' : '✏️ Escritura activa'}
+            </button>
+            <button
               onClick={exitImpersonate}
               className="text-xs px-4 py-2 bg-white text-red-600 hover:bg-red-50 font-bold rounded-lg whitespace-nowrap shrink-0 transition-all"
             >
               Salir
             </button>
           </div>
+        )}
+        {/* Modal E-9: Pedir escritura */}
+        {showSupportModal && impersonateInfo && (
+          <SupportRequestModal
+            tenantId={impersonateInfo.tenant_id}
+            brandName={impersonateInfo.brand_name}
+            onClose={() => setShowSupportModal(false)}
+          />
         )}
         {/* Banner de token Meta expirado */}
         {tokenWarning && (
@@ -444,6 +465,115 @@ const [trialInfo, setTrialInfo] = useState<{status: string, trial_ends_at: numbe
             <AgentChat companyId={user.companyId} />
             <PushSetup />
             <InstallPWAPrompt variant="dashboard" />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+// ============================================================
+// E-9: Modal "Pedir escritura" desde modo impersonate
+// ============================================================
+function SupportRequestModal({ tenantId, brandName, onClose }: any) {
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string; request_id?: string } | null>(null);
+  const submit = async () => {
+    if (reason.trim().length < 10) {
+      alert('La razón debe tener al menos 10 caracteres. El cliente la va a leer — sé claro.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/support/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResult({ ok: true, message: data.message || 'Solicitud enviada', request_id: data.request_id });
+      } else {
+        setResult({ ok: false, message: data.error || `Error ${res.status}` });
+      }
+    } catch (e: any) {
+      setResult({ ok: false, message: e.message || 'Error de conexión' });
+    }
+    setSubmitting(false);
+  };
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={() => !submitting && onClose()}
+    >
+      <div
+        className="bg-[#0B0F1A] border border-yellow-500/30 rounded-2xl p-6 max-w-md w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {result?.ok ? (
+          <>
+            <h3 className="text-lg font-bold text-emerald-400 mb-2">✓ Solicitud enviada</h3>
+            <p className="text-xs text-gray-400 mb-4">{result.message}</p>
+            <p className="text-[10px] text-gray-500 mb-4">
+              El cliente recibirá un email con un link para aprobar o denegar tu solicitud.
+              Cuando apruebe, recargá la página para que el banner se actualice a modo escritura.
+            </p>
+            <button onClick={onClose} className="w-full text-xs px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-lg">
+              Cerrar
+            </button>
+          </>
+        ) : result && !result.ok ? (
+          <>
+            <h3 className="text-lg font-bold text-red-400 mb-2">⚠ Error</h3>
+            <p className="text-xs text-gray-300 mb-4">{result.message}</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setResult(null)} className="text-xs px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 font-bold rounded-lg">
+                Reintentar
+              </button>
+              <button onClick={onClose} className="text-xs px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-lg">
+                Cerrar
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="text-lg font-bold text-white mb-1">✏️ Pedir escritura</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Cliente: <span className="text-indigo-400 font-bold">{brandName}</span>
+            </p>
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
+              <p className="text-[11px] text-yellow-300">
+                ⚠ El cliente recibirá un email con tu solicitud. Si aprueba, tendrás <strong>escritura por 30 minutos</strong>.
+                Toda acción queda registrada en auditoría.
+              </p>
+            </div>
+            <label className="block text-xs text-gray-400 font-semibold mb-1">
+              Razón del soporte <span className="text-red-400">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Ej: Cliente reportó que no le aparecen los leads del último día. Necesito ajustar el filtro de fecha del CRM."
+              maxLength={500}
+              rows={4}
+              disabled={submitting}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-yellow-500 mb-2 resize-none"
+            />
+            <p className="text-[10px] text-gray-600 text-right mb-4">
+              {reason.length}/500 caracteres · El cliente lo va a leer
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={onClose} disabled={submitting} className="text-xs px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 font-bold rounded-lg disabled:opacity-50">
+                Cancelar
+              </button>
+              <button
+                onClick={submit}
+                disabled={submitting || reason.trim().length < 10}
+                className="text-xs px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-red-900 font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? '⏳ Enviando...' : 'Enviar solicitud'}
+              </button>
+            </div>
           </>
         )}
       </div>
