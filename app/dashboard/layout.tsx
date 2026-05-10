@@ -28,6 +28,7 @@ const menuItems = [
   { href: '/dashboard/settings', label: 'Configuracion', icon: '⚙️', roles: ['owner'] },
   { href: '/dashboard/billing', label: 'Suscripción', icon: '💎', roles: ['owner'] },
   { href: '/dashboard/affiliate', label: 'Afiliados', icon: '🤝', roles: ['owner'] },
+  { href: '/dashboard/support-history', label: 'Soporte', icon: '🆘', roles: ['owner'] },
 ];
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
