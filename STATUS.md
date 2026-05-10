@@ -95,8 +95,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,400 líneas, **v138** — QUOTA_ENFORCE=true + respeta TRIAL_EXPIRED + Memoria source-aware: _detect_msg_source + _mk_sk + search_memory cascada 3 niveles + register_candidate guarda last_ai_answer + Memoria APRENDIDA SK con #source) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif (~11,200 líneas, ~114 endpoints, **v133** — Trial 14d auto + cron trial-expire + email warning 1-3d + guard owner_lifetime + webhook sync config_pro.plan + /billing/plans-public (fuente única DDB) + /admin/plan-features editor super_admin + fix router /billing/me + fix Bug #9 reincidencia x3 + bulk-import-purchases blindado con created_at GSI) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,600 líneas, **v140** — PAUSED_FOR_HUMAN guard contra race conditions: eliminado hardcode flow_state=ACTIVE en update_session_context + save_session bloquea sobreescritura si existing está PAUSED + process_ai_response aborta si agente tomó control durante Gemini) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides multi-tenant (Fase D)** (~12,600 líneas, ~118 endpoints, **v140** — Sprint D completo: feature_catalog público + GET/PUT/DELETE /admin/tenants/{id}/features con 2FA TOTP + audit + email cliente + auto-takeover en /conversations/send + fix takeover actor=email en vez de tenant_id) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
 - `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os + SOURCE_THRESHOLDS human_agent=2 + preserva source SK)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -262,15 +262,15 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [ ] **C10** Modo mantenimiento por tenant (parcial — C7 cumple este caso)
 - [ ] **C11** Clonar configuración de tenant (template para nuevos clientes)
 - [ ] **C12** Recovery / undo 24h ventana de cualquier acción admin
-### 🟨 Fase D — Feature Flags + Quotas
-- [ ] **D1** Catálogo `PLAN_FEATURES` (env var con starter/growth/enterprise → features)
-- [ ] **D2** Helper `has_feature(company_id, feature)` con override
-- [ ] **D3** `GET/PUT /admin/tenants/{id}/features` overrides individuales
-- [ ] **D4** Frontend toggles de features por tenant (verde/rojo/gris según plan + override)
-- [ ] **D5** Override con expiración (regalo "ads pro 30 días" auto-revoke)
-- [ ] **D6** Quotas tracking (mensajes/mes, leads, agentes) en DynamoDB
-- [ ] **D7** Quotas enforcement en bot (rechaza si excede) + banner upgrade en dashboard
-- [ ] **D8** Dashboard de uso por tenant (cards de quota usado/total)
+### 🟨 Fase D — Feature Flags + Quotas ✅ CERRADA
+- [x] **D1** Catálogo `feature_catalog` en `KnowledgeBase[__PLATFORM__]` con 14 features atómicas + cache 5min + endpoint público `GET /admin/feature-catalog` (API v134-v136) ✅
+- [x] **D2** Helper `has_feature(company_id, feature)` con override individual desde `config_pro.feature_overrides` (API v70) ✅
+- [x] **D3** `GET/PUT/DELETE /admin/tenants/{id}/features` con 2FA TOTP + reason obligatorio + audit_log + email al owner (API v137-v138) ✅
+- [x] **D4** Frontend `FeaturesTab.tsx` con toggle 3-estados (PLAN/FORZAR ON/FORZAR OFF) + modal 2FA + 14 features agrupadas por categoría (Frontend `6f39cea`) ✅
+- [x] **D5** Override con expiración (selector 7/14/30/60/90 días en modal) — cron expire pendiente para cuando se use ✅
+- [x] **D6** Quotas tracking en tabla `TenantQuotas` (Sprint 1.F) ✅
+- [x] **D7** Quotas enforcement en bot (Bot v137 QUOTA_ENFORCE=true) ✅
+- [x] **D8** Dashboard de uso `/dashboard/billing` con barras + alertas 80%+ (Sprint 1.H) ✅
 ### 🟥 Fase E — Impersonate + Asistencia con consentimiento
 - [ ] **E1** `POST /admin/impersonate` con HMAC ticket firmado (read-only por defecto, TTL 1h)
 - [ ] **E2** Middleware ticket en `lambda_handler` (sustituye client_id si ticket válido)
@@ -748,6 +748,36 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Diagnóstico clave**: `scan` completo mostraba 112 items con company_id=JMC, pero `query` GSI solo 17. Diferencia = los 12 nuevos + huérfanos viejos.
 - **Fix**: API v122 — agregar `"created_at": event_time or _now_ts` + `paid_at` al `put_item`. Re-subir plantilla → puts sobreescriben items huérfanos con SK correcto → entran al GSI. Resultado verificado: `paid_count=83`, `total_revenue=$23,380,000 COP`.
 - **Lección 35**: tras crear/modificar GSI, validar que TODOS los `put_item` y `update_item` incluyan los atributos definidos en KeySchema. Sin SK del GSI = item huérfano silente. Auditar describe-table → KeySchema antes de tocar puts.
+### 9 mayo 2026 (tarde) — Sprint D Feature Flags + Bug #46 race handoff humano 🦁
+> Sesión ~6h. Sprint D Fase Feature Overrides multi-tenant cerrado al 100% (5 deploys API + 1 commit frontend). Bug #46 crítico: bot y agente respondiendo en paralelo → fix triple capa con defense-in-depth (4 deploys + 1 commit frontend).
+#### Sprint D — Feature Flags multi-tenant (CERRADO 100% ✅)
+- [x] **D-1** Catálogo `feature_catalog` en DDB con 14 features atómicas (Bot/Multicanal/CRM/Ads/Atribución/Branding) + endpoint público `GET /admin/feature-catalog` (API v134-v136) ✅
+- [x] **D-2** `GET /admin/tenants/{id}/features` con cascada plan/override + estados resueltos (in_plan, effective, source) (API v136) ✅
+- [x] **D-3** `PUT /admin/tenants/{id}/features` con 2FA TOTP obligatorio + reason 500 chars + expires_at opcional + audit_log + email Resend al owner (API v137) ✅
+- [x] **D-3.5** `DELETE /admin/tenants/{id}/features?key=X` simétrico al PUT — borra override y vuelve a estado plan natural. UX completa set+delete para frontend (API v138) ✅
+- [x] **D-5** Frontend `FeaturesTab.tsx` con toggle 3-estados + modal 2FA + selector expiración (Frontend `6f39cea`) ✅
+- [~] **D-4** Cron expire overrides — skip (lo cerramos cuando se use `expires_at` real, infra ya soporta)
+#### Bug #46 (CRÍTICO 🔴) — Bot y agente responden en paralelo (race condition)
+- **Síntoma**: cliente pide humano → asesor responde desde dashboard → bot sigue respondiendo en paralelo a los mensajes del cliente. UX completamente rota.
+- **Diagnóstico**: el frontend solo llama `/conversations/send` (manda WhatsApp), nunca `/conversations/takeover`. Bot sigue procesando porque `flow_state != PAUSED_FOR_HUMAN`.
+- **Causa secundaria**: `update_session_context` (Bot línea 5140) hardcodea `"flow_state": "ACTIVE"` en cada mensaje del cliente, sobreescribiendo cualquier PAUSED que el agente haya seteado.
+- **Causa terciaria**: race condition. Cliente escribe → bot empieza a procesar Gemini (5-10s) → agente hace takeover durante esos 5-10s → bot termina y guarda `_save_data` con `"ACTIVE"` pisando el PAUSED.
+- **Fix triple capa**:
+  - **API v139** (`handle_conversation_send_message`): auto-takeover automático al primer mensaje del agente. Marca `flow_state=PAUSED_FOR_HUMAN` + audit_log `CONVERSATION_AUTO_TAKEOVER`.
+  - **API v139** (`handle_conversation_takeover`): agrega `audit_log` que faltaba.
+  - **Bot v140 — Patch 1**: eliminar hardcode `"flow_state": "ACTIVE"` de `update_session_context` (no aporta nada, solo rompe).
+  - **Bot v140 — Patch 2**: `save_session` con guard PAUSED_FOR_HUMAN. Si el existing en DDB está en PAUSED y el caller no manda `_force_flow_release`, mantiene PAUSED. Bloquea race condition donde el bot termina Gemini y va a pisar el takeover.
+  - **Bot v140 — Patch 3**: `_is_session_paused_for_human()` helper que re-lee la sesión fresca + guard al inicio de `process_ai_response`. Si durante el procesamiento Gemini un agente tomó control, aborta antes de enviar.
+- **Test E2E verificado**: 2 PAUSED_GUARDs en logs (bloqueo save + abort proceso) ✅
+- **Lección 37**: Baseline drift en patches incrementales — antes de cada patch refrescar el `lambda_function.py` desde el código realmente desplegado (`aws lambda get-function`). No se puede confiar en `~/audit_api/` viejo cuando hay deploys intermedios.
+- **Lección 38**: Race conditions en handoff humano son ineludibles cuando el procesamiento del bot dura segundos. Defense-in-depth con guards en 3 capas (save + process + helper de re-read fresco) blinda contra cualquier orden de eventos.
+#### Bug #46.1 (UX 🟡) — Audit actor=tenant_id en vez de email del agente
+- **Síntoma**: AuditLog mostraba `actor: "JMC"` (tenant_id) en lugar del email del agente que tomó control. Forensics rotos: imposible saber QUIÉN actuó.
+- **Causa**: `handle_conversation_takeover` usaba `client_id` como actor. `client_id` es el `companyId` del tenant, no el agente.
+- **Fix #1 (API v140)**: router pasa `agent_id` al handler. Handler usa `_actor = agent_id or body.get("agent_id", "") or client_id or "agent_unknown"`. takeover_by y audit_log usan ese actor.
+- **Fix #2 (Frontend `5cafbe5`)**: `providers.tsx` interceptor global ahora siempre manda `x-agent-id`: si hay `agentId` lo manda, sino el `email` del owner. Antes el header solo se enviaba si `u.agentId` existía → owners siempre caían a `agent_unknown`.
+- **Test E2E verificado**: audit muestra `actor: "juancmartinezg0827@gmail.com"` ✅
+- **Lección 39**: en multi-rol (owner/admin/agent), el "actor" para audit debe ser el **email** (estable + único por persona), no el `companyId` (compartido) ni el `agentId` (puede ser null en owners). Todo endpoint que loguee debe pasar `agent_id` desde el header `x-agent-id` y usar email como fallback.
 ### 8-9 mayo 2026 (noche-madrugada) — Sprint 1 COMPLETO: Trial + Quotas + Billing E2E + Admin Editor 🦁
 > Sesión maratón ~7h. Cerró Sprint 1 completo: trial 14d auto, quotas enforcement ON, billing E2E con Lemon Squeezy (test real con tarjeta), banner trial, email warning, cron expire, landing+dashboard dinámicos desde DDB, admin editor de planes con features_ui+tooltips. 30 deploys (Bot v137-v138 + API v123-v133 + 8 commits frontend).
 #### Sprint 1 — Billing + Trial completado
