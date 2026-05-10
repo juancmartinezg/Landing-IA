@@ -45,9 +45,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [impersonateInfo, setImpersonateInfo] = useState<{tenant_id: string, brand_name: string, mode: string, expires_at: number, admin_email: string} | null>(null);
   // E-9: modal de pedir escritura
   const [showSupportModal, setShowSupportModal] = useState(false);
-  // E-9: modal de pedir escritura
-  const [showSupportModal, setShowSupportModal] = useState(false);
-  const [impersonateInfo, setImpersonateInfo] = useState<{tenant_id: string, brand_name: string, mode: string, expires_at: number, admin_email: string} | null>(null);
   useEffect(() => {
     // Leer ticket impersonate del localStorage al cargar
     try {
@@ -72,7 +69,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     localStorage.removeItem('cb_impersonate_info');
     setImpersonateInfo(null);
     router.push(`/admin/tenants/${encodeURIComponent(impersonateInfo.tenant_id)}`);
-  };  useEffect(() => {
+  };
+  useEffect(() => {
     if (!loading && !user) {
       const stored = localStorage.getItem('cb_user');
       if (!stored) {
