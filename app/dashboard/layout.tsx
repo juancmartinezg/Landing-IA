@@ -62,6 +62,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     } catch {}
   }, []);
+  // E-12.A: Auto-poll del ticket cada 30s mientras estamos en read_only
+  // Detecta si el cliente aprobo escritura y actualiza localStorage automaticamente
+  useEffect(() => {
+    if (!impersonateInfo || impersonateInfo.mode !== 'read_only') return;
+    const checkUpgrade = async () => {
+      try {
+        const res = await fetch(`${API_URL}/support/my-tickets`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.has_active_ticket && data.rw_ticket && data.mode === 'read_write') {
+          // Cliente aprobo — actualizar localStorage + recargar
+          localStorage.setItem('cb_impersonate_ticket', data.rw_ticket);
+          const newInfo = {
+            ...impersonateInfo,
+            mode: 'read_write',
+            expires_at: data.rw_expires_at,
+          };
+          localStorage.setItem('cb_impersonate_info', JSON.stringify(newInfo));
+          // Notificar al usuario antes de recargar
+          alert('✅ El cliente aprobó tu solicitud. Ahora tienes escritura por 30 minutos. La página se recargará.');
+          location.reload();
+        }
+      } catch {
+        // Silencioso — el poll vuelve a intentar en 30s
+      }
+    };
+    // Primera verificación a los 5s (no esperamos 30s en el primer ciclo)
+    const firstCheck = setTimeout(checkUpgrade, 5000);
+    const interval = setInterval(checkUpgrade, 30000);
+    return () => {
+      clearTimeout(firstCheck);
+      clearInterval(interval);
+    };
+  }, [impersonateInfo]);
   const exitImpersonate = () => {
     if (!impersonateInfo) return;
     if (!confirm(`Salir del modo impersonate de "${impersonateInfo.brand_name}"?`)) return;
