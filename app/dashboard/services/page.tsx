@@ -17,6 +17,8 @@ const emptyForm = {
   max_days_ahead: '',
   // Días de la semana en que ESTE servicio está disponible (subset del horario del negocio)
   available_weekdays: [] as number[],
+  // Modo de reserva: 'solapable' = N clientes mismo slot (grupal) | 'exclusive' = 1 cliente por slot (personalizado)
+  booking_mode: 'solapable',
 };
 export default function ServicesPage() {
   const { user } = useAuth();
@@ -176,6 +178,7 @@ export default function ServicesPage() {
       time_slots: Array.isArray(svc.scheduling?.time_slots) ? svc.scheduling.time_slots.map((h: any) => parseInt(h)) : [],
       max_days_ahead: svc.scheduling?.max_days_ahead ? String(svc.scheduling.max_days_ahead) : '',
       available_weekdays: Array.isArray(svc.scheduling?.available_weekdays) ? svc.scheduling.available_weekdays.map((d: any) => parseInt(d)) : [],
+      booking_mode: svc.scheduling?.booking_mode || (svc.allows_group_booking ? 'solapable' : 'solapable'),
     });
     setShowForm(true);
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -214,8 +217,9 @@ export default function ServicesPage() {
           ...(parseInt(form.max_days_ahead) > 0 ? { max_days_ahead: parseInt(form.max_days_ahead) } : {}),
           // Días de la semana disponibles para ESTE servicio (vacío = todos los del negocio)
           ...(form.available_weekdays.length > 0 ? { available_weekdays: form.available_weekdays } : {}),
+          // Modo de reserva: solapable (grupal) o exclusive (1 cliente por slot)
+          booking_mode: form.booking_mode || 'solapable',
         },
-
       };
       if (form.track_inventory) {
         payload.track_inventory = true;
@@ -631,6 +635,19 @@ export default function ServicesPage() {
                   ✓ {form.available_weekdays.length} día{form.available_weekdays.length !== 1 ? 's' : ''} seleccionado{form.available_weekdays.length !== 1 ? 's' : ''}
                 </p>
               )}
+            </div>
+            <div className="mb-4">
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
+                Modo de reserva
+              </label>
+              <select value={form.booking_mode} onChange={(e) => setForm({...form, booking_mode: e.target.value})}
+                className="bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white w-full">
+                <option value="solapable" className="bg-[#1a1f2e] text-white">👥 Solapable — varios clientes en el mismo horario (grupal)</option>
+                <option value="exclusive" className="bg-[#1a1f2e] text-white">🔒 Exclusivo — solo 1 cliente por slot (personalizado)</option>
+              </select>
+              <p className="text-[10px] text-gray-500 mt-1">
+                💡 Solapable = seminarios grupales, talleres masivos. Exclusivo = consultas médicas, asesorías 1-a-1, sesiones personalizadas.
+              </p>
             </div>
             <div>
               <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
