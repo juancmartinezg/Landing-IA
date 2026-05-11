@@ -95,8 +95,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,600 líneas, **v140** — PAUSED_FOR_HUMAN guard contra race conditions: eliminado hardcode flow_state=ACTIVE en update_session_context + save_session bloquea sobreescritura si existing está PAUSED + process_ai_response aborta si agente tomó control durante Gemini) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides multi-tenant (Fase D)** (~12,600 líneas, ~118 endpoints, **v140** — Sprint D completo: feature_catalog público + GET/PUT/DELETE /admin/tenants/{id}/features con 2FA TOTP + audit + email cliente + auto-takeover en /conversations/send + fix takeover actor=email en vez de tenant_id) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,800 líneas, **v151** — Wompi webhook fix: eliminado return prematuro WOMPI_OK + fallback búsqueda por phoneNumber + PK fix StudentPaymentState + Scheduling Flow v4 con RSA key desde config_pro DDB + detección flow por body + PAUSED_FOR_HUMAN guard triple capa) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** (~14,000 líneas, ~125 endpoints, **v147** — Fase E completa: impersonate read_only/read_write con HMAC tickets + consentimiento del cliente via email + support-history + cron cleanup + auto-poll ticket upgrade) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
 - `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os + SOURCE_THRESHOLDS human_agent=2 + preserva source SK)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -118,8 +118,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Meta App:** `27398458396409385`
 - **WABA:** `2891074877943438` (migrado desde `948932884157315` — portfolio Escuela de Tiro Jose Maria Cordoba)
 - **Pixel:** `1102373681952908`
-- **EventBridge crons:** `ads-daily-optimize` ENABLED (6 AM diario), `meta-token-renewal` ENABLED (domingos 5 AM UTC), `promote-memory-every-5min` ENABLED, `remarketing-every-hour` ENABLED, `affiliate-payout-batch-monthly` ENABLED (día 5 cada mes 8 AM UTC), `trial-expire-daily` ENABLED (8 AM UTC = 3 AM CO — expira trials 14d + email warning 1-3d)
-
+- **EventBridge crons:** `ads-daily-optimize` ENABLED (6 AM diario), `meta-token-renewal` ENABLED (domingos 5 AM UTC), `promote-memory-every-5min` ENABLED, `remarketing-every-hour` ENABLED, `affiliate-payout-batch-monthly` ENABLED (día 5 cada mes 8 AM UTC), `trial-expire-daily` ENABLED (8 AM UTC = 3 AM CO — expira trials 14d + email warning 1-3d), `support-cleanup-hourly` ENABLED (cada hora — Fase E auto-expire + email resumen), `feature-overrides-expire-daily` pendiente (Fase D-4 skip)
 ---
 ## ✅ MÓDULOS COMPLETADOS
 ### 🤖 Bot WhatsApp
@@ -271,19 +270,19 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **D6** Quotas tracking en tabla `TenantQuotas` (Sprint 1.F) ✅
 - [x] **D7** Quotas enforcement en bot (Bot v137 QUOTA_ENFORCE=true) ✅
 - [x] **D8** Dashboard de uso `/dashboard/billing` con barras + alertas 80%+ (Sprint 1.H) ✅
-### 🟥 Fase E — Impersonate + Asistencia con consentimiento
-- [ ] **E1** `POST /admin/impersonate` con HMAC ticket firmado (read-only por defecto, TTL 1h)
-- [ ] **E2** Middleware ticket en `lambda_handler` (sustituye client_id si ticket válido)
-- [ ] **E3** Frontend banner rojo permanente "Viendo como X — [Salir]" + override `cb_user.companyId`
-- [ ] **E4** Botón "Ver como" en detalle tenant
-- [ ] **E5** Tabla `SupportRequests` (estados PENDING/APPROVED/DENIED/EXPIRED/COMPLETED)
-- [ ] **E6** `POST /support/request` admin solicita permiso de escritura con razón
-- [ ] **E7** Push FCM + email Resend al owner del tenant
-- [ ] **E8** Página `/support/approve/{id}` para que cliente apruebe/deniegue
-- [ ] **E9** Ticket evoluciona a read_write con TTL 30min al aprobar
-- [ ] **E10** Auto-expire + email Resend de resumen al cliente al cerrar (qué se hizo)
-- [ ] **E11** Página `/dashboard/support-history` (cliente ve histórico de quién entró)
-- [ ] **E12** Modo "shadow" (ver chat live del cliente con aviso previo)
+### 🟥 Fase E — Impersonate + Asistencia con consentimiento ✅ CERRADA
+- [x] **E1** Tabla `SupportRequests` (PK request_id, 2 GSIs, PITR, TTL 30d) ✅
+- [x] **E2** Helpers HMAC: `_sign_impersonate_ticket` + `_verify_impersonate_ticket` con env var `IMPERSONATE_HMAC_SECRET` ✅
+- [x] **E3** `POST /admin/impersonate` genera ticket read_only TTL 1h (API v141) ✅
+- [x] **E4** Middleware en `lambda_handler`: lee `X-Impersonate-Ticket` → sustituye client_id + guard read_only hard (API v142) ✅
+- [x] **E5** Frontend botón "👁 Ver como cliente" en `/admin/tenants/[id]` + banner rojo + interceptor header automático (Frontend `9f8ca84`) ✅
+- [x] **E6** `POST /support/request` admin pide escritura con razón + email Resend al owner + anti-spam 1h (API v143) ✅
+- [x] **E7** `GET/POST /support/approve` página pública sin login + token HMAC + approve/deny + emails 3-way (API v144) ✅
+- [x] **E8** Frontend `/support/approve/[id]/page.tsx` página pública de aprobación (Frontend `ed0c716`) ✅
+- [x] **E9** Auto-poll cada 30s: frontend detecta ticket read_write aprobado y recarga automáticamente (Frontend `108c67a`) ✅
+- [x] **E10** `POST /support/exit` cierra sesión + email resumen al cliente SOLO si hubo writes reales (API v146) ✅
+- [x] **E11** Cron `support-cleanup-hourly` EventBridge: auto-expire PENDING >24h + cierra APPROVED vencidos + email resumen (API v146) ✅
+- [x] **E12** Frontend `/dashboard/support-history` + link sidebar 🆘 Soporte (Frontend `1812e79`) ✅
 ### 🟪 Fase F — Soporte como módulo (Ticketing real)
 - [ ] **F1** Tabla `SupportTickets` + UI cliente "Pedir ayuda" en su dashboard
 - [ ] **F2** Frontend `/admin/tickets` cola con filtros + asignación round-robin entre support
@@ -483,15 +482,15 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ### 🗂️ Tablas DynamoDB nuevas (a crear durante B-M)
 - [x] `PlatformAdmins` (PK: `email`) — equipo de la plataforma ✅ creada
 - [x] `ErrorLog` (PK: `service`, SK: `sk`, TTL 30d, PITR) ✅ creada
-- [ ] `SupportRequests` (PK: `request_id`, GSI: `company_id`, TTL 30 días)
+- [x] `SupportRequests` (PK: `request_id`, GSI: `company_id-created_at-index` + `status-created_at-index`, PITR ✅, TTL 30d) ✅ creada Fase E
 - [ ] `SupportTickets` (PK: `ticket_id`, GSI: `company_id`, GSI: `assigned_to`)
 - [ ] `BugReports` (PK: `report_id`, GSI: `company_id`)
 - [x] `TenantQuotas` (PK: `company_id`, SK: `period` YYYY-MM, PITR ✅, TTL 400d) ✅ creada Sprint 1.F
 - [x] `Subscriptions` (PK: `company_id`, GSI: `gateway-subscription-index` + `status-index`, PITR ✅) — creada, lista para Sprint 1`
-- [ ] `Affiliates` (PK: `email`, GSI: `affiliate_code-index`) — programa de afiliados (Sprint 1)
-- [ ] `Referrals` (PK: `company_id`, GSI: `affiliate_email-index`) — tracking de referidos (Sprint 1)
-- [ ] `AffiliateCommissions` (PK: `affiliate_email`, SK: `ts#referral_id`, GSI: `released-hold_until-index`) — comisiones individuales (Sprint 1)
-- [ ] `AffiliatePayouts` (PK: `affiliate_email`, SK: `month` YYYY-MM) — payouts mensuales agrupados (Sprint 1)
+- [x] `Affiliates` (PK: `email`, GSI: `affiliate_code-index`) ✅ creada Sprint 1
+- [x] `Referrals` (PK: `company_id`, GSI: `affiliate_email-index`) ✅ creada Sprint 1
+- [x] `AffiliateCommissions` (PK: `affiliate_email`, SK: `ts#referral_id`, GSI: `released-hold_until-index`) ✅ creada Sprint 1
+- [x] `AffiliatePayouts` (PK: `affiliate_email`, SK: `month` YYYY-MM) ✅ creada Sprint 1
 - [x] `MetaEventsLog` (PK: `event_id`, TTL 90d, PITR) ✅ creada — dedup eventos CAPI antes de enviar
 - [x] `AdsAttribution` (PK: `company_id`, SK: `campaign_id#phone#event#epoch`, GSI: `campaign-event-index`, TTL 365d, PITR) ✅ creada — vincula campaign → lead → pago
 - [x] `AdsRecommendations` (PK: `company_id`, SK: `rec_id`, GSI: `status-created-index`, TTL 7d, PITR) ✅ creada — recomendaciones IA del cron
@@ -778,6 +777,46 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Fix #2 (Frontend `5cafbe5`)**: `providers.tsx` interceptor global ahora siempre manda `x-agent-id`: si hay `agentId` lo manda, sino el `email` del owner. Antes el header solo se enviaba si `u.agentId` existía → owners siempre caían a `agent_unknown`.
 - **Test E2E verificado**: audit muestra `actor: "juancmartinezg0827@gmail.com"` ✅
 - **Lección 39**: en multi-rol (owner/admin/agent), el "actor" para audit debe ser el **email** (estable + único por persona), no el `companyId` (compartido) ni el `agentId` (puede ser null en owners). Todo endpoint que loguee debe pasar `agent_id` desde el header `x-agent-id` y usar email como fallback.
+### 10-11 mayo 2026 — Sesión maratón ~20h: Fase D+E completas + Bug #46 race handoff + Bug #48-49 Wompi + Flow scheduling WABA nuevo 🦁
+> Sesión épica. Cerró Fase D (Feature Flags) + Fase E (Impersonate completo con consentimiento) + descubrió y arregló 3 bugs críticos de pagos Wompi + migró Scheduling Flow al WABA nuevo + investigó a fondo bug IG/FB (pendiente App Review Meta).
+#### Fase D — Feature Flags (CERRADO ✅)
+- [x] D-1 a D-5 + D-3.5 DELETE override (API v134-v138, Frontend `6f39cea`) ✅
+#### Fase E — Impersonate (CERRADO ✅)
+- [x] E-1 a E-13 completo (API v141-v147, Frontend 5 commits, tabla SupportRequests, EventBridge cron) ✅
+#### Bug #46 (CRÍTICO 🔴) — Bot y agente responden en paralelo
+- **Fix triple capa**: API v139 auto-takeover + Bot v140 guards PAUSED_FOR_HUMAN en save_session + process_ai_response ✅
+#### Bug #46.1 (UX 🟡) — Audit actor=tenant_id
+- **Fix**: API v140 takeover usa email real + Frontend `5cafbe5` interceptor x-agent-id global ✅
+#### Bug #47 (BLOQUEANTE 🔴) — IG/FB no responde a usuarios externos
+- **Diagnóstico**: App en Live, tokens correctos, scopes correctos. Meta API rechaza con "App does not have Advanced Access to instagram_manage_messages". Solo admin recibe respuestas.
+- **Causa raíz**: `instagram_manage_messages` en Standard Access. Necesita App Review → Advanced Access.
+- **Estado**: submission enviada a Meta, esperando review 3-7 días.
+- **Workaround**: auto-respuesta nativa de IG redirigiendo a WhatsApp.
+#### Bug #48 (CRÍTICO 🔴) — Wompi webhook ignorado ("WOMPI_OK" sin procesar)
+- **Síntoma**: 2 clientes pagaron $280k c/u. Bot recibió webhook de Wompi, respondió 200 OK pero NO procesó el pago. Clientes pensaban que les robaron el dinero.
+- **Causa**: línea 6524 del bot tenía `return {"statusCode": 200, "body": "WOMPI_OK"}` con comentario "no implementado aún" que cortocircuitaba el handler real.
+- **Fix**: Bot v144 — eliminar return prematuro, dejar que `handle_payment_webhook(event, "wompi")` se ejecute ✅
+#### Bug #49 (CRÍTICO 🔴) — Wompi reference no matchea
+- **Síntoma**: Wompi manda `reference: "qy8DC6_1778464263_u8iaghAyN"` (ID interno del payment link) pero DDB tiene `ESCUELADE_1310_1778464243` (SKU que el bot mandó). El handler busca por reference → no encuentra → no procesa.
+- **Fix**: Bot v145 — fallback: si reference no matchea, buscar por `customer_data.phone_number` del webhook → encontrar PENDING más reciente de ese teléfono ✅
+#### Bug #49.1 (CRÍTICO 🔴) — PK equivocada en StudentPaymentState
+- **Síntoma**: `Key={"contact_id": phone}` pero la tabla tiene PK `phoneNumber`.
+- **Fix**: Bot v146 — cambiar a `Key={"phoneNumber": phone}` ✅
+#### Scheduling Flow migrado al WABA nuevo
+- [x] Flow `1623032778987375` creado en WABA `2891074877943438` con `data_api_version: "3.0"` ✅
+- [x] RSA key pair generada + public key registrada en Meta (`signature_status: VALID`) ✅
+- [x] Private key guardada en `config_pro.flows_private_key_b64` (DynamoDB, multi-tenant) ✅
+- [x] Bot v149 lee key de config_pro en vez de env var ✅
+- [x] Bot v150 detecta flow request por body (`encrypted_flow_data`) cuando path no tiene `/flows` ✅
+- [x] Bot v151 responde con version "6.0" + key "dates" correcta ✅
+- [ ] **Pendiente**: fix `_get_available_dates` (lunes aparece, no debería) + TIME_SCREEN no muestra horas + config `max_days_ahead` por tenant
+#### Lecciones nuevas
+37. **🔴 Baseline drift**: antes de cada patch, descargar Lambda desplegada. No confiar en `~/audit_*` viejo.
+38. **🔴 Race conditions handoff**: defense-in-depth con guards en 3 capas (save + process + re-read fresco).
+39. **🔴 Audit actor = email**: en multi-rol, el actor para audit debe ser email (estable), no companyId (compartido).
+40. **🔴 Webhook payment links**: Wompi manda reference interna del payment link, NO el SKU del comercio. Siempre tener fallback por phone_number del customer_data.
+41. **🔴 WhatsApp Flows migración WABA**: flows NO se migran entre WABAs. Hay que recrear flow + registrar RSA key + configurar endpoint_uri + health check ping.
+42. **🔴 Flow version mismatch**: si el flow JSON es v6.0, TODAS las respuestas data_exchange deben tener `"version": "6.0"`. Mezclar 3.0/6.0 causa que Meta no inyecte datos dinámicos.
 ### 8-9 mayo 2026 (noche-madrugada) — Sprint 1 COMPLETO: Trial + Quotas + Billing E2E + Admin Editor 🦁
 > Sesión maratón ~7h. Cerró Sprint 1 completo: trial 14d auto, quotas enforcement ON, billing E2E con Lemon Squeezy (test real con tarjeta), banner trial, email warning, cron expire, landing+dashboard dinámicos desde DDB, admin editor de planes con features_ui+tooltips. 30 deploys (Bot v137-v138 + API v123-v133 + 8 commits frontend).
 #### Sprint 1 — Billing + Trial completado
