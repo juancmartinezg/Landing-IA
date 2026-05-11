@@ -12,9 +12,11 @@ const emptyForm = {
   // M11: vender por cantidad (1 compra = N cupos / N unidades del mismo producto)
  allows_group_booking: false, min_pax: '1', max_pax: '10',
   next_session_date: '', session_available: true,
-  // Sprint UI scheduling multi-tenant: horarios + max_days_ahead por servicio
+   // Sprint UI scheduling multi-tenant: horarios + max_days_ahead por servicio
   time_slots: [] as number[],
   max_days_ahead: '',
+  // Días de la semana en que ESTE servicio está disponible (subset del horario del negocio)
+  available_weekdays: [] as number[],
 };
 export default function ServicesPage() {
   const { user } = useAuth();
@@ -173,6 +175,7 @@ export default function ServicesPage() {
       // Sprint UI scheduling: cargar horarios + max_days_ahead del servicio (si existen)
       time_slots: Array.isArray(svc.scheduling?.time_slots) ? svc.scheduling.time_slots.map((h: any) => parseInt(h)) : [],
       max_days_ahead: svc.scheduling?.max_days_ahead ? String(svc.scheduling.max_days_ahead) : '',
+      available_weekdays: Array.isArray(svc.scheduling?.available_weekdays) ? svc.scheduling.available_weekdays.map((d: any) => parseInt(d)) : [],
     });
     setShowForm(true);
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -209,6 +212,8 @@ export default function ServicesPage() {
           ...(form.time_slots.length > 0 ? { time_slots: form.time_slots } : {}),
           // Anticipación máxima de reserva (vacío = usa max_days_ahead del config_pro, default 7)
           ...(parseInt(form.max_days_ahead) > 0 ? { max_days_ahead: parseInt(form.max_days_ahead) } : {}),
+          // Días de la semana disponibles para ESTE servicio (vacío = todos los del negocio)
+          ...(form.available_weekdays.length > 0 ? { available_weekdays: form.available_weekdays } : {}),
         },
 
       };
@@ -576,6 +581,54 @@ export default function ServicesPage() {
               {form.time_slots.length > 0 && (
                 <p className="text-[10px] text-emerald-400 mt-2">
                   ✓ {form.time_slots.length} horario{form.time_slots.length !== 1 ? 's' : ''} seleccionado{form.time_slots.length !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+            <div className="mb-4">
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-2">
+                Días de la semana disponibles
+              </label>
+              <p className="text-[10px] text-gray-500 mb-2">
+                Marca los días en que ofreces este servicio. Si no marcas ninguno, usa los días del negocio.
+                <br/>💡 Ejemplos: Semillero juvenil → solo Sábado y Domingo · Promo 2x1 → solo Lunes
+              </p>
+              <div className="grid grid-cols-7 gap-2">
+                {[
+                  { id: 0, label: 'Lun' },
+                  { id: 1, label: 'Mar' },
+                  { id: 2, label: 'Mié' },
+                  { id: 3, label: 'Jue' },
+                  { id: 4, label: 'Vie' },
+                  { id: 5, label: 'Sáb' },
+                  { id: 6, label: 'Dom' },
+                ].map((day) => {
+                  const selected = form.available_weekdays.includes(day.id);
+                  return (
+                    <button
+                      key={day.id}
+                      type="button"
+                      onClick={() => {
+                        setForm({
+                          ...form,
+                          available_weekdays: selected
+                            ? form.available_weekdays.filter((d) => d !== day.id)
+                            : [...form.available_weekdays, day.id].sort((a, b) => a - b),
+                        });
+                      }}
+                      className={`px-2 py-2 rounded-lg text-xs font-medium transition-all border ${
+                        selected
+                          ? 'bg-indigo-600 border-indigo-500 text-white'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:border-indigo-500/50'
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {form.available_weekdays.length > 0 && (
+                <p className="text-[10px] text-emerald-400 mt-2">
+                  ✓ {form.available_weekdays.length} día{form.available_weekdays.length !== 1 ? 's' : ''} seleccionado{form.available_weekdays.length !== 1 ? 's' : ''}
                 </p>
               )}
             </div>
