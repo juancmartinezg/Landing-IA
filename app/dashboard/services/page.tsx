@@ -6,7 +6,7 @@ const emptyForm = {
   name: '', description: '', category: 'servicio',
   regular_price: '', deposit_required: '', currency: 'COP',
   image_url: '', duration_hours: '1', service_type: 'personalizado',
-  post_payment_flow: '', download_url: '',
+  post_payment_flow: '', download_url: '', post_payment_message: '',
   track_inventory: false, sku: '', stock_quantity: '', stock_min_alert: '5',
   cost_price: '', supplier: '',
   // M11: vender por cantidad (1 compra = N cupos / N unidades del mismo producto)
@@ -157,6 +157,7 @@ export default function ServicesPage() {
       service_type: svc.scheduling?.service_type || 'personalizado',
       post_payment_flow: svc.post_payment_flow || '',
       download_url: svc.download_url || '',
+      post_payment_message: svc.post_payment_message || '',
       track_inventory: svc.track_inventory || false,
       sku: svc.sku || '',
       stock_quantity: String(svc.stock_quantity ?? ''),
@@ -191,6 +192,7 @@ export default function ServicesPage() {
         image_url: form.image_url,
         post_payment_flow: form.post_payment_flow || undefined,
         download_url: form.post_payment_flow === 'download' ? form.download_url : undefined,
+        post_payment_message: form.post_payment_flow === 'send_group_link' ? form.post_payment_message : undefined,
         pricing: {
           regular_price: parseInt(form.regular_price) || 0,
           deposit_required: parseInt(form.deposit_required) || 0,
@@ -341,13 +343,26 @@ export default function ServicesPage() {
               <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Después del pago</label>
               <select value={form.post_payment_flow} onChange={(e) => setForm({...form, post_payment_flow: e.target.value})}
                 className="bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white w-full">
-                <option value="" className="bg-[#1a1f2e] text-white">— Usar default global —</option>
+               <option value="" className="bg-[#1a1f2e] text-white">— Usar default global —</option>
                 <option value="scheduling" className="bg-[#1a1f2e] text-white">📅 Agendar cita</option>
                 <option value="shipping" className="bg-[#1a1f2e] text-white">📦 Pedir dirección de envío</option>
                 <option value="download" className="bg-[#1a1f2e] text-white">⬇️ Enviar descarga</option>
+                <option value="send_group_link" className="bg-[#1a1f2e] text-white">🔗 Enviar mensaje con link/info</option>
                 <option value="thanks_only" className="bg-[#1a1f2e] text-white">🙏 Solo agradecimiento</option>
               </select>
             </div>
+            {form.post_payment_flow === 'send_group_link' && (
+              <div className="md:col-span-2">
+                <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Mensaje post-pago</label>
+                <textarea value={form.post_payment_message}
+                  onChange={(e) => setForm({...form, post_payment_message: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white h-32 resize-none"
+                  placeholder={"¡Bienvenido!\nTu curso comienza el 1 de junio.\nÚnete al grupo: https://chat.whatsapp.com/XXXXX"} />
+                <p className="text-[10px] text-gray-500 mt-1">
+                  💡 Soporta links de WhatsApp, Telegram, Zoom, Discord, calendarios, etc. El bot lo envía tal cual lo escribas.
+                </p>
+              </div>
+            )}
             {form.post_payment_flow === 'download' && (
               <div className="md:col-span-2">
                 <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">URL de descarga</label>
