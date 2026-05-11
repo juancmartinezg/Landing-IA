@@ -12,6 +12,9 @@ const emptyForm = {
   // M11: vender por cantidad (1 compra = N cupos / N unidades del mismo producto)
  allows_group_booking: false, min_pax: '1', max_pax: '10',
   next_session_date: '', session_available: true,
+  // Sprint UI scheduling multi-tenant: horarios + max_days_ahead por servicio
+  time_slots: [] as number[],
+  max_days_ahead: '',
 };
 export default function ServicesPage() {
   const { user } = useAuth();
@@ -166,6 +169,9 @@ export default function ServicesPage() {
       max_pax: String(svc.max_pax ?? '10'),
       next_session_date: svc.next_session_date || '',
       session_available: svc.session_available !== false,
+      // Sprint UI scheduling: cargar horarios + max_days_ahead del servicio (si existen)
+      time_slots: Array.isArray(svc.scheduling?.time_slots) ? svc.scheduling.time_slots.map((h: any) => parseInt(h)) : [],
+      max_days_ahead: svc.scheduling?.max_days_ahead ? String(svc.scheduling.max_days_ahead) : '',
     });
     setShowForm(true);
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -197,7 +203,12 @@ export default function ServicesPage() {
           duration_hours: parseInt(form.duration_hours) || 1,
           group_booking: false,
           scheduling_mode: 'calendar',
+          // Sprint UI multi-tenant: horarios fijos (vacío = usa business_hours del config_pro)
+          ...(form.time_slots.length > 0 ? { time_slots: form.time_slots } : {}),
+          // Anticipación máxima de reserva (vacío = usa max_days_ahead del config_pro, default 7)
+          ...(parseInt(form.max_days_ahead) > 0 ? { max_days_ahead: parseInt(form.max_days_ahead) } : {}),
         },
+
       };
       if (form.track_inventory) {
         payload.track_inventory = true;
@@ -503,6 +514,73 @@ export default function ServicesPage() {
                 </div>
               </>
             )}
+          </div>
+          {/* Sprint UI scheduling multi-tenant: horarios específicos + anticipación */}
+          <div className="mt-4 border-t border-white/5 pt-4">
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">
+              ⚙️ Agendamiento avanzado <span className="text-gray-600 font-normal normal-case">(opcional)</span>
+            </p>
+            <p className="text-[10px] text-gray-500 mb-4">
+              Personaliza los horarios y la anticipación de reserva para ESTE servicio.
+              Si lo dejas vacío, el bot usa los horarios generales de tu negocio.
+            </p>
+            <div className="mb-4">
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-2">
+                Horarios disponibles
+              </label>
+              <p className="text-[10px] text-gray-500 mb-2">
+                Marca las horas en que ofreces este servicio. Si no marcas ninguna, el bot usa el horario general del negocio.
+              </p>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                {Array.from({ length: 14 }, (_, i) => i + 7).map((hour) => {
+                  const selected = form.time_slots.includes(hour);
+                  const label = hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour - 12}:00 PM`;
+                  return (
+                    <button
+                      key={hour}
+                      type="button"
+                      onClick={() => {
+                        setForm({
+                          ...form,
+                          time_slots: selected
+                            ? form.time_slots.filter((h) => h !== hour)
+                            : [...form.time_slots, hour].sort((a, b) => a - b),
+                        });
+                      }}
+                      className={`px-2 py-2 rounded-lg text-xs font-medium transition-all border ${
+                        selected
+                          ? 'bg-indigo-600 border-indigo-500 text-white'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:border-indigo-500/50'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {form.time_slots.length > 0 && (
+                <p className="text-[10px] text-emerald-400 mt-2">
+                  ✓ {form.time_slots.length} horario{form.time_slots.length !== 1 ? 's' : ''} seleccionado{form.time_slots.length !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
+                Anticipación máxima de reserva (días)
+              </label>
+              <input
+                type="number"
+                value={form.max_days_ahead}
+                onChange={(e) => setForm({ ...form, max_days_ahead: e.target.value })}
+                min="1"
+                max="365"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-white"
+                placeholder="7 (default)"
+              />
+              <p className="text-[10px] text-gray-500 mt-1">
+                💡 Ejemplos: consultorios médicos 30-90 días · talleres puntuales 14 días · eventos especiales 60 días.
+              </p>
+            </div>
           </div>
           <div className="flex gap-3 mt-4">
             <button onClick={closeForm}
