@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**v65** — planes Starter/Growth/Agency + billing Lemon Squeezy)
+**v153** — scheduling flow multi-tenant: company_id resuelto desde sesión + TIME_SCREEN keys alineadas con flow JSON v6.0 + max_days_ahead config-driven + PK phoneNumber en updates)
 Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
@@ -95,7 +95,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,800 líneas, **v151** — Wompi webhook fix: eliminado return prematuro WOMPI_OK + fallback búsqueda por phoneNumber + PK fix StudentPaymentState + Scheduling Flow v4 con RSA key desde config_pro DDB + detección flow por body + PAUSED_FOR_HUMAN guard triple capa) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,670 líneas, **v153** — scheduling flow multi-tenant: `company_id` resuelto desde sesión del phone en `_handle_scheduling_flow_exchange` + `max_days_ahead` config-driven + PK `phoneNumber` corregida en 2 `update_item` de scheduling + TIME_SCREEN keys `date_label`+`slots` alineadas con flow JSON v6.0) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
 - `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** (~14,000 líneas, ~125 endpoints, **v147** — Fase E completa: impersonate read_only/read_write con HMAC tickets + consentimiento del cliente via email + support-history + cron cleanup + auto-poll ticket upgrade) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
 - `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os + SOURCE_THRESHOLDS human_agent=2 + preserva source SK)
@@ -817,6 +817,45 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 40. **🔴 Webhook payment links**: Wompi manda reference interna del payment link, NO el SKU del comercio. Siempre tener fallback por phone_number del customer_data.
 41. **🔴 WhatsApp Flows migración WABA**: flows NO se migran entre WABAs. Hay que recrear flow + registrar RSA key + configurar endpoint_uri + health check ping.
 42. **🔴 Flow version mismatch**: si el flow JSON es v6.0, TODAS las respuestas data_exchange deben tener `"version": "6.0"`. Mezclar 3.0/6.0 causa que Meta no inyecte datos dinámicos.
+### 11 mayo 2026 (madrugada) — Sprint Scheduling Flow multi-tenant 🦁
+> Sesión ~3h. Cerró 5 bugs del scheduling flow + dejó plan multi-tenant para UI de horarios. 2 deploys (Bot v152 + v153) + 1 fix de dato en DDB pendiente. Backup v151 guardado en `~/lambda_v151_backup.zip` por si rollback.
+#### Bug #50 (CRÍTICO 🔴) — Scheduling Flow rompía multi-tenant con company_id=""
+- **Síntoma**: TIME_SCREEN no mostraba horarios, lunes aparecía disponible, `${data.service_type_label}` se renderizaba literal. El bot funcionaba accidentalmente para JMC en versiones viejas porque `DEFAULT_COMPANY_ID="JMC"` estaba seteado por env var.
+- **Causa raíz**: `_handle_scheduling_flow_exchange` (L3932) hardcodeaba `DEFAULT_COMPANY_ID` en 4 call sites (`get_services_catalog`, `_get_available_dates`, `_get_available_slots`, `get_config_pro`). Tras Bot v19 multi-tenant strict, `DEFAULT_COMPANY_ID=""` y todas las queries caían a empty string → `ValidationException: empty string key`. JMC funcionaba a medias solo porque el cache del catalogo era global y a veces tenía data residual.
+- **Fix triple capa (Bot v152)**:
+  - `_handle_scheduling_flow_exchange` ahora resuelve `company_id` desde `get_session(phone)` (que `_trigger_scheduling_flow` ya guarda en L3539). Fallback secundario: `StudentPaymentState.company_id`.
+  - 4 call sites internos ahora reciben el `company_id` real (no más `DEFAULT_COMPANY_ID`).
+  - `max_days_ahead` ahora se lee de `config_pro.scheduling.max_days_ahead` (default 7) → consultorios pueden configurar 30-90 días sin tocar código.
+- **Verificación**: log `flow_exchange: phone=... company_id=JMC slug=... type=...` aparece en CloudWatch tras invoke de prueba ✅
+- **Lección 43**: cuando un handler recibe un `phone` (token, callback, webhook) y necesita el `company_id`, NO usar `DEFAULT_COMPANY_ID`. Resolver SIEMPRE desde sesión o desde un item canónico (`StudentPaymentState`, `Leads_CRM_v2`). Multi-tenant strict no perdona shortcuts.
+#### Bug #51 (CRÍTICO 🔴) — TIME_SCREEN muerto por keys de data mal nombradas
+- **Síntoma**: cliente clickeaba "Agendar cita 📅" → DATE_SCREEN se renderizaba (con lunes erróneo) → seleccionaba fecha → TIME_SCREEN quedaba en blanco sin horarios.
+- **Causa**: el flow JSON publicado en Meta (`1623032778987375`) esperaba keys `dates` (DATE_SCREEN) y `date_label`+`slots` (TIME_SCREEN), pero el bot enviaba `available_dates`, `selected_date_label`, `available_times`. Mismatch silencioso — Meta no renderiza componentes con `data-source` que no encuentra.
+- **Diagnóstico clave**: descargar el flow JSON real desde `https://graph.facebook.com/v22.0/{FLOW_ID}/assets` y comparar keys vs lo que envía el bot. `data_api_version: "3.0"` + `version: "6.0"` es la combinación correcta — NO importa el `data_api_version` (sigue siendo 3.0 incluso si el flow es v6.0).
+- **Fix (Bot v153)**: renombrar 2 keys del response del bot:
+  - `"available_dates"` → `"dates"` (DATE_SCREEN)
+  - `"selected_date_label"` → `"date_label"` + `"available_times"` → `"slots"` (TIME_SCREEN)
+- **Lección 44**: tras publicar un WhatsApp Flow, SIEMPRE descargar el asset publicado y verificar las keys esperadas con `python3 -c "import json; ..."`. El compilador del flow no avisa si el bot manda nombres distintos — render queda vacío silente.
+#### Bug #52 (LATENTE 🟡) — PK incorrecta en update_item de scheduling (Lección 40 reincidencia)
+- **Síntoma**: silente. Tras agendar exitosamente, los campos `scheduled_date`, `scheduled_hour`, `schedule_status` nunca aparecían en `StudentPaymentState`. Reportes/analytics no podían mostrar tasa de agendamiento post-pago.
+- **Causa**: 2 `payment_table.update_item` (L3712 y L4138) usaban `Key={"contact_id": phone}` pero la tabla tiene PK `phoneNumber`. DynamoDB no lanza error — el update simplemente no aplica.
+- **Fix (Bot v152)**: cambiar a `Key={"phoneNumber": ...}` en ambos call sites.
+- **Lección 40 reincidencia**: este es el 4to bug del estilo "PK incorrecta en update silencioso" del año. Necesario: auditoría automatizada que recorra todos los `update_item(Table=X, Key=Y)` y valide Y contra el KeySchema real.
+#### Pendientes detectados (no bloquean — siguiente sprint)
+- **2 `ValidationException` latentes en `handle_payment_webhook`** (L2904-3036): 2 call sites pasan `""` a `get_config_pro` o `get_services_catalog` antes de tener el item. No rompen el flow (try/except los traga) pero ensucian CloudWatch.
+- **`Tipo: ${data.service_type_label}` renderizado literal en DATE_SCREEN**: el bot manda la key bien, pero Meta no la interpola en el `TextBody`. Workaround acordado: eliminar el `TextBody` del flow JSON publicado (no es necesario que aparezca tipo de servicio, el cliente ya sabe qué pagó).
+- **Datos JMC sin `service.scheduling.time_slots`**: el código está bien escrito (lee `time_slots` del servicio), pero el servicio `seminario-tiro-pistola-9mm` no tiene el campo configurado → cae al rango completo de `business_hours` (9-17). Pendiente: agregar el dato a DDB + construir UI multi-tenant en `/dashboard/services` para que clientes configuren sus horarios sin tocar DDB.
+### Próximo sprint: Scheduling UI multi-tenant
+- **API SaaS_API_Handler**: whitelist `service.scheduling.time_slots`, `duration_hours`, `max_days_ahead` en `handle_add_service` + `handle_update_service`.
+- **Frontend `/dashboard/services`**: bloque colapsable "⚙️ Agendamiento avanzado" en el modal de servicio con multi-checkbox 8AM-8PM + select duración + input max_days_ahead. Default `[]` = usa business_hours del config_pro.
+- **Bot**: extender `_handle_scheduling_flow_exchange` para leer `max_days_ahead` del servicio individual (override sobre config_pro global) — citas a 3 meses para consultorios.
+- **DatePicker nativo**: investigar componente WhatsApp Flows v5.0+ para reemplazar `RadioButtonsGroup` (limite 30 items). Necesario para consultorios que agendan hasta 90 días adelante.
+#### Lecciones nuevas (sesión 11 mayo madrugada)
+43. **🔴 Multi-tenant strict no perdona shortcuts**: cuando un handler recibe un `phone`/token/callback y necesita el `company_id`, NO usar `DEFAULT_COMPANY_ID`. Resolver SIEMPRE desde sesión activa o desde item canónico (`StudentPaymentState`, `Leads_CRM_v2`). Si `DEFAULT_COMPANY_ID=""` strict, cualquier shortcut explota con `ValidationException` silente.
+44. **🔴 WhatsApp Flows keys del data**: tras publicar un flow, descargar el asset con `GET /flows/{id}/assets` y verificar las keys que cada screen espera en su `data`. Si el bot manda nombres distintos, Meta renderiza el componente vacío sin error. Crear hook pre-deploy: validar que toda response del flow_exchange mande las keys del flow JSON publicado.
+45. **🟡 Lección 40 sigue reincidiendo (4ta vez)**: PK incorrecta en `update_item` silente. Necesario crear job de auditoría que recorra el código buscando `Table("X").update_item(Key={...})` y valide contra el KeySchema real de cada tabla.
+46. **🔴 Baseline drift confirmado (Lección 37)**: `~/audit_bot/lambda_function.py` estaba 2.6KB más viejo que la versión desplegada (`_is_session_paused_for_human` faltaba). SIEMPRE descargar el paquete con `aws lambda get-function --query Code.Location | xargs curl` antes de parchar. Nunca confiar en carpetas locales viejas.
+47. **🦁 Filosofía multi-tenant en datos de cliente**: si necesitás corregir un dato puntual de un tenant (ej: agregar `time_slots` a un servicio), preguntate ANTES "¿esto debería ser editable desde la UI del cliente?". Si la respuesta es sí → construir la UI en vez de hacer el update DDB a mano. El update DDB es deuda técnica disfrazada de solucirápida — cada update manual te ata como dueño-soporte y rompe el modelo SaaS escalable. Filosofía león: si no escala a 1000 clientes, no lo hagas a 1.
 ### 8-9 mayo 2026 (noche-madrugada) — Sprint 1 COMPLETO: Trial + Quotas + Billing E2E + Admin Editor 🦁
 > Sesión maratón ~7h. Cerró Sprint 1 completo: trial 14d auto, quotas enforcement ON, billing E2E con Lemon Squeezy (test real con tarjeta), banner trial, email warning, cron expire, landing+dashboard dinámicos desde DDB, admin editor de planes con features_ui+tooltips. 30 deploys (Bot v137-v138 + API v123-v133 + 8 commits frontend).
 #### Sprint 1 — Billing + Trial completado
