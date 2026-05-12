@@ -2,6 +2,8 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
+**v164** — Ads Pro v2 cerrado: Regla #8 KILL_CREATIVE (API v153) + `/ads/generate-hook-variants` Gemini Flash Lite (API v155) + frontend botón ✨ Variantes + modal con patrón emocional (`92a3dcd`)
+**v164** — Ads Pro v2 CERRADO 🎯 Regla #8 KILL_CREATIVE en motor B6.5 (API v153) + `POST /ads/generate-hook-variants` Gemini Flash Lite con cache 5min (API v155) + frontend botón ✨ Variantes en el 🏆 + modal con 3 hooks copiables y patrón emocional detectado (`92a3dcd`). JMC verificado: 0 KILL_CREATIVE (creatives sanos 2.43-4.99% CTR) + Gemini detectó patrón "escasez" del ganador.
 **v163** — deuda técnica cerrada: CAPI Schedule funnel completo + Google Calendar multi-tenant + ValidationException fix + Ads dashboard cache L1+L2 DDB (0 rate limits Meta) + fix frontend tab sobreescritura métricas)
 Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
@@ -191,12 +193,13 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] Cache Meta API L1 memoria + L2 DynamoDB persistente (TTL 15 min, sobrevive cold starts, 0 rate limits) — API v149
 - [x] Lazy load ads
 - [x] Cron diario EventBridge
-- [ ] **Ads Pro v2 — AI Creative Analysis** (Sprint en progreso):
-  - [ ] Análisis a nivel **creative/ad** (no solo campaña) — métricas CTR/CPL/Hook Rate por variante individual
-  - [ ] Hook generation basada en ganadores — Gemini analiza texto del creative con mejor CTR y genera variantes del mismo patrón emocional
-  - [ ] Auto-kill perdedores por Hook Rate — si creative tiene <X% CTR después de 500 impressions, recomendación automática de pausar
-  - [ ] Ranking de creatives en tab "🎯 IA" del dashboard
-  - [ ] **Futuro (Sprint 3):** AI Creative Loop completo (5 motores: Content Ingestion → Winner Analysis → Hook Generation → Creative Production → Publish+Learn). Contexto técnico absorbido de referencia Meta 2026 — `Velocity = Creative Volume × Signal Quality × Learning Speed`. Cross-tenant learning como ventaja competitiva del SaaS.
+- [x] **Ads Pro v2 — AI Creative Analysis** (CERRADO ✅ — 12 mayo 2026):
+  - [x] Análisis a nivel **creative/ad** (no solo campaña) — métricas CTR/CPL/Hook Rate por variante individual (API v149 + `_b65_fetch_ad_creative_ranking`)
+  - [x] Hook generation basada en ganadores — `POST /ads/generate-hook-variants` con Gemini Flash Lite (API v155) + cache 5min + cascada modelos
+  - [x] Auto-kill perdedores por Hook Rate — Regla #8 `kill_creative` en B6.5: CTR<1% + ≥500 impr + CPL>2× avg (API v153)
+  - [x] Ranking de creatives en tab "🎯 IA" del dashboard (`GET /ads/creative-ranking` API v152 + frontend `92a3dcd`)
+  - [x] Botón "✨ Variantes" en el 🏆 + modal con 3 hooks copiables + patrón emocional detectado (frontend `92a3dcd`)
+  - [ ] **Futuro (Sprint 3):** AI Creative Loop completo (5 motores: Content Ingestion → Winner Analysis → Hook Generation → Creative Production → Publish+Learn). Falta: endpoint `/ads/duplicate-ad` (publicar variante 1-click en Ads Manager). Contexto técnico absorbido de referencia Meta 2026 — `Velocity = Creative Volume × Signal Quality × Learning Speed`. Cross-tenant learning como ventaja competitiva del SaaS.
 ### 💻 Frontend
 - [x] 19+ páginas: dashboard, CRM Kanban+IA, chat en vivo, catálogo+inventario, citas, pagos, analytics, memoria IA, training, templates, gateway, WhatsApp Embedded Signup, settings, ads wizard+dashboard, agents, agents/performance
 - [x] Auth Cognito email/Google + callback + welcome
@@ -963,6 +966,38 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 #### Lecciones nuevas
 54. **🔴 Cache en memoria Lambda es inútil para dashboards**: el Lambda se apaga después de ~5 min de inactividad → cache en dict se pierde → siguiente visita golpea Meta de nuevo → rate limit. DynamoDB como L2 resuelve el problema porque persiste entre cold starts. Patrón reusable para cualquier API externa con rate limit.
 55. **🔴 Frontend: setCampaigns sobreescribe métricas**: si un tab hace fetch a un endpoint que devuelve campañas SIN métricas y hace `setCampaigns(data)`, borra las métricas que ya estaban en el state del `/ads/init`. Guard: solo recargar si el state está vacío.
+### 12 mayo 2026 (mañana) — Ads Pro v2 CERRADO 🎯 KILL_CREATIVE + Hook Generation E2E 🦁
+> Sesión ~2h. Cerró el Sprint Ads Pro v2 completo con 3 bloques atómicos. Reusa motor B6.5 ya en producción (7 reglas → 8 reglas). Gemini Flash Lite cascada con fallback (Lección 19 aplicada). Cache en memoria 5min. Frontend con botón ✨ Variantes + modal copiable. 3 deploys API (v153/v154/v155) + 1 commit frontend (`92a3dcd`).
+#### Bloque 1 — Regla #8 KILL_CREATIVE (API v153)
+- [x] **Detecta creatives perdedores**: CTR<1% + ≥500 impresiones + CPL>2× avg de la campaña → recomienda pausar (NO auto-pausa, Lección Bug #2).
+- [x] **Inyectada en `_b65_fetch_ad_creative_ranking`** justo después del sort (tiene cpl/ctr/impressions/spend por ad en scope).
+- [x] **Anti-spam compound key**: `campaign_id#ad_id` en `_b65_already_dismissed_recently` para filtrar por anuncio individual, no por campaña entera.
+- [x] **Justification numérica**: `{impressions, ctr_pct, cpl_cop, avg_cpl_campaign, threshold_ctr_pct=1.0, threshold_cpl_multiplier=2.0, spend_wasted_cop}` + confidence 85.
+- [x] **JMC verificado**: 8 campañas con ranking, 0 KILL_CREATIVE generadas (creatives sanos 2.43-4.99% CTR). Regla funciona, no hay perdedores que matar. Cuando lances variantes, los cazará automáticamente.
+#### Bloque 2 — `POST /ads/generate-hook-variants` (API v154 + fix v155)
+- [x] **Endpoint nuevo**: recibe `{ad_id, creative_text, campaign_name}` → Gemini Flash Lite analiza patrón emocional → devuelve `{variants: [{hook, angle, pattern}], pattern, model, cached}`.
+- [x] **Cache 5min en memoria**: dict `_hook_variants_cache[ad_id]` evita recomputar el mismo ganador. Segunda llamada al mismo `ad_id` retorna instantáneo con `cached: true`.
+- [x] **Cascada de modelos** (Lección 19 aplicada): `gemini-2.5-flash-lite` (principal) → `gemini-flash-lite-latest` (fallback). 0% dependencia de un solo modelo.
+- [x] **Quita acentos del input** (Lección 18 / Bug #29): `unicodedata.normalize("NFD")` antes de mandar a Gemini. Input sin tildes, output con tildes correctas.
+- [x] **responseMimeType=application/json** + responseSchema implícito en prompt (estructura exacta esperada).
+- [x] **Validación dura**: max 3 variantes, hook≤200 chars, angle≤100 chars. Si Gemini devuelve vacío, intenta fallback.
+- [x] **Test JMC verificado**: creative "Cupos limitados" → patrón detectado "escasez" → 3 hooks con ángulos distintos (escasez directa / última oportunidad / call-to-action negativa).
+- [x] **Bug v154→v155**: usaba `http.request` (no existe en API SaaS — solo en Bot). Fix: `urllib3.PoolManager` local `_hgv`.
+#### Bloque 3 — Frontend botón ✨ Variantes + modal (`92a3dcd`)
+- [x] **Botón "✨ Variantes" en el 🏆** del ranking de creatives — guard `idx === 0 && ad.ctr >= 2` (solo aparece en ganadores con CTR mínimo, sino no tiene sentido replicar un loser).
+- [x] **Modal full-screen** con backdrop blur, header sticky, chip de patrón emocional, 3 cards de variantes con hook + angle + botón "📋 Copiar" individual.
+- [x] **Feedback ✓ Copiado 2s** con `navigator.clipboard.writeText` + `setTimeout` reset.
+- [x] **Loading state**: spinner morado + "Generando 3 variantes con IA..." durante ~3s.
+- [x] **Toast cache**: "⚡ Variantes recuperadas del cache" cuando backend retorna `cached: true`.
+- [x] **Tip educativo**: caja morada al final explicando cómo usar las variantes en Ads Manager (duplicar ganador, cambiar solo el hook, mantener imagen+audiencia para aislar el efecto).
+#### Pendientes detectados (próximo sprint)
+- 🟡 **Endpoint `POST /ads/duplicate-ad`**: publicar variante 1-click directo en Ads Manager (hoy el cliente copia/pega manualmente). Requiere Meta Graph API call para duplicar ad + reemplazar primary_text. Estimado 2-3h.
+- 🟡 **Tracking de variantes**: tabla nueva `AdsHookVariants` para comparar CTR de la variante vs el ganador original a los 7 días. Cierra el AI Creative Loop.
+- 🟡 **Multi-pattern detection**: hoy Gemini detecta UN patrón. Para ganadores muy buenos (CTR>4%) generar 3 hooks de 3 patrones distintos (escasez + curiosidad + prueba social) para diversificar.
+#### Lecciones nuevas (sesión 12 mayo mañana)
+56. **🔴 API SaaS no tiene `http` global**: cada handler que llama APIs externas crea su propio `urllib3.PoolManager()` local (`_han`, `_u3v`, `_hgv`, etc). Antes de copiar código de Gemini desde el Bot al API, verificar que el cliente HTTP existe en el handler destino. Costo del error v154: 1 deploy extra (v155) + ~3 min. Patrón seguro: `import urllib3 as _u3_LOCAL; _h = _u3_LOCAL.PoolManager()` al inicio del handler.
+57. **🦁 Reusar motor antes que crear endpoint nuevo**: la Regla #8 KILL_CREATIVE se inyectó dentro de `_b65_fetch_ad_creative_ranking` (que ya tenía cpl/ctr/impressions en scope), no en un endpoint nuevo. Resultado: 0 frontend, 0 tablas nuevas, 0 router cambios. Si el motor B6.5 ya itera sobre ads y tiene los datos necesarios, agregar regla #N ahí mismo es el camino correcto. Filosofía león: ¿esto cabe dentro de algo que ya funciona?
+58. **🟢 Detección temprana de "falsa alarma" en regla nueva**: tras deployar Regla #8 obtuvimos `total_recommendations: 0`. En vez de asumir bug, verificamos con scan al `creative_ranking` existente y confirmamos que NINGÚN ad cumple los 3 criterios duros. La regla está OK, JMC tiene creatives sanos. Patrón: al deployar regla nueva con 0 hits, validar con los datos reales antes de debug.
 ### 8-9 mayo 2026 (noche-madrugada) — Sprint 1 COMPLETO: Trial + Quotas + Billing E2E + Admin Editor 🦁
 > Sesión maratón ~7h. Cerró Sprint 1 completo: trial 14d auto, quotas enforcement ON, billing E2E con Lemon Squeezy (test real con tarjeta), banner trial, email warning, cron expire, landing+dashboard dinámicos desde DDB, admin editor de planes con features_ui+tooltips. 30 deploys (Bot v137-v138 + API v123-v133 + 8 commits frontend).
 #### Sprint 1 — Billing + Trial completado
@@ -1419,8 +1454,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **90% → 92%** — Memoria source-aware (Bot v136 + promote-cron v2) + 6 bugs CRM masivos cerrados (Bug #9 reincidió 3 veces, Bug #44 fix CRÍTICO created_at GSI con paid_count 0→83 y revenue $23.38M COP) + cleanup memoria 615 entries — API v117-v122 🦁
 - [x] **92% → 94%** — Sprint 1 COMPLETADO 🍾 Trial 14d E2E + QUOTA_ENFORCE=true + billing LS E2E (test real $297) + cron trial-expire + email warning + landing+dashboard dinámicos DDB + admin editor planes + 7 bugs más (Bug #45 router /billing/me) — Bot v137-v138, API v123-v133, 8 commits frontend 🦁
 - [x] **94% → 95%** — Calendly Mode CERRADO 📅 CalendarPicker v7.3 + auto-onboarding multi-tenant del flow (1 POST = flow creado en Meta) + UI completa `/dashboard/services` con `time_slots` / `available_weekdays` / `booking_mode` solapable+exclusive / `max_days_ahead` / `post_payment_flow=send_group_link` / recordatorios async post-agendamiento — Bot v154-v162, API v148, 4 commits frontend (4b0d78c, 8f8775b, a4c3172, fc069b1). Bug #56 falsa alarma (testing pipeline borraba scheduled_*). 5 lecciones nuevas (48-53). 🦁
-- [ ] **95% → 96%** — Feature Flags toggles por tenant (D3-D4) + Impersonate "Ver como cliente" (E1-E4) + Hook agente humano memoria + Web Chat Widget + Google Calendar multi-tenant fix + CAPI Schedule event ⭐ ESTÁS AQUÍ
-- [ ] **96% → 100%** — Sprints 3-7 + Admin D-K completo + RUGIDO 🦁
+- [x] **95% → 96%** — Ads Pro v2 CERRADO 🎯 Regla #8 KILL_CREATIVE (B6.5 motor) + `/ads/generate-hook-variants` Gemini Flash Lite con cache 5min + frontend botón ✨ Variantes en el 🏆 + modal con 3 hooks copiables y patrón emocional detectado. JMC verificado: 0 KILL_CREATIVE (creatives sanos 2.43-4.99% CTR) + Gemini detectó patrón "escasez" del ganador. API v153-v155, frontend `92a3dcd`. 3 lecciones nuevas (56-58). ⭐ ESTÁS AQUÍ
+- [ ] **96% → 100%** — Sprints 3-7 + Admin D-K completo + Feature Flags UI + Impersonate + Hook agente humano memoria + Web Chat Widget + Google Calendar multi-tenant fix + CAPI Schedule + RUGIDO 🦁
 
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
