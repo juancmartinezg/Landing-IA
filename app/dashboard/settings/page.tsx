@@ -1323,34 +1323,35 @@ const handleSaveAdsConfig = async () => {
                 ))}
               </div>
             </div>
-            <div className="border-t border-white/5 pt-4">
+             <div className="border-t border-white/5 pt-4">
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 pt-0.5">
-                  <button
-                    onClick={() => setAdsForm({...adsForm, ads_cross_tenant_optin: !adsForm.ads_cross_tenant_optin})}
-                    className={`relative w-11 h-6 rounded-full transition-all ${
-                      adsForm.ads_cross_tenant_optin ? 'bg-emerald-600' : 'bg-white/10'
-                    }`}>
-                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      adsForm.ads_cross_tenant_optin ? 'translate-x-5' : ''
-                    }`} />
-                  </button>
+                  <span className="inline-flex items-center justify-center w-11 h-6 rounded-full bg-emerald-600 text-white text-[10px] font-bold">
+                    ✓ ON
+                  </span>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold mb-1">🌐 Aprendizaje colaborativo entre negocios</p>
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <p className="text-sm font-bold">🌐 Aprendizaje colaborativo entre negocios</p>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">
+                      ACTIVO SIEMPRE
+                    </span>
+                  </div>
                   <p className="text-[11px] text-gray-400 leading-relaxed">
-                    Si activas esto, cuando una de tus variantes <strong className="text-emerald-400">supere al original en +20% CTR</strong>,
-                    el patrón emocional que usó (ej: "escasez", "curiosidad") se compartirá <strong>de forma anonimizada</strong> con
-                    otros negocios de tu industria.
+                    Tu IA aprende de los <strong className="text-emerald-400">patrones ganadores anonimizados</strong> de otros negocios de tu industria,
+                    y aporta los tuyos al pool colectivo (cuando una variante supera al original en +20% CTR).
                   </p>
                   <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
-                    <strong>Lo que se comparte:</strong> tipo de patrón, longitud del hook, % de mejora vs original.
+                    <strong>Lo que se comparte:</strong> tipo de patrón emocional, longitud del hook, % de mejora vs original.
                     <br />
-                    <strong>Lo que NO se comparte:</strong> el texto del anuncio, datos del negocio, precios, audiencia, métricas absolutas.
+                    <strong>Lo que NO se comparte:</strong> el texto del anuncio, datos del negocio, precios, audiencia, métricas absolutas, ni identificación del tenant.
                   </p>
                   <p className="text-[10px] text-emerald-400 mt-2 leading-relaxed">
-                    ✨ <strong>A cambio:</strong> tu IA verá qué patrones funcionan mejor en {adsForm.business_vertical || 'tu industria'} y los sugerirá al generar variantes.
-                    Cuantos más negocios opt-in haya, más inteligente es la IA para todos.
+                    ✨ <strong>El resultado:</strong> tu IA es más inteligente desde el día 1 porque aprende del éxito de cientos de negocios en {adsForm.business_vertical || 'tu industria'}.
+                    Esto es parte del valor que ofrece clientes.bot vs Manychat/Wati.
+                  </p>
+                  <p className="text-[9px] text-gray-600 mt-2 italic">
+                    🔒 Activación automática regulada por nuestros <a href="/terminos#aprendizaje-colaborativo" className="text-indigo-400 hover:text-indigo-300 underline">Términos y Condiciones — sección Aprendizaje Colaborativo</a>.
                   </p>
                 </div>
               </div>
