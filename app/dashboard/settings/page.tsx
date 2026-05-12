@@ -104,6 +104,18 @@ export default function SettingsPage() {
     'tecnologia-saas', 'fotografia', 'eventos-bodas', 'agencia-marketing',
     'tiro-deportivo', 'seguros', 'asesoria-legal', 'arquitectura',
   ];
+  // Brand DNA (Sprint A) — ADN de marca generado con IA
+  const [brandDna, setBrandDna] = useState<any>(null);
+  const [brandDnaLoading, setBrandDnaLoading] = useState(false);
+  const [brandDnaModalOpen, setBrandDnaModalOpen] = useState(false);
+  const [brandDnaInputs, setBrandDnaInputs] = useState({
+    website_url: '',
+    competitor_url_1: '',
+    competitor_url_2: '',
+    include_instagram: true,
+    include_facebook: true,
+  });
+  const [brandDnaGenerating, setBrandDnaGenerating] = useState(false);
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -143,10 +155,59 @@ export default function SettingsPage() {
           business_vertical: data.business_vertical || '',
           ads_cross_tenant_optin: !!data.ads_cross_tenant_optin,
         });
+         setBrandDnaInputs(prev => ({
+           ...prev,
+           website_url: data.website_url || '',
+         }));
          setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+       })
+       .catch(() => setLoading(false));
+     // Cargar Brand DNA si existe
+     loadBrandDna();
+   }, []);
+   const loadBrandDna = async () => {
+     try {
+       const res = await fetch(`${API_URL}/brand-dna`, {
+         headers: { 'client-id': user?.companyId || '' }
+       });
+       if (res.ok) {
+         const data = await res.json();
+         setBrandDna(data);
+       }
+     } catch {}
+   };
+   const generateBrandDna = async () => {
+     setBrandDnaGenerating(true);
+     try {
+       const competitor_urls = [
+         brandDnaInputs.competitor_url_1.trim(),
+         brandDnaInputs.competitor_url_2.trim(),
+       ].filter(u => u.length > 0);
+       const res = await fetch(`${API_URL}/brand-dna/generate`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+         body: JSON.stringify({
+           website_url: brandDnaInputs.website_url.trim(),
+           competitor_urls,
+           include_instagram: brandDnaInputs.include_instagram,
+           include_facebook: brandDnaInputs.include_facebook,
+         }),
+       });
+       const data = await res.json();
+       if (res.status === 429) {
+         showToast(`⏳ ${data.message}`);
+       } else if (data.ok) {
+         setBrandDna(data);
+         setBrandDnaModalOpen(false);
+         showToast('✅ ADN de marca generado correctamente');
+       } else {
+         showToast(`❌ ${data.message || data.error || 'Error generando ADN'}`);
+       }
+     } catch {
+       showToast('Error de conexión');
+     }
+     setBrandDnaGenerating(false);
+   };
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -1014,6 +1075,208 @@ const handleSaveAdsConfig = async () => {
             <p className="text-[9px] text-emerald-400 mt-1">✅ Sitio web importado y activo en el bot</p>
           )}
         </div>
+        {/* Brand DNA — ADN de marca generado con IA */}
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold">🧬 ADN de mi marca</h3>
+            {brandDna?.ok ? (
+              <button onClick={() => setBrandDnaModalOpen(true)} disabled={Date.now() / 1000 < (brandDna?.regenerate_available_at || 0)}
+                className="bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title={Date.now() / 1000 < (brandDna?.regenerate_available_at || 0)
+                  ? `Disponible para regenerar el ${new Date((brandDna?.regenerate_available_at || 0) * 1000).toLocaleDateString()}`
+                  : 'Regenerar ADN con datos actualizados'}>
+                🔄 Regenerar
+              </button>
+            ) : (
+              <button onClick={() => setBrandDnaModalOpen(true)}
+                className="bg-purple-600 hover:bg-purple-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+                ✨ Generar ADN
+              </button>
+            )}
+          </div>
+          {!brandDna?.ok ? (
+            <div className="text-center py-6">
+              <p className="text-3xl mb-2">🧬</p>
+              <p className="text-xs text-gray-400 mb-3">
+                La IA analiza tu sitio web, redes sociales y competencia para generar el <strong className="text-white">ADN de tu marca</strong>:
+                voz, tono, audiencia, dolores, propuestas de valor y social proof legal.
+              </p>
+              <p className="text-[10px] text-gray-500">
+                Toma ~30 segundos · Se actualiza solo cada 90 días
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2 mb-2">
+                {(brandDna.sources_used || []).map((src: string) => (
+                  <span key={src} className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold uppercase">
+                    {src === 'website' ? '🌐 Web' :
+                     src === 'instagram' ? '📸 Instagram' :
+                     src === 'facebook' ? '👥 Facebook' :
+                     src === 'competitor' ? '🔍 Competencia' : src}
+                  </span>
+                ))}
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/5 text-gray-400">
+                  Generado: {new Date((brandDna.generated_at || 0) * 1000).toLocaleDateString()}
+                </span>
+              </div>
+              <details className="bg-white/[0.02] rounded-xl p-3" open>
+                <summary className="text-xs font-bold text-purple-400 cursor-pointer">🎙️ Voz y tono</summary>
+                <p className="text-xs text-gray-300 mt-2"><strong>Voz:</strong> {brandDna.dna?.voice}</p>
+                <p className="text-xs text-gray-300 mt-1"><strong>Tono:</strong> {brandDna.dna?.tone}</p>
+              </details>
+              <details className="bg-white/[0.02] rounded-xl p-3">
+                <summary className="text-xs font-bold text-purple-400 cursor-pointer">🎯 Audiencia objetivo</summary>
+                <div className="text-xs text-gray-300 mt-2 space-y-1">
+                  <p><strong>Demografía:</strong> {brandDna.dna?.target_audience?.demographics}</p>
+                  <p><strong>Psicografía:</strong> {brandDna.dna?.target_audience?.psychographics}</p>
+                  <div>
+                    <strong>Dolores:</strong>
+                    <ul className="list-disc ml-5 mt-1 text-gray-400">
+                      {(brandDna.dna?.target_audience?.pain_points || []).map((p: string, i: number) => (
+                        <li key={i}>{p}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </details>
+              <details className="bg-white/[0.02] rounded-xl p-3">
+                <summary className="text-xs font-bold text-purple-400 cursor-pointer">💎 Propuestas de valor</summary>
+                <ul className="list-disc ml-5 mt-2 text-xs text-gray-300 space-y-1">
+                  {(brandDna.dna?.value_propositions || []).map((v: string, i: number) => (
+                    <li key={i}>{v}</li>
+                  ))}
+                </ul>
+              </details>
+              <details className="bg-white/[0.02] rounded-xl p-3">
+                <summary className="text-xs font-bold text-purple-400 cursor-pointer">🛡️ Social proof legal (vague specificity)</summary>
+                <ul className="list-disc ml-5 mt-2 text-xs text-emerald-300 space-y-1">
+                  {(brandDna.dna?.legal_social_proof || []).map((p: string, i: number) => (
+                    <li key={i}>{p}</li>
+                  ))}
+                </ul>
+                <p className="text-[9px] text-gray-500 mt-2 italic">
+                  ✅ Frases legales: números referencian al MERCADO, no a tu negocio individual.
+                </p>
+              </details>
+              {(brandDna.dna?.competitor_insights || []).length > 0 && (
+                <details className="bg-white/[0.02] rounded-xl p-3">
+                  <summary className="text-xs font-bold text-purple-400 cursor-pointer">🔍 Insights de competencia</summary>
+                  <ul className="list-disc ml-5 mt-2 text-xs text-gray-300 space-y-1">
+                    {(brandDna.dna?.competitor_insights || []).map((c: string, i: number) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {(brandDna.dna?.key_differentiators || []).length > 0 && (
+                <details className="bg-white/[0.02] rounded-xl p-3">
+                  <summary className="text-xs font-bold text-purple-400 cursor-pointer">⚡ Tus diferenciadores únicos</summary>
+                  <ul className="list-disc ml-5 mt-2 text-xs text-yellow-300 space-y-1">
+                    {(brandDna.dna?.key_differentiators || []).map((d: string, i: number) => (
+                      <li key={i}>{d}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              <p className="text-[9px] text-gray-500 mt-2">
+                Próxima regeneración disponible: {new Date((brandDna.regenerate_available_at || 0) * 1000).toLocaleDateString()}
+              </p>
+            </div>
+          )}
+        </div>
+        {/* Modal: generar Brand DNA */}
+        {brandDnaModalOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:col-span-2"
+            onClick={() => !brandDnaGenerating && setBrandDnaModalOpen(false)}>
+            <div className="bg-[#0f1320] border border-purple-500/30 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}>
+              <div className="p-5 border-b border-white/5 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-bold text-base text-purple-400">🧬 Generar ADN de mi marca</h3>
+                  <p className="text-[11px] text-gray-400 mt-1">La IA analizará tus fuentes y creará tu identidad de marca</p>
+                </div>
+                <button onClick={() => !brandDnaGenerating && setBrandDnaModalOpen(false)}
+                  className="text-gray-400 hover:text-white text-xl">✕</button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
+                    🌐 URL de tu sitio web
+                  </label>
+                  <input
+                    type="url"
+                    value={brandDnaInputs.website_url}
+                    onChange={(e) => setBrandDnaInputs({...brandDnaInputs, website_url: e.target.value})}
+                    placeholder="https://www.tunegocio.com"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-purple-500 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
+                    🔍 URL competidor 1 (opcional)
+                  </label>
+                  <input
+                    type="url"
+                    value={brandDnaInputs.competitor_url_1}
+                    onChange={(e) => setBrandDnaInputs({...brandDnaInputs, competitor_url_1: e.target.value})}
+                    placeholder="https://competencia1.com"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-purple-500 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
+                    🔍 URL competidor 2 (opcional)
+                  </label>
+                  <input
+                    type="url"
+                    value={brandDnaInputs.competitor_url_2}
+                    onChange={(e) => setBrandDnaInputs({...brandDnaInputs, competitor_url_2: e.target.value})}
+                    placeholder="https://competencia2.com"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-purple-500 text-white"
+                  />
+                </div>
+                <div className="border-t border-white/5 pt-4 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={brandDnaInputs.include_instagram}
+                      onChange={(e) => setBrandDnaInputs({...brandDnaInputs, include_instagram: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-xs text-gray-300">📸 Incluir Instagram (si tienes IG conectado)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={brandDnaInputs.include_facebook}
+                      onChange={(e) => setBrandDnaInputs({...brandDnaInputs, include_facebook: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-xs text-gray-300">👥 Incluir Facebook (si tienes Página conectada)</span>
+                  </label>
+                </div>
+                <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-3">
+                  <p className="text-[10px] text-purple-300 leading-relaxed">
+                    💡 <strong>¿Qué genera el ADN?</strong> Voz, tono, audiencia objetivo, dolores reales,
+                    propuestas de valor, social proof legal e insights de competencia.
+                    Se usa después en el wizard de Ads para generar imágenes y textos personalizados.
+                  </p>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => setBrandDnaModalOpen(false)} disabled={brandDnaGenerating}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-bold border border-white/10 text-gray-300 hover:bg-white/5 transition-all disabled:opacity-50">
+                    Cancelar
+                  </button>
+                  <button onClick={generateBrandDna} disabled={brandDnaGenerating || !brandDnaInputs.website_url.trim()}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50">
+                    {brandDnaGenerating ? '⏳ Analizando con IA... (~30s)' : '✨ Generar ADN'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Inteligencia de Ads — Vertical + Cross-tenant pool */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
           <div className="flex justify-between items-center mb-4">
