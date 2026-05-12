@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**v153** — scheduling flow multi-tenant: company_id resuelto desde sesión + TIME_SCREEN keys alineadas con flow JSON v6.0 + max_days_ahead config-driven + PK phoneNumber en updates)
+**v162** — Calendly mode UX premium: CalendarPicker v7.3 + auto-onboarding flow multi-tenant + recordatorios async post-agendamiento + booking_mode solapable/exclusive + available_weekdays + send_group_link)
 Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
@@ -95,8 +95,9 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,670 líneas, **v153** — scheduling flow multi-tenant: `company_id` resuelto desde sesión del phone en `_handle_scheduling_flow_exchange` + `max_days_ahead` config-driven + PK `phoneNumber` corregida en 2 `update_item` de scheduling + TIME_SCREEN keys `date_label`+`slots` alineadas con flow JSON v6.0) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** (~14,000 líneas, ~125 endpoints, **v147** — Fase E completa: impersonate read_only/read_write con HMAC tickets + consentimiento del cliente via email + support-history + cron cleanup + auto-poll ticket upgrade) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,790 líneas, **v162** — Calendly mode: CalendarPicker v7.3 (`min_date`/`max_date`/`unavailable_dates`) + `_get_available_dates` y `_get_available_slots` con cascada svc→tenant→default + `available_weekdays` y `booking_mode` por servicio + handler async `_internal_action=post_booking_messages` (no bloquea flow) + `post_payment_flow=send_group_link` con mensaje custom + `screen` y `selected_slot` del nivel raíz v6.0/7.3 + scheduling_flow_id desde config_pro) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
+- `SaaS_API_Handler` — incluye **`POST /scheduling-flow/setup`** auto-onboarding multi-tenant del WhatsApp Flow CalendarPicker v7.3 (crea + sube JSON + publica + guarda flow_id en config_pro, idempotente)
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** + **Auto-onboarding Scheduling Flow** (~14,370 líneas, ~126 endpoints, **v148** — `POST /scheduling-flow/setup` crea flow CalendarPicker v7.3 en Meta via Graph API + sube JSON + publica + guarda flow_id en config_pro, idempotente, reusa RSA key del WABA) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
 - `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os + SOURCE_THRESHOLDS human_agent=2 + preserva source SK)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -856,6 +857,93 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 45. **🟡 Lección 40 sigue reincidiendo (4ta vez)**: PK incorrecta en `update_item` silente. Necesario crear job de auditoría que recorra el código buscando `Table("X").update_item(Key={...})` y valide contra el KeySchema real de cada tabla.
 46. **🔴 Baseline drift confirmado (Lección 37)**: `~/audit_bot/lambda_function.py` estaba 2.6KB más viejo que la versión desplegada (`_is_session_paused_for_human` faltaba). SIEMPRE descargar el paquete con `aws lambda get-function --query Code.Location | xargs curl` antes de parchar. Nunca confiar en carpetas locales viejas.
 47. **🦁 Filosofía multi-tenant en datos de cliente**: si necesitás corregir un dato puntual de un tenant (ej: agregar `time_slots` a un servicio), preguntate ANTES "¿esto debería ser editable desde la UI del cliente?". Si la respuesta es sí → construir la UI en vez de hacer el update DDB a mano. El update DDB es deuda técnica disfrazada de solución rápida — cada update manual te ata como dueño-soporte y rompe el modelo SaaS escalable. Filosofía león: si no escala a 1000 clientes, no lo hagas a 1.
+### 11 mayo 2026 (mañana-tarde) — Sprint Calendly Mode + UI Multi-tenant completa 🦁
+> Sesión maratón ~8h. Cerró Calendly mode (CalendarPicker v7.3) + auto-onboarding multi-tenant del flow + UI completa `/dashboard/services` con horarios/días/modo de reserva + recordatorios post-agendamiento async + handler `send_group_link` para cursos con cohort fijo. 9 deploys Bot (v154→v162) + 1 deploy API (v148) + 4 commits frontend. Filosofía león aplicada: NADA hardcodeado, todo configurable desde UI por cualquier tenant.
+#### Bugs cerrados
+##### Bug #53 (CRÍTICO 🔴) — TIME_SCREEN flow v6.0: `screen` leído del lugar equivocado
+- **Síntoma**: TIME_SCREEN no renderizaba — flow mostraba "Se produjo un error". Logs mostraban Duration 187ms (handler cayó al fallback genérico).
+- **Causa**: `_handle_scheduling_flow_exchange` leía `from_screen = payload.get("screen")` (adentro de `data`), pero v6.0 manda `screen` al nivel raíz del request descifrado.
+- **Fix (Bot v155)**: `from_screen = decrypted_data.get("screen", "") or payload.get("screen", "")` + log debug `flow_exchange data_exchange: from_screen=..., payload_keys=...`
+- **Lección 48**: en cualquier integración con payload anidado (Flows, webhooks Stripe, etc), loguear `payload_keys` en debug ayuda a cazar mismatches silenciosos al primer intento.
+##### Bug #54 (CRÍTICO 🔴) — `selected_slot` vs `selected_time`
+- **Síntoma**: tras fix Bug #53, TIME_SCREEN renderizaba pero seleccionar hora no completaba el flow. Bot dejaba typing infinito.
+- **Causa**: el componente RadioButtonsGroup del flow JSON v6.0 se llama `selected_slot` (porque la key del data es `slots`), pero el bot buscaba `selected_time`. El log debug del Bug #53 lo reveló al instante: `payload_keys=['selected_slot']`.
+- **Fix (Bot v156)**: rename `selected_time` → `selected_slot` (5 ocurrencias dentro de `_handle_scheduling_flow_exchange`).
+- **Lección 49**: nombre del componente input == nombre del campo en el payload. Si la key del data se llama `slots`, el RadioButtons que la consume se llama `selected_slot`.
+##### Bug #55 (CRÍTICO 🔴) — `time.sleep` síncrono rompía el flow ("no se pudo cargar")
+- **Síntoma**: tras agregar 3 recordatorios post-agendamiento con `time.sleep(2.5)` entre cada uno (total 7.5s), Meta cortaba el data_exchange a los ~5s. Cliente veía "no se pudo cargar el contenido". PERO los 4 mensajes SÍ llegaban en cascada (encolados en WA).
+- **Causa**: el handler del flow_exchange tarda > 5s → Meta corta conexión → response del SUCCESS_SCREEN nunca llega al cliente. Duration en logs: **10507ms**.
+- **Fix (Bot v159)**: invocar el mismo Lambda en modo `InvocationType=Event` con `_internal_action=post_booking_messages` para que los recordatorios corran **en paralelo** sin bloquear la respuesta del flow. Handler async al inicio de `lambda_handler` procesa la acción interna.
+- **Lección 50**: side-effects que tardan >2-3s tras un webhook con timeout deben ir SIEMPRE en async invoke (Event), no en el mismo proceso. Patrón reusable para todo post-pago/post-agendamiento/post-handoff.
+##### Bug #56 (FALSA ALARMA 😅) — "scheduled_date no se guarda"
+- **Síntoma**: tras agendar, `scheduled_date/hour/status` no aparecían en `StudentPaymentState`. Pánico inicial: "es la 5ta reincidencia de Lección 40".
+- **Causa REAL**: el comando de testing `reset_payment.sh` hacía `REMOVE scheduled_date, scheduled_hour, schedule_status` justo antes del test. El bot SÍ los escribía correctamente cada vez — el reset los borraba después.
+- **Fix**: ninguno (cero bug). El código siempre estuvo bien.
+- **Lección 51**: cuando reincide un bug "ya cerrado 3 veces", VERIFICAR PRIMERO con un test sin el reset script antes de declarar regresión. La culpa del testing pipeline no es del código.
+#### Features cerradas (en orden de deploy)
+**Bot v154 — `max_days_ahead` con cascada svc→tenant→default**
+- `_handle_scheduling_flow_exchange` lee primero `service.scheduling.max_days_ahead`, fallback `config_pro.scheduling.max_days_ahead`, default `7`.
+- Cero impacto si no hay datos (backward-compatible).
+- Log: `flow_exchange: max_days_ahead=X (svc=Y, tenant=Z)`.
+**API v148 — `POST /scheduling-flow/setup` auto-onboarding multi-tenant 🦁**
+- Endpoint nuevo: `handle_setup_scheduling_flow(client_id, body)`.
+- Idempotente: si `config_pro.scheduling_flow_id` ya existe y está PUBLISHED en Meta, devuelve `already_existed: True`. `force_recreate=true` para regenerar.
+- 3 llamadas a Meta Graph API: `POST /{waba_id}/flows` → `POST /{flow_id}/assets` (multipart con JSON CalendarPicker v7.3) → `POST /{flow_id}/publish`.
+- Genera nombre del flow dinámico: `agendamiento_{brand_clean}_v7`.
+- Guarda en `config_pro`: `scheduling_flow_id`, `scheduling_flow_name`, `scheduling_flow_status`, `scheduling_flow_version`.
+- Usa `meta_access_token` del tenant + `scheduling_flow_endpoint_uri` configurable (default: env var `BOT_FLOWS_ENDPOINT`).
+- **Resultado verificado**: flow `1526049892363825` creado en WABA `2891074877943438` con `validation_errors: []` y `status: PUBLISHED` ✅
+- **Filosofía león**: cliente #2 a #1000 onboardea su flow con 1 POST. Cero trabajo manual del founder.
+**Bot v157 — CalendarPicker v7.3 (Calendly mode)**
+- `_handle_scheduling_flow_exchange` INIT response migrado de `dates` (array) → `min_date`+`max_date`+`unavailable_dates` (strings YYYY-MM-DD).
+- Calcula `unavailable_dates` invirtiendo `_get_available_dates`: todos los días dentro del rango que NO están en la lista de disponibles → marcados como `unavailable`.
+- Version bump 6.0 → 7.3 en 5 responses internas + 2 del wrapper handle_flows_data_exchange.
+- `_trigger_scheduling_flow` lee `scheduling_flow_id` desde config_pro (multi-tenant), fallback env var legacy.
+**Bot v158 — Recordatorios post-agendamiento + "Duración aproximada"**
+- Tras "✅ ¡Cita agendada!", lee `config_pro.scheduling.post_booking_messages` (lista de strings) y envía cada uno con delay 2.5s.
+- Si no hay lista configurada → envía cierre genérico "¿Hay algo más en lo que pueda ayudarte? 🙂" (apaga el typing huérfano).
+- Cambio cosmetic: "Duración" → "Duración aproximada" (2 lugares) — refleja que ciertos servicios pueden variar.
+**Bot v159 — Recordatorios async (no bloquean flow)**
+- `lambda_client.invoke(FunctionName=..., InvocationType="Event", Payload={"_internal_action": "post_booking_messages", ...})` desde dentro del handler de TIME_SCREEN.
+- Handler async al inicio de `lambda_handler` procesa `_internal_action=post_booking_messages`: lee tokens dinámicos del tenant, envía cada mensaje con `time.sleep(2.5)`.
+- Lambda se invoca a sí mismo en background → response del flow vuelve a Meta en <2s → cliente ve SUCCESS limpio.
+**Bot v161 — `available_weekdays` por servicio + fix `max_check`**
+- `_get_available_dates` recibe `service_slug` opcional → lee `service.scheduling.available_weekdays` → filtra días que NO están en la lista.
+- Si servicio tiene `available_weekdays=[5,6]` (sáb+dom), el calendario marca lun-vie como unavailable.
+- Fix bug latente: `max_check = max(30, num_days * 2)` (antes hardcoded 30 → loop terminaba antes de tiempo con num_days=60).
+- Call sites actualizados para pasar `service_slug=session.get("scheduling_service_slug")`.
+**Bot v162 — `booking_mode` solapable/exclusive**
+- `_get_available_slots` recibe `service_slug` opcional + lookup del servicio prioriza slug exacto (fallback a service_type).
+- Si `service.scheduling.booking_mode == "exclusive"`: scan `StudentPaymentState` filtrando `company_id + service_slug + scheduled_date + schedule_status=AGENDADO` → recolecta `scheduled_hour` ocupados → suma al `busy_ranges`.
+- **Per-service**: solo cuentan reservas del MISMO `service_slug` (Personalizado 9mm a las 14:00 NO bloquea Asesoría Individual a las 14:00 — son recursos distintos).
+- Default `solapable`: comportamiento actual (varios clientes mismo slot).
+**Frontend (4 commits)**
+- `8f8775b`: campo `post_payment_message` + opción `send_group_link` en select "Después del pago"
+- `a4c3172`: bloque "Días de la semana disponibles" (multi-checkbox L-D) + fix UI
+- `fc069b1`: select `booking_mode` solapable/exclusive con hints multi-tenant
+- (commit anterior 4b0d78c): bloque inicial "⚙️ Agendamiento avanzado" con `time_slots` (multi-checkbox 7AM-8PM) + `max_days_ahead` input
+#### Configuración JMC desde la UI (cero DDB manual 🦁)
+- `Seminario 9mm grupal`: `time_slots=[10,14]`, `max_days_ahead=30`, `booking_mode=solapable`, `post_payment_flow=scheduling`
+- `Seminario Personalizado 9mm`: `time_slots=[9,13,16,17]`, `booking_mode=exclusive`, `post_payment_flow=scheduling`
+- `Curso de Escolta`: `post_payment_flow=send_group_link` + mensaje con link grupo WhatsApp
+- `Semillero Juvenil`: `post_payment_flow=thanks_only` (próximamente migrar a `send_group_link` con su propio grupo)
+- `Resto de personalizados`: `booking_mode=exclusive` (configurar uno por uno desde UI)
+- `config_pro.scheduling.max_days_ahead=60` (default global del negocio)
+- `config_pro.scheduling.post_booking_messages`: 3 mensajes (recordatorios + ubicación + cierre)
+#### Pendientes detectados (próximo sprint)
+- 🟡 **Google Calendar Service Account multi-tenant**: `_get_google_calendar_service` falla con `empty string company_id` → cita se guarda en DDB pero NO crea evento en Calendar del dueño JMC. Workaround: dueño ve agenda desde dashboard `/dashboard/citas`. Fix similar al de Bug #50 (resolver company_id desde contexto).
+- 🟡 **CAPI Schedule event**: 5 líneas pendientes, bonus al funnel Meta (`Lead → InitiateCheckout → Purchase → Schedule`). Útil multi-tenant (consultorios donde Schedule es la conversión clave, no Purchase).
+- 🟡 **UI editable de `post_booking_messages`** en `/dashboard/settings` o `/dashboard/services` (hoy se setean en DDB).
+- 🟡 **Auto-onboarding del carrusel** (mismo patrón que `/scheduling-flow/setup` → `/carousel/setup`).
+- 🟡 **2 ValidationException latentes en `handle_payment_webhook`** (no bloquean, solo ensucian CloudWatch).
+- 🟡 **DatePicker componente nativo Meta** (si existe en v7.x — alternativa más compacta al CalendarPicker).
+#### Lecciones nuevas (sesión 11 mayo mañana-tarde)
+48. **🔴 Debug payload anidado**: en cualquier integración con webhooks/flows, loguear `payload_keys=list(payload.keys())` la primera vez ahorra horas de adivinanza al primer mismatch.
+49. **🔴 Nombre de input == nombre del payload**: en WhatsApp Flows, si la key del `data` se llama X, el componente input que la consume se llama `selected_X`. No `selected_X_time` ni variantes.
+50. **🔴 Async invoke para side-effects post-webhook**: si tras responder a Meta/Stripe/etc necesitás disparar N mensajes con delays, NUNCA bloquear el response. Patrón: `lambda_client.invoke(InvocationType="Event", Payload={"_internal_action": "..."})` + handler al inicio del lambda_handler.
+51. **🟠 Falsas alarmas del testing pipeline**: cuando reincide un bug "ya cerrado 3 veces", VERIFICAR PRIMERO sin el reset/cleanup script antes de declarar regresión. Lección 40 NO siempre es Lección 40.
+52. **🦁 Auto-onboarding > update DDB manual**: si un tenant nuevo necesita un asset en Meta (flow, template, pixel, ad account), el endpoint que lo crea debe estar listo DESDE EL DÍA 1. Cada update manual al primer cliente JMC es una promesa rota de escalabilidad. Filosofía león: construir el endpoint la primera vez, no esperar al cliente #2.
+53. **🔴 read_file siempre, asumir nunca**: cuarta vez en la sesión asumí (mal) el SHA o repo de un archivo. La herramienta `read_file` acepta cualquier SHA de cualquier repo del workspace. Costo de asumir: 5 min de ida y vuelta + sensación de no confianza del usuario. Costo de verificar: 2 segundos. SIEMPRE verificar.
 ### 8-9 mayo 2026 (noche-madrugada) — Sprint 1 COMPLETO: Trial + Quotas + Billing E2E + Admin Editor 🦁
 > Sesión maratón ~7h. Cerró Sprint 1 completo: trial 14d auto, quotas enforcement ON, billing E2E con Lemon Squeezy (test real con tarjeta), banner trial, email warning, cron expire, landing+dashboard dinámicos desde DDB, admin editor de planes con features_ui+tooltips. 30 deploys (Bot v137-v138 + API v123-v133 + 8 commits frontend).
 #### Sprint 1 — Billing + Trial completado
@@ -1212,7 +1300,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-██████████████████████████████████░ 94%
+██████████████████████████████████░ 95%
 ### ⏱️ Métricas de desarrollo reales
 | Métrica | Valor |
 |---|---|
@@ -1249,7 +1337,9 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 |---|---|
 | ~~Sprint 1 — billing completo~~ | ~~60h~~ ✅ COMPLETADO (LS) |
 | ~~Sprint 1 — Feature Flags + Quotas~~ | ~~20h~~ ✅ COMPLETADO |
-| Sprint 1 — Programa de afiliados (frontend falta) | ~10h |
+| ~~Sprint 1 — Programa de afiliados~~ | ~~10h~~ ✅ COMPLETADO |
+| ~~Sprint Calendly Mode + UI Scheduling multi-tenant~~ | ~~8h~~ ✅ COMPLETADO (Bot v154-v162 + API v148 + 4 commits frontend) |
+
 | Sprint 2 — Multicanal IG/FB (backend listo, falta webhooks + bandeja) | ~40h |
 | Admin Panel C8-C12 + D-K completo | ~120h |
 | Sprint 3 — IA superpoderes | ~60h |
@@ -1309,7 +1399,8 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **88% → 90%** — Multicanal completo Instagram DM + Facebook Messenger (Bot v104-v114, API v95-v96) + fix handle_add_service duplicada sync prompt (API v94) + conversations/active con canal icon 🦁
 - [x] **90% → 92%** — Memoria source-aware (Bot v136 + promote-cron v2) + 6 bugs CRM masivos cerrados (Bug #9 reincidió 3 veces, Bug #44 fix CRÍTICO created_at GSI con paid_count 0→83 y revenue $23.38M COP) + cleanup memoria 615 entries — API v117-v122 🦁
 - [x] **92% → 94%** — Sprint 1 COMPLETADO 🍾 Trial 14d E2E + QUOTA_ENFORCE=true + billing LS E2E (test real $297) + cron trial-expire + email warning + landing+dashboard dinámicos DDB + admin editor planes + 7 bugs más (Bug #45 router /billing/me) — Bot v137-v138, API v123-v133, 8 commits frontend 🦁
-- [ ] **94% → 96%** — Feature Flags toggles por tenant (D3-D4) + Impersonate "Ver como cliente" (E1-E4) + Hook agente humano memoria + Web Chat Widget ⭐ ESTÁS AQUÍ
+- [x] **94% → 95%** — Calendly Mode CERRADO 📅 CalendarPicker v7.3 + auto-onboarding multi-tenant del flow (1 POST = flow creado en Meta) + UI completa `/dashboard/services` con `time_slots` / `available_weekdays` / `booking_mode` solapable+exclusive / `max_days_ahead` / `post_payment_flow=send_group_link` / recordatorios async post-agendamiento — Bot v154-v162, API v148, 4 commits frontend (4b0d78c, 8f8775b, a4c3172, fc069b1). Bug #56 falsa alarma (testing pipeline borraba scheduled_*). 5 lecciones nuevas (48-53). 🦁
+- [ ] **95% → 96%** — Feature Flags toggles por tenant (D3-D4) + Impersonate "Ver como cliente" (E1-E4) + Hook agente humano memoria + Web Chat Widget + Google Calendar multi-tenant fix + CAPI Schedule event ⭐ ESTÁS AQUÍ
 - [ ] **96% → 100%** — Sprints 3-7 + Admin D-K completo + RUGIDO 🦁
 
 > *"Cada % se gana con café. Cada café se gana con un commit."*
