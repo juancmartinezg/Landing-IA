@@ -156,6 +156,15 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
   const [hookVariants, setHookVariants] = useState<any[]>([]);
   const [hookPattern, setHookPattern] = useState<string>('');
   const [hookCopiedIdx, setHookCopiedIdx] = useState<number | null>(null);
+  // Motor 4 — Publicar variante (modal confirmación + estado)
+  const [publishingVariant, setPublishingVariant] = useState<any>(null);
+  const [publishVariantLoading, setPublishVariantLoading] = useState(false);
+  // Motor 1+2 — Biblioteca de creatives ganadores
+  const [librarySubTab, setLibrarySubTab] = useState<'ranking' | 'library' | 'variants'>('ranking');
+  const [libraryWinners, setLibraryWinners] = useState<any>(null);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [myVariants, setMyVariants] = useState<any[]>([]);
+  const [variantsLoading, setVariantsLoading] = useState(false);
   const loadRecommendations = async () => {
     setRecsLoading(true);
     try {
@@ -253,6 +262,74 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
       setHookCopiedIdx(idx);
       setTimeout(() => setHookCopiedIdx(null), 2000);
     }).catch(() => showToast('No se pudo copiar'));
+  };
+  // Motor 4: abre modal de confirmación antes de crear ad en Meta
+  const openPublishModal = (variant: any) => {
+    if (!hookModalAd?.ad_id) {
+      showToast('No hay ad ganador seleccionado');
+      return;
+    }
+    setPublishingVariant({
+      ...variant,
+      original_ad_id: hookModalAd.ad_id,
+      original_ad_name: hookModalAd.ad_name || '',
+    });
+  };
+  // Motor 4: confirma y crea el ad en Meta vía API
+  const confirmPublishVariant = async () => {
+    if (!publishingVariant) return;
+    setPublishVariantLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/duplicate-ad`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          original_ad_id: publishingVariant.original_ad_id,
+          new_primary_text: publishingVariant.hook,
+          pattern: publishingVariant.pattern || 'neutro',
+          name_suffix: `v-${(publishingVariant.pattern || 'neutro').slice(0, 10)}`,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`✅ Variante creada en Meta (PAUSED). Actívala desde Ads Manager.`);
+        setPublishingVariant(null);
+        // Refrescar lista de variantes si está abierta
+        if (librarySubTab === 'variants') loadMyVariants();
+      } else {
+        showToast('❌ ' + (data.error || 'Error publicando'));
+      }
+    } catch {
+      showToast('Error de conexión');
+    }
+    setPublishVariantLoading(false);
+  };
+  // Motor 1+2: cargar biblioteca de winners + análisis de patrones
+  const loadLibrary = async () => {
+    setLibraryLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/library/winners?period=60`, { headers: h });
+      const data = await res.json();
+      setLibraryWinners(data);
+    } catch { showToast('Error cargando biblioteca'); }
+    setLibraryLoading(false);
+  };
+  // Motor 4+5: cargar mis variantes publicadas con sus métricas
+  const loadMyVariants = async () => {
+    setVariantsLoading(true);
+    try {
+      // No hay endpoint LIST de variantes, usamos scan en backend via library
+      // Por ahora, scan client-side desde un endpoint nuevo o filtrar de variants futuros
+      // Trade-off: usamos /ads/library con source=variant_winner para los ganadores aprendidos
+      const res = await fetch(`${API_URL}/ads/library?period=90`, { headers: h });
+      const data = await res.json();
+      // Filtrar solo los que vienen de variantes (Motor 5 los marca source=variant_winner)
+      const variantWinners = (data.creatives || []).filter((c: any) =>
+        c.ad_name?.includes('auto-learned') || c.source === 'variant_winner'
+      );
+      setMyVariants(variantWinners);
+    } catch { showToast('Error cargando variantes'); }
+    setVariantsLoading(false);
   };
   const handleGenerate = async () => {
     setCreating(true); setVariants([]);
@@ -562,13 +639,27 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                   {hookVariants.map((v: any, i: number) => (
                     <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-4 hover:border-purple-500/30 transition-all">
                       <div className="flex items-start justify-between gap-3 mb-2">
-                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold shrink-0">
-                          Variante {i + 1}
-                        </span>
-                        <button onClick={() => copyHook(v.hook, i)}
-                          className={`text-[9px] px-2 py-1 rounded-lg font-bold transition-all shrink-0 ${hookCopiedIdx === i ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}>
-                          {hookCopiedIdx === i ? '✓ Copiado' : '📋 Copiar'}
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold shrink-0">
+                            Variante {i + 1}
+                          </span>
+                          {v.pattern && v.pattern !== hookPattern && (
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-bold uppercase">
+                              {v.pattern}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button onClick={() => copyHook(v.hook, i)}
+                            className={`text-[9px] px-2 py-1 rounded-lg font-bold transition-all ${hookCopiedIdx === i ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}>
+                            {hookCopiedIdx === i ? '✓ Copiado' : '📋 Copiar'}
+                          </button>
+                          <button onClick={() => openPublishModal(v)}
+                            className="text-[9px] px-2 py-1 rounded-lg font-bold transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30"
+                            title="Crea esta variante como anuncio nuevo en Meta (PAUSED)">
+                            🚀 Publicar
+                          </button>
+                        </div>
                       </div>
                       <p className="text-sm text-white leading-snug mb-2">{v.hook}</p>
                       {v.angle && (
@@ -587,6 +678,54 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {publishingVariant && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => !publishVariantLoading && setPublishingVariant(null)}>
+          <div className="bg-[#0f1320] border border-emerald-500/30 rounded-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-white/5 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-base text-emerald-400">🚀 Publicar variante como nuevo anuncio</h3>
+                <p className="text-[11px] text-gray-400 mt-1">Se creará en Meta Ads en estado <span className="text-yellow-400 font-bold">PAUSED</span></p>
+              </div>
+              <button onClick={() => !publishVariantLoading && setPublishingVariant(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-white/[0.03] rounded-xl p-3">
+                <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Anuncio base (ganador)</p>
+                <p className="text-xs text-white">{publishingVariant.original_ad_name || publishingVariant.original_ad_id}</p>
+              </div>
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold uppercase">
+                    {publishingVariant.pattern || 'neutro'}
+                  </span>
+                  <span className="text-[9px] text-emerald-400 font-bold">Nuevo hook</span>
+                </div>
+                <p className="text-sm text-white leading-snug">{publishingVariant.hook}</p>
+              </div>
+              <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-3">
+                <p className="text-[10px] text-yellow-400 leading-relaxed">
+                  ⚠️ <strong>Importante:</strong> el anuncio se crea <strong>PAUSADO</strong> en Meta Ads.
+                  Hereda la misma audiencia, imágenes, presupuesto y configuración del ganador.
+                  Revísalo en Ads Manager y actívalo manualmente cuando estés listo.
+                  <br /><br />
+                  📊 En 7 días la IA evaluará automáticamente si superó al original (≥+20% CTR)
+                  y lo incorporará a tu biblioteca de ganadores.
+                </p>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button onClick={() => setPublishingVariant(null)} disabled={publishVariantLoading}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold border border-white/10 text-gray-300 hover:bg-white/5 transition-all disabled:opacity-50">
+                  Cancelar
+                </button>
+                <button onClick={confirmPublishVariant} disabled={publishVariantLoading}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50">
+                  {publishVariantLoading ? '⏳ Creando en Meta...' : '✅ Confirmar y crear'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1064,7 +1203,26 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
               Tú decides qué aplicar — nada se cambia automáticamente.
             </p>
           </div>
-          {creativeRankings.length > 0 && (
+          {/* Sub-tabs: Ranking / Biblioteca / Mis Variantes */}
+          <div className="flex gap-1 mb-4 p-1 bg-white/[0.02] border border-white/5 rounded-xl">
+            {[
+              {id:'ranking', l:'🏆 Ranking actual', desc:'Top creatives últimos 30d'},
+              {id:'library', l:'📚 Mi biblioteca', desc:'Ganadores históricos + patrones'},
+              {id:'variants', l:'🚀 Mis variantes', desc:'Variantes publicadas y resultados'},
+            ].map(st => (
+              <button key={st.id} onClick={() => {
+                setLibrarySubTab(st.id as any);
+                if (st.id === 'library' && !libraryWinners) loadLibrary();
+                if (st.id === 'variants' && myVariants.length === 0) loadMyVariants();
+              }}
+                className={`flex-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${librarySubTab === st.id ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30' : 'text-gray-400 hover:bg-white/5'}`}
+                title={st.desc}>
+                {st.l}
+              </button>
+            ))}
+          </div>
+          {/* SUB-TAB: 🏆 Ranking actual (existente) */}
+          {librarySubTab === 'ranking' && creativeRankings.length > 0 && (
             <details className="mb-4 group" open>
               <summary className="flex items-center justify-between bg-purple-500/5 border border-purple-500/20 rounded-2xl p-4 cursor-pointer hover:bg-purple-500/10 transition-all">
                 <div>
@@ -1130,6 +1288,187 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                 ))}
               </div>
             </details>
+          )}
+          {librarySubTab === 'ranking' && creativeRankings.length === 0 && (
+            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-8 text-center mb-4">
+              <p className="text-3xl mb-2">📊</p>
+              <p className="text-xs text-gray-400">Sin ranking aún. La IA analiza creatives cuando hay datos suficientes.</p>
+            </div>
+          )}
+          {/* SUB-TAB: 📚 Mi biblioteca */}
+          {librarySubTab === 'library' && (
+            <div className="mb-4">
+              {libraryLoading ? (
+                <div className="flex flex-col items-center py-12">
+                  <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
+                  <p className="text-xs text-gray-400">Analizando tu biblioteca con IA...</p>
+                </div>
+              ) : !libraryWinners || (libraryWinners.winners_dedup || []).length === 0 ? (
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-8 text-center">
+                  <p className="text-3xl mb-2">📚</p>
+                  <h4 className="font-bold mb-1 text-sm">Tu biblioteca de ganadores está vacía</h4>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Cada noche la IA detecta tus creatives top y los agrega aquí automáticamente.
+                  </p>
+                  <button onClick={loadLibrary}
+                    className="text-[10px] px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 font-bold transition-all">
+                    🔄 Actualizar ahora
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Top patrones */}
+                  {(libraryWinners.top_patterns || []).length > 0 && (
+                    <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-4 mb-4">
+                      <h3 className="font-bold text-sm mb-3">🧠 Patrones que mejor funcionan en tu negocio</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        {libraryWinners.top_patterns.slice(0, 3).map((p: any) => (
+                          <div key={p.pattern} className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold uppercase">
+                                {p.pattern}
+                              </span>
+                              <span className="text-[9px] text-gray-500">{p.count} ad{p.count !== 1 ? 's' : ''}</span>
+                            </div>
+                            <p className="text-[10px] text-gray-400">CTR prom: <span className="text-emerald-400 font-bold">{p.avg_ctr}%</span></p>
+                            <p className="text-[10px] text-gray-400">Best: <span className="text-yellow-400 font-bold">{p.best_ctr}%</span></p>
+                            <p className="text-[10px] text-gray-400">Leads: <span className="text-white font-bold">{p.total_leads}</span></p>
+                          </div>
+                        ))}
+                      </div>
+                      {(libraryWinners.cross_tenant_suggestions || []).length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-purple-500/10">
+                          <p className="text-[9px] text-purple-400 font-bold uppercase tracking-widest mb-2">
+                            🌐 También funcionan en tu industria
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {libraryWinners.cross_tenant_suggestions.map((s: any, i: number) => (
+                              <span key={i} className="text-[10px] px-2 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                                {s.pattern} <span className="text-indigo-400 font-bold">+{s.avg_ctr_uplift_pct}%</span>
+                              </span>
+                            ))}
+                          </div>
+                          <p className="text-[8px] text-gray-500 mt-2">
+                            Datos anonimizados de otros negocios de tu vertical ({libraryWinners.vertical || '—'}).
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* Lista de ganadores */}
+                  <div className="space-y-2">
+                    {libraryWinners.winners_dedup.map((w: any) => (
+                      <div key={w.creative_id} className="bg-white/[0.03] border border-white/5 rounded-xl p-3 flex items-center gap-3">
+                        {w.creative_image ? (
+                          <img src={w.creative_image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center text-[10px] text-gray-600 shrink-0">📷</div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-[11px] font-bold truncate">{w.ad_name || 'Sin nombre'}</p>
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold uppercase shrink-0">
+                              {w.pattern}
+                            </span>
+                          </div>
+                          {w.creative_text && (
+                            <p className="text-[9px] text-gray-500 line-clamp-2 leading-snug">{w.creative_text}</p>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center shrink-0">
+                          <div>
+                            <p className="text-[8px] text-gray-500">CTR</p>
+                            <p className="text-[10px] font-bold text-indigo-400">{w.ctr}%</p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] text-gray-500">Leads</p>
+                            <p className="text-[10px] font-bold text-emerald-400">{w.leads}</p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] text-gray-500">CPL</p>
+                            <p className="text-[10px] font-bold text-purple-400">${(w.cpl || 0).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        <button onClick={() => generateHookVariants({
+                          ad_id: w.ad_id,
+                          ad_name: w.ad_name,
+                          creative_text: w.creative_text,
+                          creative_image: w.creative_image,
+                          ctr: w.ctr,
+                        }, 'Biblioteca')}
+                          className="text-[9px] px-2 py-1 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 font-bold transition-all shrink-0"
+                          title="Genera 3 variantes basadas en este ganador histórico">
+                          ✨ Variantes
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {/* SUB-TAB: 🚀 Mis variantes */}
+          {librarySubTab === 'variants' && (
+            <div className="mb-4">
+              {variantsLoading ? (
+                <div className="flex flex-col items-center py-12">
+                  <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3" />
+                  <p className="text-xs text-gray-400">Cargando tus variantes...</p>
+                </div>
+              ) : myVariants.length === 0 ? (
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-8 text-center">
+                  <p className="text-3xl mb-2">🚀</p>
+                  <h4 className="font-bold mb-1 text-sm">Aún no has publicado variantes ganadoras</h4>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Publica una variante desde ✨ Variantes, espera 7 días con el ad activo en Meta,
+                    y si supera al original en CTR, aparecerá aquí automáticamente.
+                  </p>
+                  <button onClick={loadMyVariants}
+                    className="text-[10px] px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all">
+                    🔄 Actualizar
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 mb-3">
+                    <p className="text-[10px] text-emerald-300">
+                      🏆 <strong>{myVariants.length} variante{myVariants.length !== 1 ? 's' : ''} ganadora{myVariants.length !== 1 ? 's' : ''}</strong> — superaron al ganador original en ≥+20% CTR.
+                      Ya están en tu biblioteca de patrones que funcionan.
+                    </p>
+                  </div>
+                  {myVariants.map((v: any) => (
+                    <div key={v.creative_id} className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-3">
+                      <span className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-xl shrink-0">🏆</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold uppercase shrink-0">
+                            {v.pattern}
+                          </span>
+                          {v.ctr_delta_pct && (
+                            <span className="text-[9px] text-emerald-400 font-bold">+{v.ctr_delta_pct}% vs original</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-white line-clamp-2 leading-snug">{v.creative_text}</p>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center shrink-0">
+                        <div>
+                          <p className="text-[8px] text-gray-500">CTR</p>
+                          <p className="text-[10px] font-bold text-indigo-400">{v.ctr}%</p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] text-gray-500">Leads</p>
+                          <p className="text-[10px] font-bold text-emerald-400">{v.leads}</p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] text-gray-500">CPL</p>
+                          <p className="text-[10px] font-bold text-purple-400">${(v.cpl || 0).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           {recsLoading ? (
             <div className="flex flex-col items-center py-12">
