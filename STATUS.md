@@ -2,8 +2,9 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
+**v165** — AI Creative Loop CERRADO 🦁 5 motores en producción: Content Ingestion + Winner Analysis + Hook Generation multi_pattern + Creative Production (Meta Graph asset_feed_spec real) + Publish+Learn con cross-tenant pool opt-in. 3 tablas DDB con PITR + 2 crons EventBridge ENABLED
+**v165** — AI Creative Loop CERRADO 🦁 5 motores en producción: Content Ingestion + Winner Analysis + Hook Generation multi_pattern + Creative Production (Meta Graph asset_feed_spec real) + Publish+Learn con cross-tenant pool opt-in. 3 tablas DDB con PITR + 2 crons EventBridge ENABLED (`ads-ingestion-daily` 7AM UTC, `ads-variant-learn-daily` 8AM UTC). API v156-v164 + frontend `e96fd2a` (botón 🚀 Publicar + modal + 3 sub-tabs) + `2e38b21` (Inteligencia de Ads en settings). Test E2E real: ad PAUSED creado en Meta de JMC heredando asset_feed_spec. Próximo sprint: Brand DNA + Wizard 2.0 + BrandAssets + Wizard Packs (~17h).
 **v164** — Ads Pro v2 CERRADO 🎯 Regla #8 KILL_CREATIVE en motor B6.5 (API v153) + `POST /ads/generate-hook-variants` Gemini Flash Lite con cache 5min (API v155) + frontend botón ✨ Variantes en el 🏆 + modal con 3 hooks copiables y patrón emocional detectado (`92a3dcd`). JMC verificado: 0 KILL_CREATIVE (creatives sanos 2.43-4.99% CTR) + Gemini detectó patrón "escasez" del ganador.
-
 **v163** — deuda técnica cerrada: CAPI Schedule funnel completo + Google Calendar multi-tenant + ValidationException fix + Ads dashboard cache L1+L2 DDB (0 rate limits Meta) + fix frontend tab sobreescritura métricas)
 Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
@@ -121,7 +122,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Meta App:** `27398458396409385`
 - **WABA:** `2891074877943438` (migrado desde `948932884157315` — portfolio Escuela de Tiro Jose Maria Cordoba)
 - **Pixel:** `1102373681952908`
-- **EventBridge crons:** `ads-daily-optimize` ENABLED (6 AM diario), `meta-token-renewal` ENABLED (domingos 5 AM UTC), `promote-memory-every-5min` ENABLED, `remarketing-every-hour` ENABLED, `affiliate-payout-batch-monthly` ENABLED (día 5 cada mes 8 AM UTC), `trial-expire-daily` ENABLED (8 AM UTC = 3 AM CO — expira trials 14d + email warning 1-3d), `support-cleanup-hourly` ENABLED (cada hora — Fase E auto-expire + email resumen), `feature-overrides-expire-daily` pendiente (Fase D-4 skip)
+- **EventBridge crons:** `ads-daily-optimize` ENABLED (6 AM UTC diario — B6.5 recomendaciones IA), `ads-ingestion-daily` ENABLED (7 AM UTC — Motor 1 Content Ingestion AI Creative Loop), `ads-variant-learn-daily` ENABLED (8 AM UTC — Motor 5 Publish+Learn AI Creative Loop), `meta-token-renewal` ENABLED (domingos 5 AM UTC), `promote-memory-every-5min` ENABLED, `remarketing-every-hour` ENABLED, `affiliate-payout-batch-monthly` ENABLED (día 5 cada mes 8 AM UTC), `affiliate-release-commissions-daily` ENABLED (4 AM UTC = 11 PM CO), `trial-expire-daily` ENABLED (8 AM UTC = 3 AM CO — expira trials 14d + email warning 1-3d), `support-cleanup-hourly` ENABLED (cada hora — Fase E auto-expire + email resumen), `feature-overrides-expire-daily` pendiente (Fase D-4 skip)
 ---
 ## ✅ MÓDULOS COMPLETADOS
 ### 🤖 Bot WhatsApp
@@ -199,7 +200,21 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
   - [x] Auto-kill perdedores por Hook Rate — Regla #8 `kill_creative` en B6.5: CTR<1% + ≥500 impr + CPL>2× avg (API v153)
   - [x] Ranking de creatives en tab "🎯 IA" del dashboard (`GET /ads/creative-ranking` API v152 + frontend `92a3dcd`)
   - [x] Botón "✨ Variantes" en el 🏆 + modal con 3 hooks copiables + patrón emocional detectado (frontend `92a3dcd`)
-  - [ ] **Futuro (Sprint 3):** AI Creative Loop completo (5 motores: Content Ingestion → Winner Analysis → Hook Generation → Creative Production → Publish+Learn). Falta: endpoint `/ads/duplicate-ad` (publicar variante 1-click en Ads Manager). Contexto técnico absorbido de referencia Meta 2026 — `Velocity = Creative Volume × Signal Quality × Learning Speed`. Cross-tenant learning como ventaja competitiva del SaaS.
+  - [x] **AI Creative Loop completo (5 motores) — CERRADO 12 mayo 2026 ✅**
+    - [x] **Motor 1 Content Ingestion** (API v156-v157): `_ingest_creative_winners` filtra ganadores top20% del tenant + heurístico de patrones (escasez/curiosidad/dolor/beneficio/prueba_social) + persiste en `AdsCreativeLibrary`. Cron `ads-ingestion-daily` 7AM UTC ENABLED. Endpoint `GET /ads/library?pattern=X&period=N&limit=N`.
+    - [x] **Motor 2 Winner Analysis** (API v158): `_analyze_winner_patterns` con dedup por `ad_id` + Gemini Flash Lite reclasifica patrón con cache 10min + agrupa por pattern + cross-tenant suggestions del vertical. Endpoint `GET /ads/library/winners?period=N&skip_gemini=0|1`.
+    - [x] **Motor 3 Hook Generation extendido** (API v159): `multi_pattern=true` genera 3 hooks de 3 patrones DISTINTOS (cross-tenant aware con top_patterns del tenant). Cascada modelos Gemini con fallback. Cache 5min compuesto `(ad_id, multi_pattern)`.
+    - [x] **Motor 4 Creative Production** (API v160-v163): `POST /ads/duplicate-ad` con Meta Graph API real. Soporte dual `object_story_spec` (link/video/photo_data) Y `asset_feed_spec` (Advantage+ Creative). Fix `image_crops` deprecados (191x100, 16x9, 9x16). Status PAUSED por defecto + tracking `AdsHookVariants` + audit_log.
+    - [x] **Motor 5 Publish+Learn** (API v164): `_learn_from_variant` evalúa a 7d (CTR delta vs original) + veredictos `winner/marginal_winner/tie/loser/insufficient_data`. Cron `ads-variant-learn-daily` 8AM UTC ENABLED. Si gana ≥+20% CTR → ingiere a `AdsCreativeLibrary` con `source=variant_winner` + pushea anonimizado a `AdsCrossTenantPool` si tenant tiene `ads_cross_tenant_optin=true`. Endpoint `GET /ads/variants/{id}/metrics` para comparativa.
+    - [x] **3 tablas DDB nuevas** con PITR + TTL: `AdsCreativeLibrary` (persistente sin TTL, GSI `pattern-ctr-index`), `AdsHookVariants` (90d, GSI `original_ad_id-index`), `AdsCrossTenantPool` (365d, GSI `pattern-ctr-index`).
+    - [x] **2 EventBridge crons** ENABLED con targets correctos (Input JSON con path + httpMethod + body).
+    - [x] **Frontend `e96fd2a`** (`app/dashboard/ads/page.tsx`): botón "🚀 Publicar" en cada variant card + modal de confirmación con warning PAUSED + 3 sub-tabs dentro de "🎯 IA" (🏆 Ranking actual / 📚 Mi biblioteca / 🚀 Mis variantes) con lazy load. Botón "✨ Variantes" en biblioteca permite regenerar hooks desde cualquier ganador histórico.
+    - [x] **Frontend `2e38b21`** (`app/dashboard/settings/page.tsx`): card "🧠 Inteligencia de Ads" con `business_vertical` (input libre + 8 chips quick-pick + datalist 24 sugerencias) + toggle ON/OFF opt-in cross-tenant pool (default OFF, privacy-first) + textos explícitos sobre qué se comparte (pattern, longitud, % uplift) y qué NO (texto literal, datos del negocio, precios).
+    - [x] **Cross-tenant learning** como ventaja competitiva del SaaS: anonimizado por diseño, opt-in obligatorio, sk con sufijo `company_id[-4:]` (no identificable). Manychat/Wati no tienen esto.
+    - [x] **Test E2E real**: ad PAUSED creado en Meta de JMC (`new_ad_id=120246481560160200`) heredando asset_feed_spec del ganador original (`120242866733710200`) + variante persistida en `AdsHookVariants` con `status=PENDING_REVIEW`.
+    - [x] **3 lecciones nuevas** (sesión 12 mayo): #56 API SaaS no tiene `http` global (cada handler crea PoolManager local), #57 reusar motor B6.5 antes que crear endpoint nuevo (Regla #8 KILL_CREATIVE inyectada dentro de `_b65_fetch_ad_creative_ranking` — cero refactor), #58 falsa alarma "0 hits" en regla nueva (validar con datos reales antes de debug — JMC simplemente no tiene perdedores que matar).
+    - [x] **Costo unitario**: $0/variante (Gemini Flash Lite con cache 5min). Sin minimum mensual. Replicate descartado tras análisis exhaustivo (`gemini-3.1-flash-image-preview` único modelo para todo el módulo de imágenes).
+    - [ ] **Próximo sprint relacionado:** Brand DNA + Wizard 2.0 con generación de imágenes (ver sección "Sprint Brand DNA + Wizard 2.0" abajo).
 ### 💻 Frontend
 - [x] 19+ páginas: dashboard, CRM Kanban+IA, chat en vivo, catálogo+inventario, citas, pagos, analytics, memoria IA, training, templates, gateway, WhatsApp Embedded Signup, settings, ads wizard+dashboard, agents, agents/performance
 - [x] Auth Cognito email/Google + callback + welcome
@@ -504,7 +519,12 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] `MetaEventsLog` (PK: `event_id`, TTL 90d, PITR) ✅ creada — dedup eventos CAPI antes de enviar
 - [x] `AdsAttribution` (PK: `company_id`, SK: `campaign_id#phone#event#epoch`, GSI: `campaign-event-index`, TTL 365d, PITR) ✅ creada — vincula campaign → lead → pago
 - [x] `AdsRecommendations` (PK: `company_id`, SK: `rec_id`, GSI: `status-created-index`, TTL 7d, PITR) ✅ creada — recomendaciones IA del cron
-- [ ] Modificar `KnowledgeBase config_pro`: agregar `feature_overrides`, `tenant_notes`, `tags`, `events_timeline`, `pixel_id`
+- [x] `AdsCreativeLibrary` (PK: `company_id`, SK: `creative_id`, GSI: `pattern-ctr-index`, PITR ✅, sin TTL — persistente) ✅ creada Sprint AI Creative Loop — librería de creatives ganadores del tenant
+- [x] `AdsHookVariants` (PK: `company_id`, SK: `variant_id`, GSI: `original_ad_id-index`, TTL 90d, PITR ✅) ✅ creada Sprint AI Creative Loop — tracking variantes publicadas (Motor 4 → Motor 5)
+- [x] `AdsCrossTenantPool` (PK: `vertical`, SK: `pattern#ts#company_short`, GSI: `pattern-ctr-index`, TTL 365d, PITR ✅) ✅ creada Sprint AI Creative Loop — patrones anonimizados cross-tenant opt-in
+- [ ] `BrandDNA` (PK: `company_id`, TTL 90d, PITR) — pendiente Sprint Brand DNA + Wizard 2.0
+- [ ] `BrandAssets` (PK: `company_id`, SK: `asset_id`, GSI: `asset_type-index`, TTL 365d auto-cleanup inactivos, PITR) — pendiente Sprint Brand DNA + Wizard 2.0
+- [ ] Modificar `KnowledgeBase config_pro`: agregar `feature_overrides`, `tenant_notes`, `tags`, `events_timeline`, `pixel_id`, `business_vertical`, `ads_cross_tenant_optin`, `wizards_pack_balance`
 - [ ] Modificar `Leads_CRM`: agregar `source_campaign_id`, `source_type`, `paid_amount`
 ### ⚙️ Env vars nuevas
 - `SUPER_ADMIN_EMAILS` (ya existe) — bootstrap inicial
@@ -866,8 +886,129 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 45. **🟡 Lección 40 sigue reincidiendo (4ta vez)**: PK incorrecta en `update_item` silente. Necesario crear job de auditoría que recorra el código buscando `Table("X").update_item(Key={...})` y valide contra el KeySchema real de cada tabla.
 46. **🔴 Baseline drift confirmado (Lección 37)**: `~/audit_bot/lambda_function.py` estaba 2.6KB más viejo que la versión desplegada (`_is_session_paused_for_human` faltaba). SIEMPRE descargar el paquete con `aws lambda get-function --query Code.Location | xargs curl` antes de parchar. Nunca confiar en carpetas locales viejas.
 47. **🦁 Filosofía multi-tenant en datos de cliente**: si necesitás corregir un dato puntual de un tenant (ej: agregar `time_slots` a un servicio), preguntate ANTES "¿esto debería ser editable desde la UI del cliente?". Si la respuesta es sí → construir la UI en vez de hacer el update DDB a mano. El update DDB es deuda técnica disfrazada de solución rápida — cada update manual te ata como dueño-soporte y rompe el modelo SaaS escalable. Filosofía león: si no escala a 1000 clientes, no lo hagas a 1.
-### 11 mayo 2026 (mañana-tarde) — Sprint Calendly Mode + UI Multi-tenant completa 🦁
-> Sesión maratón ~8h. Cerró Calendly mode (CalendarPicker v7.3) + auto-onboarding multi-tenant del flow + UI completa `/dashboard/services` con horarios/días/modo de reserva + recordatorios post-agendamiento async + handler `send_group_link` para cursos con cohort fijo. 9 deploys Bot (v154→v162) + 1 deploy API (v148) + 4 commits frontend. Filosofía león aplicada: NADA hardcodeado, todo configurable desde UI por cualquier tenant.
+---
+## 🧬 PRÓXIMO SPRINT — Brand DNA + Wizard 2.0 + BrandAssets + Wizard Packs
+> **Estado:** PENDIENTE (planificado 12 mayo 2026, ejecución pendiente)
+> **Tiempo estimado:** ~17h en 5 sesiones atómicas
+> **Filosofía:** Wizard de ads de hoy es básico y apretado. Cliente entrega URLs/fotos, IA genera todo según fórmula Andromeda Meta 2026 (emoción + tensión + persona + autenticidad), cliente revisa visualmente y lanza multi-canal.
+### 🎯 Objetivo del módulo
+Transformar el wizard de Ads actual (5 pasos, 1 imagen genérica) en un **wizard guiado de 8 pasos** que:
+1. Analiza la marca del cliente con IA (scraping de su web + IG/FB + competencia)
+2. Genera **Brand DNA persistente** (voz, tono, audiencia, dolores, propuesta de valor, social proof legal)
+3. Permite seleccionar referencias visuales reales (productos, lugares, equipo) desde **Brand Assets Library**
+4. Genera **10 imágenes 512px en paralelo** con prompt Andromeda (cliente elige las que más le gustan)
+5. **Upgrade 3 imágenes finales a 1024px** con thinking=high
+6. Genera **3-5 variantes de texto** con social proof legal anonimizado
+7. Publica multi-canal (FB Ads + IG Ads + WhatsApp CTW) en una sola pantalla de review
+8. Quotas por plan con compra de packs adicionales (mismo patrón que Message Packs)
+### 📐 Arquitectura técnica
+#### Modelo de IA único: `gemini-3.1-flash-image-preview` (Nano Banana 2)
+- **Por qué este y no Replicate/Flux:** mismo billing Google ya activo, soporta 0.5K (512px barato $0.045/img), aspect ratios 9:16+16:9+1:1 nativos, hasta 14 imágenes de referencia (productos+personas), thinking mode controlado (minimal/high), marca de agua SynthID legal automática para Meta Ads policies.
+- **Costos por wizard:**
+  - **Sin refs (servicios genéricos):** 10×$0.045 preview + 3×$0.067 final = **$0.65 USD** (~$2,700 COP)
+  - **Con refs (producto/lugar real):** stage 1 master con refs ($0.221) + 9 variantes editando master ($0.41) + 3 finales 1K ($0.20) = **$0.83 USD** (~$3,500 COP)
+- **Env vars planificadas:** `IMAGE_MODEL_PREVIEW`, `IMAGE_MODEL_FINAL`, `IMAGE_RESOLUTION_PREVIEW=512`, `IMAGE_RESOLUTION_FINAL=1K`, `IMAGE_THINKING_PREVIEW=minimal`, `IMAGE_THINKING_FINAL=high` (todo configurable sin redeploy).
+- **Cuando salga Nano Banana 3 o modelo mejor:** cambiar 1 env var. Cero refactor.
+#### Modelo dual canales — preparado para TikTok + Google sin refactor
+- **Hoy:** FB Ads + IG Ads + WhatsApp CTW (los 3 corren sobre Meta API ya integrada)
+- **Mañana (Sprint 7):** agregar 1 archivo `tiktok_scraper.py` + setear `coming_soon: false` en el catálogo
+- **Helper `_scrape_source(source_type, url)` con dispatcher pattern:** cada source es módulo independiente. Wizard step "Canales" lee de array `available_channels` con flag `coming_soon` (visible disabled hasta integrar).
+### 📅 Roadmap de 5 sprints atómicos
+#### **Sprint A — Brand DNA (~3h)** 🧬
+- Tabla `BrandDNA` (PK `company_id`, TTL 90d, PITR)
+- Helper `_scrape_source(source_type, url)` con dispatcher pattern:
+  - `_scrape_website(url)` ← reusa `/scrape` existente
+  - `_scrape_instagram(ig_token)` ← Graph API (requiere conexión Embedded Signup)
+  - `_scrape_facebook(fb_token)` ← Graph API
+  - `_scrape_competitor(url)` ← scraping HTML público (Puppeteer skip por timeout Lambda — usar `urllib3` + BeautifulSoup)
+  - `_scrape_tiktok(url)` ← stub `NotImplementedError` con flag `coming_soon=true`
+- Endpoints:
+  - `POST /brand-dna/generate` → orquesta scraping multi-source + Gemini análisis profundo + persiste
+  - `GET /brand-dna` → lee del cache (90d)
+  - `POST /brand-dna/regenerate` → cooldown 15d obligatorio (anti-abuso)
+- UI en `/dashboard/settings`:
+  - Card "🧬 ADN de mi marca" con botón "Generar"
+  - Modal de inputs: URL website, URL competidor 1, URL competidor 2 (opcionales)
+  - Visualización del resultado con secciones colapsables: Voz/Tono, Audiencia, Dolores, Propuesta de Valor, Social Proof Legal, Insights de Competencia
+  - Botón "🔄 Regenerar" con countdown si está en cooldown
+**Output estructurado del Brand DNA:**
+```json
+{
+  "voice": "profesional, cálida, con autoridad técnica",
+  "tone": "directo pero amable",
+  "target_audience": {
+    "demographics": "...",
+    "psychographics": "...",
+    "pain_points": ["...", "..."]
+  },
+  "value_propositions": ["..."],
+  "legal_social_proof": [
+    "+1,000 colombianos eligen formarse en seguridad personal",
+    "+500 personas capacitadas confirman que vale cada minuto",
+    "El 80% de quienes se forman recomendarían el curso"
+  ],
+  "competitor_insights": ["..."],
+  "sources_used": ["website", "instagram", "competitor_url_1"],
+  "generated_at": ts,
+  "expires_at": ts + 90d,
+  "regenerate_available_at": ts + 15d
+}
+```
+#### **Sprint A.5 — Brand Assets Library (~3h)** 📚
+- Tabla `BrandAssets` (PK `company_id`, SK `asset_id`, GSI `asset_type-index`, TTL 365d, PITR)
+- Schema: `asset_type` (product/location/team/logo) + `name` + `s3_url` + `thumbnail_url` (256x256 Pillow) + `tags` + `usage_count` + `uploaded_at`
+- Endpoints: `POST /brand-assets/upload-url`, `POST /brand-assets`, `GET /brand-assets?type=X`, `DELETE /brand-assets/{id}`, `PUT /brand-assets/{id}`
+- UI en `/dashboard/settings`: sección "📚 Biblioteca de imágenes de marca" con drag&drop + 4 grupos
+- "Identidad Visual" evoluciona a 3 sub-secciones: 📝 Descripción textual + 📚 Biblioteca + 🧬 Brand DNA
+#### **Sprint B — Wizard 2.0 Backend (~4h)** 🤖
+- Catálogo `WIZARD_PACKS` en DDB (mismo patrón Message Packs)
+- `TenantQuotas` con campo `wizards_used` nuevo
+- Helpers: `consume_pack_wizard()`, `add_pack_wizards()`, `_generate_image_async()`, `_brand_dna_to_image_prompt()`
+- Endpoints: `POST /ads/wizard/check-quota`, `/generate-strategy`, `/generate-images-preview` (10×512px), `/generate-images-final` (3×1K), `/generate-copies`, `/launch`
+- Billing: `GET /billing/packs/wizards` + `POST /billing/packs/wizards/checkout`
+- Quotas: Starter 5/mes, Pro 20/mes, Agency 50/mes, Enterprise ilimitado
+#### **Sprint C — Wizard 2.0 Frontend (~5h)** 🎨
+- Nueva página `/dashboard/ads/wizard` full-screen con 8 pasos
+- Indicador cuota arriba: `🎨 3/5 wizards usados este mes`
+- 8 pasos: Brand DNA check → Estrategia → Canales (TikTok+Google "Próximamente") → Idioma → Producto+Beneficios → Referencias visuales → Grid 10 imágenes → Textos persuasivos
+- Pantalla final: preview Meta Ad 3 formatos + botón "🚀 Lanzar multi-canal"
+#### **Sprint D — Andromeda Overlay + 3 formatos auto (~2h)** ✨
+- Helper `_overlay_text_on_image()` con Gemini editing nativo
+- Auto-generación 3 formatos (1:1, 9:16, 16:9) al publicar
+- Integración con Motor 4 del AI Creative Loop
+- Texto sobreimpuesto bottom-left, máx 4 palabras, safe-zone Meta
+### 💰 Pricing — NO se cobra por wizard al cliente (incluido en plan)
+| Plan | Wizards/mes | Costo backend máx | Margen |
+|---|---|---|---|
+| Starter $97 | 5 | $4.15 | 95.7% ✅ |
+| Pro $297 | 20 | $16.60 | 94.4% ✅ |
+| Agency $497 | 50 | $41.50 | 91.6% ✅ |
+| Enterprise | Ilimitado | depende uso | configurable |
+**Packs adicionales (one-time, no expiran):**
+| Pack | Wizards | Precio | Descuento |
+|---|---|---|---|
+| S | 10 | $19 | 0% |
+| M ⭐ | 50 | $79 | 17% |
+| L 💎 | 200 | $249 | 35% |
+### 🔑 12 Decisiones críticas (NO replantear)
+1. Scraping: website + IG/FB conectado + URL competencia
+2. Modelo IA único: `gemini-3.1-flash-image-preview`
+3. Wizard: nueva página `/dashboard/ads/wizard` full-screen
+4. Brand DNA: cache 90d + cooldown 15d
+5. TikTok+Google Ads: arquitectura preparada con `coming_soon`, Sprint 7
+6. Social proof: técnica "vague specificity" legal
+7. BrandAssets persistente: una vez subido, reusable N veces
+8. $0.83/wizard peor caso: margen 91.6%, no se cobra extra
+9. Opción genérica para servicios sin producto: SÍ con warning UX
+10. Orden: A → A.5 → B → C → D
+11. "Identidad Visual" actual: EVOLUCIONA, no se elimina
+12. Wizards incluidos en plan + packs (mismo modelo Message Packs)
+### ⚙️ Env vars planificadas
+`IMAGE_MODEL_PREVIEW`, `IMAGE_MODEL_FINAL`, `IMAGE_RESOLUTION_PREVIEW=512`, `IMAGE_RESOLUTION_FINAL=1K`, `IMAGE_THINKING_PREVIEW=minimal`, `IMAGE_THINKING_FINAL=high`, `BRAND_DNA_TTL_DAYS=90`, `BRAND_DNA_REGENERATE_COOLDOWN_DAYS=15`, `WIZARD_MAX_REFS=5`, `GOOGLE_SPENDING_CAP_MONTHLY=300`
+### 🛡️ Pre-requisitos antes de Sprint B
+1. Subir spending cap Google Cloud a $300/mes + alertas 50/75/90% (Lección Bug #14)
+2. Crear 3 productos Wizard Packs en Lemon Squeezy (S/M/L) + variant_ids en DDB
+3. NO necesitas Replicate — todo Google Gemini
 #### Bugs cerrados
 ##### Bug #53 (CRÍTICO 🔴) — TIME_SCREEN flow v6.0: `screen` leído del lugar equivocado
 - **Síntoma**: TIME_SCREEN no renderizaba — flow mostraba "Se produjo un error". Logs mostraban Duration 187ms (handler cayó al fallback genérico).
