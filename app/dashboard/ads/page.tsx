@@ -150,6 +150,12 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
     } catch {}
   };
   const [creativeRankings, setCreativeRankings] = useState<any[]>([]);
+  // Hook Generation (Ads Pro v2) — botón ✨ Variantes en el 🏆
+  const [hookModalAd, setHookModalAd] = useState<any>(null);
+  const [hookLoading, setHookLoading] = useState(false);
+  const [hookVariants, setHookVariants] = useState<any[]>([]);
+  const [hookPattern, setHookPattern] = useState<string>('');
+  const [hookCopiedIdx, setHookCopiedIdx] = useState<number | null>(null);
   const loadRecommendations = async () => {
     setRecsLoading(true);
     try {
@@ -210,6 +216,43 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
       }
     } catch { showToast('Error de conexión'); }
     setDismissingRec(null);
+  };
+  const generateHookVariants = async (ad: any, campaignName: string) => {
+    setHookModalAd({ ...ad, campaign_name: campaignName });
+    setHookLoading(true);
+    setHookVariants([]);
+    setHookPattern('');
+    setHookCopiedIdx(null);
+    try {
+      const res = await fetch(`${API_URL}/ads/generate-hook-variants`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ad_id: ad.ad_id,
+          creative_text: ad.creative_text || ad.ad_name || '',
+          campaign_name: campaignName,
+        }),
+      });
+      const data = await res.json();
+      if (data.variants?.length) {
+        setHookVariants(data.variants);
+        setHookPattern(data.pattern || '');
+        if (data.cached) showToast('⚡ Variantes recuperadas del cache');
+      } else {
+        showToast('❌ ' + (data.error || 'No se pudieron generar variantes'));
+        setHookModalAd(null);
+      }
+    } catch {
+      showToast('Error de conexión');
+      setHookModalAd(null);
+    }
+    setHookLoading(false);
+  };
+  const copyHook = (hook: string, idx: number) => {
+    navigator.clipboard.writeText(hook).then(() => {
+      setHookCopiedIdx(idx);
+      setTimeout(() => setHookCopiedIdx(null), 2000);
+    }).catch(() => showToast('No se pudo copiar'));
   };
   const handleGenerate = async () => {
     setCreating(true); setVariants([]);
@@ -487,6 +530,67 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
     return (
     <div>
       {toast && <div className="fixed top-4 right-4 z-50 bg-[#1a1f2e] border border-white/10 rounded-xl px-5 py-3 text-sm font-medium shadow-xl">{toast}</div>}
+      {hookModalAd && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setHookModalAd(null)}>
+          <div className="bg-[#0f1320] border border-purple-500/30 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-[#0f1320] border-b border-white/5 p-5 flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-base text-purple-400">✨ Variantes generadas por IA</h3>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Basadas en tu ganador: <span className="text-white font-medium">{hookModalAd.ad_name}</span>
+                  {hookModalAd.ctr && <span className="text-emerald-400"> (CTR {hookModalAd.ctr}%)</span>}
+                </p>
+                {hookPattern && (
+                  <span className="inline-block mt-2 text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold uppercase tracking-widest">
+                    Patrón: {hookPattern}
+                  </span>
+                )}
+              </div>
+              <button onClick={() => setHookModalAd(null)} className="text-gray-400 hover:text-white text-xl shrink-0">✕</button>
+            </div>
+            <div className="p-5">
+              {hookLoading ? (
+                <div className="flex flex-col items-center py-12">
+                  <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
+                  <p className="text-xs text-gray-400">Generando 3 variantes con IA...</p>
+                  <p className="text-[9px] text-gray-600 mt-1">~3 segundos</p>
+                </div>
+              ) : hookVariants.length === 0 ? (
+                <p className="text-center text-sm text-gray-400 py-8">Sin variantes</p>
+              ) : (
+                <div className="space-y-3">
+                  {hookVariants.map((v: any, i: number) => (
+                    <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-4 hover:border-purple-500/30 transition-all">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold shrink-0">
+                          Variante {i + 1}
+                        </span>
+                        <button onClick={() => copyHook(v.hook, i)}
+                          className={`text-[9px] px-2 py-1 rounded-lg font-bold transition-all shrink-0 ${hookCopiedIdx === i ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}>
+                          {hookCopiedIdx === i ? '✓ Copiado' : '📋 Copiar'}
+                        </button>
+                      </div>
+                      <p className="text-sm text-white leading-snug mb-2">{v.hook}</p>
+                      {v.angle && (
+                        <p className="text-[10px] text-gray-500 italic">
+                          <span className="text-gray-400 font-medium">Ángulo:</span> {v.angle}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                  <div className="mt-4 p-3 bg-purple-500/5 border border-purple-500/20 rounded-xl">
+                    <p className="text-[10px] text-purple-300 leading-relaxed">
+                      💡 <strong>Tip:</strong> Copia una variante y pégala en Ads Manager como nuevo anuncio
+                      dentro de la misma campaña. Duplica el ganador y cambia solo el texto principal —
+                      mantén la misma imagen y audiencia para aislar el efecto del hook.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Publicidad 📢</h1>
         <div className="flex gap-2">
@@ -987,6 +1091,13 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${idx === 0 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/10 text-gray-500'}`}>
                             {idx === 0 ? '🏆' : idx + 1}
                           </span>
+                          {idx === 0 && ad.ctr >= 2 && (
+                            <button onClick={() => generateHookVariants(ad, camp.campaign_name)}
+                              className="text-[9px] px-2 py-1 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 font-bold transition-all shrink-0 whitespace-nowrap"
+                              title="Genera 3 variantes basadas en este ganador">
+                              ✨ Variantes
+                            </button>
+                          )}
                           {ad.creative_image && (
                             <img src={ad.creative_image} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
                           )}
