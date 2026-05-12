@@ -2,7 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**v162** — Calendly mode UX premium: CalendarPicker v7.3 + auto-onboarding flow multi-tenant + recordatorios async post-agendamiento + booking_mode solapable/exclusive + available_weekdays + send_group_link)
+**v163** — deuda técnica cerrada: CAPI Schedule funnel completo + Google Calendar multi-tenant + ValidationException fix + Ads dashboard cache L1+L2 DDB (0 rate limits Meta) + fix frontend tab sobreescritura métricas)
 Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 **Repo frontend:** [Landing-IA](https://github.com/juancmartinezg/Landing-IA) · `main`
 **Repo backend:** [chatbot_escuela](https://github.com/juancmartinezg/chatbot_escuela) · `main`
@@ -188,7 +188,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] Edit budget endpoint
 - [x] Endpoint resize-image (3 formatos: 1:1, 9:16, 16:9 con Pillow)
 - [x] Saved audiences endpoint
-- [x] Cache Meta API 15 min + rate limit fallback
+- [x] Cache Meta API L1 memoria + L2 DynamoDB persistente (TTL 15 min, sobrevive cold starts, 0 rate limits) — API v149
 - [x] Lazy load ads
 - [x] Cron diario EventBridge
 ### 💻 Frontend
@@ -944,6 +944,19 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 51. **🟠 Falsas alarmas del testing pipeline**: cuando reincide un bug "ya cerrado 3 veces", VERIFICAR PRIMERO sin el reset/cleanup script antes de declarar regresión. Lección 40 NO siempre es Lección 40.
 52. **🦁 Auto-onboarding > update DDB manual**: si un tenant nuevo necesita un asset en Meta (flow, template, pixel, ad account), el endpoint que lo crea debe estar listo DESDE EL DÍA 1. Cada update manual al primer cliente JMC es una promesa rota de escalabilidad. Filosofía león: construir el endpoint la primera vez, no esperar al cliente #2.
 53. **🔴 read_file siempre, asumir nunca**: cuarta vez en la sesión asumí (mal) el SHA o repo de un archivo. La herramienta `read_file` acepta cualquier SHA de cualquier repo del workspace. Costo de asumir: 5 min de ida y vuelta + sensación de no confianza del usuario. Costo de verificar: 2 segundos. SIEMPRE verificar.
+### 12 mayo 2026 (madrugada-mañana) — Deuda técnica cerrada + Ads cache L1+L2 🦁
+> Sesión ~4h post-Calendly. Cerró 3 deudas técnicas pendientes (CAPI Schedule + Google Calendar multi-tenant + ValidationException fix) + migró cache de Meta Ads API a DynamoDB L1+L2 (0 rate limits) + fix frontend tab sobreescritura métricas. Bot v163 + API v149 + 1 commit frontend.
+#### Deuda técnica cerrada (Bot v163)
+- [x] **CAPI Schedule event**: `send_meta_capi_event("Schedule")` disparado tras confirmar cita en flow_exchange. Cierra el funnel Meta completo: `Lead → InitiateCheckout → Purchase → Schedule`. Multi-tenant (usa company_id del contexto). ✅
+- [x] **Google Calendar multi-tenant**: `_get_google_calendar_service(company_id)` y `create_calendar_event(..., company_id=...)` ahora reciben company_id como parámetro. Antes usaban `DEFAULT_COMPANY_ID=""` → `ValidationException` silente → evento nunca se creaba en Calendar del dueño. 2 callers actualizados. ✅
+- [x] **ValidationException latente en handle_payment_webhook**: `get_config_pro(DEFAULT_COMPANY_ID)` se llamaba ANTES de tener el item del pago (que trae el company_id real). Fix: `if DEFAULT_COMPANY_ID else {}` + fallback a env vars legacy. No rompe nada, solo limpia CloudWatch. ✅
+#### Ads dashboard cache L1+L2 DDB (API v149)
+- [x] **`meta_cached_request` migrado a DynamoDB**: cache de 2 niveles — L1 memoria (instantáneo, se pierde en cold start) + L2 DynamoDB `KnowledgeBase[__META_CACHE__]` (persistente entre cold starts, TTL automático). Cuando Meta devuelve 429, devuelve cache expirado como fallback (nunca datos vacíos). Multi-tenant safe: cache_key incluye `company_id`. ✅
+- [x] **`handle_ads_dashboard` cacheado**: 4 llamadas directas a Meta envueltas en `meta_cached_request` con cache keys por tenant+periodo+campaña. Dashboard carga **instantáneo** en segunda visita (0 llamadas a Meta). ✅
+- [x] **Frontend fix tab sobreescritura**: cambiar tab "Mis campañas" ya NO recarga campañas sin métricas sobreescribiendo las buenas del `/ads/init`. Solo recarga si `campaigns.length === 0`. ✅
+#### Lecciones nuevas
+54. **🔴 Cache en memoria Lambda es inútil para dashboards**: el Lambda se apaga después de ~5 min de inactividad → cache en dict se pierde → siguiente visita golpea Meta de nuevo → rate limit. DynamoDB como L2 resuelve el problema porque persiste entre cold starts. Patrón reusable para cualquier API externa con rate limit.
+55. **🔴 Frontend: setCampaigns sobreescribe métricas**: si un tab hace fetch a un endpoint que devuelve campañas SIN métricas y hace `setCampaigns(data)`, borra las métricas que ya estaban en el state del `/ads/init`. Guard: solo recargar si el state está vacío.
 ### 8-9 mayo 2026 (noche-madrugada) — Sprint 1 COMPLETO: Trial + Quotas + Billing E2E + Admin Editor 🦁
 > Sesión maratón ~7h. Cerró Sprint 1 completo: trial 14d auto, quotas enforcement ON, billing E2E con Lemon Squeezy (test real con tarjeta), banner trial, email warning, cron expire, landing+dashboard dinámicos desde DDB, admin editor de planes con features_ui+tooltips. 30 deploys (Bot v137-v138 + API v123-v133 + 8 commits frontend).
 #### Sprint 1 — Billing + Trial completado
