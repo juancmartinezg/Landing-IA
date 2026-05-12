@@ -191,6 +191,12 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] Cache Meta API L1 memoria + L2 DynamoDB persistente (TTL 15 min, sobrevive cold starts, 0 rate limits) — API v149
 - [x] Lazy load ads
 - [x] Cron diario EventBridge
+- [ ] **Ads Pro v2 — AI Creative Analysis** (Sprint en progreso):
+  - [ ] Análisis a nivel **creative/ad** (no solo campaña) — métricas CTR/CPL/Hook Rate por variante individual
+  - [ ] Hook generation basada en ganadores — Gemini analiza texto del creative con mejor CTR y genera variantes del mismo patrón emocional
+  - [ ] Auto-kill perdedores por Hook Rate — si creative tiene <X% CTR después de 500 impressions, recomendación automática de pausar
+  - [ ] Ranking de creatives en tab "🎯 IA" del dashboard
+  - [ ] **Futuro (Sprint 3):** AI Creative Loop completo (5 motores: Content Ingestion → Winner Analysis → Hook Generation → Creative Production → Publish+Learn). Contexto técnico absorbido de referencia Meta 2026 — `Velocity = Creative Volume × Signal Quality × Learning Speed`. Cross-tenant learning como ventaja competitiva del SaaS.
 ### 💻 Frontend
 - [x] 19+ páginas: dashboard, CRM Kanban+IA, chat en vivo, catálogo+inventario, citas, pagos, analytics, memoria IA, training, templates, gateway, WhatsApp Embedded Signup, settings, ads wizard+dashboard, agents, agents/performance
 - [x] Auth Cognito email/Google + callback + welcome
