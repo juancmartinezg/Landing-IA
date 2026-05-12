@@ -515,7 +515,7 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
         ].map(t => (
           <button key={t.id} onClick={() => {
             setTab(t.id as any);
-            if (t.id === 'campaigns') {
+            if (t.id === 'campaigns' && campaigns.length === 0) {
               fetch(`${API_URL}/ads/campaigns`, { headers: h }).then((r: any) => r.json()).then((d: any) => setCampaigns(d.campaigns || [])).catch(() => {});
             }
             if (t.id === 'recommendations') {
