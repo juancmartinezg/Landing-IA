@@ -85,11 +85,25 @@ export default function SettingsPage() {
     closed_days: [] as number[],
     holidays: [] as string[],
   });
-  const [humanHours, setHumanHours] = useState({
-    start: 8,
-    end: 18,
-    days: [1, 2, 3, 4, 5] as number[],
+   const [humanHours, setHumanHours] = useState({
+     start: 8,
+     end: 18,
+     days: [1, 2, 3, 4, 5] as number[],
+   });
+  // Ads — vertical de industria + opt-in cross-tenant pool
+  const [adsForm, setAdsForm] = useState({
+    business_vertical: '',
+    ads_cross_tenant_optin: false,
   });
+  // Lista de verticals sugeridos (extensible — el usuario puede escribir uno custom)
+  const VERTICAL_SUGGESTIONS = [
+    'clinica-estetica', 'odontologia', 'salud', 'fitness-gym',
+    'restaurante', 'delivery-comida', 'turismo', 'hoteleria',
+    'ropa-femenina', 'ropa-masculina', 'belleza-spa', 'peluqueria',
+    'inmobiliaria', 'automotriz', 'educacion-cursos', 'consultoria',
+    'tecnologia-saas', 'fotografia', 'eventos-bodas', 'agencia-marketing',
+    'tiro-deportivo', 'seguros', 'asesoria-legal', 'arquitectura',
+  ];
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -120,12 +134,16 @@ export default function SettingsPage() {
         setShippingProviders((data.shipping || {}).providers || []);
         setPostPaymentFlow(data.post_payment_flow || 'scheduling');
         const hh = data.human_support_hours || {};
-        setHumanHours({
-          start: hh.start ?? 8,
-          end: hh.end ?? 18,
-          days: hh.days ?? [1, 2, 3, 4, 5],
+         setHumanHours({
+           start: hh.start ?? 8,
+           end: hh.end ?? 18,
+           days: hh.days ?? [1, 2, 3, 4, 5],
+         });
+        setAdsForm({
+          business_vertical: data.business_vertical || '',
+          ads_cross_tenant_optin: !!data.ads_cross_tenant_optin,
         });
-        setLoading(false);
+         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
@@ -213,6 +231,24 @@ export default function SettingsPage() {
       showToast('✓ Horario del asesor guardado');
     } catch (err) {
       showToast('Error guardando horario del asesor');
+    }
+    setSaving(false);
+  };
+const handleSaveAdsConfig = async () => {
+    setSaving(true);
+    try {
+      await fetch(`${API_URL}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({
+          business_vertical: adsForm.business_vertical.trim().toLowerCase(),
+          ads_cross_tenant_optin: adsForm.ads_cross_tenant_optin,
+        }),
+      });
+      setConfig({ ...config, business_vertical: adsForm.business_vertical, ads_cross_tenant_optin: adsForm.ads_cross_tenant_optin });
+      showToast('✓ Configuración de Ads guardada');
+    } catch (err) {
+      showToast('Error guardando');
     }
     setSaving(false);
   };
@@ -977,6 +1013,86 @@ export default function SettingsPage() {
           {config?.prompt?.includes('INFORMACION DEL SITIO WEB') && (
             <p className="text-[9px] text-emerald-400 mt-1">✅ Sitio web importado y activo en el bot</p>
           )}
+        </div>
+        {/* Inteligencia de Ads — Vertical + Cross-tenant pool */}
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold">Inteligencia de Ads 🧠</h3>
+            <button onClick={handleSaveAdsConfig} disabled={saving}
+              className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
+              {saving ? '...' : 'Guardar'}
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-500 mb-4">
+            Estas opciones potencian el motor de IA que genera y analiza tus anuncios.
+            Los datos se usan de forma anonimizada — nadie ve qué tenant aportó qué patrón.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
+                Industria de tu negocio
+              </label>
+              <p className="text-[10px] text-gray-600 mb-2">
+                Permite que la IA aprenda qué patrones funcionan en negocios similares al tuyo.
+                Escribe libremente o elige una sugerencia.
+              </p>
+              <input
+                list="vertical-suggestions"
+                value={adsForm.business_vertical}
+                onChange={(e) => setAdsForm({...adsForm, business_vertical: e.target.value})}
+                placeholder="Ej: clinica-estetica, restaurante, ropa-femenina..."
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white"
+              />
+              <datalist id="vertical-suggestions">
+                {VERTICAL_SUGGESTIONS.map(v => <option key={v} value={v} />)}
+              </datalist>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {VERTICAL_SUGGESTIONS.slice(0, 8).map(v => (
+                  <button key={v}
+                    onClick={() => setAdsForm({...adsForm, business_vertical: v})}
+                    className={`text-[9px] px-2 py-1 rounded-full transition-all ${
+                      adsForm.business_vertical === v
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                    }`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-white/5 pt-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 pt-0.5">
+                  <button
+                    onClick={() => setAdsForm({...adsForm, ads_cross_tenant_optin: !adsForm.ads_cross_tenant_optin})}
+                    className={`relative w-11 h-6 rounded-full transition-all ${
+                      adsForm.ads_cross_tenant_optin ? 'bg-emerald-600' : 'bg-white/10'
+                    }`}>
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                      adsForm.ads_cross_tenant_optin ? 'translate-x-5' : ''
+                    }`} />
+                  </button>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold mb-1">🌐 Aprendizaje colaborativo entre negocios</p>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    Si activas esto, cuando una de tus variantes <strong className="text-emerald-400">supere al original en +20% CTR</strong>,
+                    el patrón emocional que usó (ej: "escasez", "curiosidad") se compartirá <strong>de forma anonimizada</strong> con
+                    otros negocios de tu industria.
+                  </p>
+                  <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
+                    <strong>Lo que se comparte:</strong> tipo de patrón, longitud del hook, % de mejora vs original.
+                    <br />
+                    <strong>Lo que NO se comparte:</strong> el texto del anuncio, datos del negocio, precios, audiencia, métricas absolutas.
+                  </p>
+                  <p className="text-[10px] text-emerald-400 mt-2 leading-relaxed">
+                    ✨ <strong>A cambio:</strong> tu IA verá qué patrones funcionan mejor en {adsForm.business_vertical || 'tu industria'} y los sugerirá al generar variantes.
+                    Cuantos más negocios opt-in haya, más inteligente es la IA para todos.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         {/* Pasarela de Pagos */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
