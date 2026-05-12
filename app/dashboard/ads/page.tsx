@@ -149,14 +149,20 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
       setRecsCount(data.total || 0);
     } catch {}
   };
+  const [creativeRankings, setCreativeRankings] = useState<any[]>([]);
   const loadRecommendations = async () => {
     setRecsLoading(true);
     try {
-      const res = await fetch(`${API_URL}/ads/recommendations?status=pending&limit=50`, { headers: h });
-      const data = await res.json();
+      const [recsRes, crRes] = await Promise.all([
+        fetch(`${API_URL}/ads/recommendations?status=pending&limit=50`, { headers: h }),
+        fetch(`${API_URL}/ads/creative-ranking`, { headers: h }),
+      ]);
+      const data = await recsRes.json();
       setRecommendations(data.recommendations || []);
       setRecsByType(data.by_type || {});
       setRecsCount(data.total || 0);
+      const crData = await crRes.json();
+      setCreativeRankings(crData.rankings || []);
     } catch {
       showToast('Error cargando recomendaciones');
     }
@@ -954,6 +960,66 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
               Tú decides qué aplicar — nada se cambia automáticamente.
             </p>
           </div>
+          {creativeRankings.length > 0 && (
+            <details className="mb-4 group" open>
+              <summary className="flex items-center justify-between bg-purple-500/5 border border-purple-500/20 rounded-2xl p-4 cursor-pointer hover:bg-purple-500/10 transition-all">
+                <div>
+                  <h3 className="font-bold text-sm">🏆 Ranking de Creatives</h3>
+                  <p className="text-[10px] text-gray-400">¿Cuál anuncio convierte mejor? Análisis por creative individual.</p>
+                </div>
+                <span className="text-[10px] text-purple-400 group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div className="mt-2 space-y-3">
+                {creativeRankings.map((camp: any) => (
+                  <div key={camp.campaign_id} className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate">{camp.campaign_name}</p>
+                        <p className="text-[10px] text-gray-500">{camp.total_ads} anuncio{camp.total_ads !== 1 ? 's' : ''}</p>
+                      </div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${camp.best_ctr >= 3 ? 'bg-emerald-500/20 text-emerald-400' : camp.best_ctr >= 1.5 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                        CTR {camp.best_ctr}%
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {(camp.ranking || []).map((ad: any, idx: number) => (
+                        <div key={ad.ad_id} className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02] border border-white/5">
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${idx === 0 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/10 text-gray-500'}`}>
+                            {idx === 0 ? '🏆' : idx + 1}
+                          </span>
+                          {ad.creative_image && (
+                            <img src={ad.creative_image} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-bold truncate">{ad.ad_name}</p>
+                            {ad.creative_text && <p className="text-[9px] text-gray-500 truncate">{ad.creative_text}</p>}
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 text-center shrink-0">
+                            <div>
+                              <p className="text-[8px] text-gray-500">CTR</p>
+                              <p className="text-[10px] font-bold text-indigo-400">{ad.ctr}%</p>
+                            </div>
+                            <div>
+                              <p className="text-[8px] text-gray-500">Leads</p>
+                              <p className="text-[10px] font-bold text-emerald-400">{ad.leads}</p>
+                            </div>
+                            <div>
+                              <p className="text-[8px] text-gray-500">CPL</p>
+                              <p className="text-[10px] font-bold text-purple-400">${(ad.cpl || 0).toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-[8px] text-gray-500">Gasto</p>
+                              <p className="text-[10px] font-bold">${(ad.spend || 0).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
           {recsLoading ? (
             <div className="flex flex-col items-center py-12">
               <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3" />
