@@ -98,7 +98,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,790 líneas, **v162** — Calendly mode: CalendarPicker v7.3 (`min_date`/`max_date`/`unavailable_dates`) + `_get_available_dates` y `_get_available_slots` con cascada svc→tenant→default + `available_weekdays` y `booking_mode` por servicio + handler async `_internal_action=post_booking_messages` (no bloquea flow) + `post_payment_flow=send_group_link` con mensaje custom + `screen` y `selected_slot` del nivel raíz v6.0/7.3 + scheduling_flow_id desde config_pro) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,790 líneas, **v164** — payment-webhook blindado contra `item.get("company_id")=""`; Calendly mode:
+ CalendarPicker v7.3 (`min_date`/`max_date`/`unavailable_dates`) + `_get_available_dates` y `_get_available_slots` con cascada svc→tenant→default + `available_weekdays` y `booking_mode` por servicio + handler async `_internal_action=post_booking_messages` (no bloquea flow) + `post_payment_flow=send_group_link` con mensaje custom + `screen` y `selected_slot` del nivel raíz v6.0/7.3 + scheduling_flow_id desde config_pro) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
 - `SaaS_API_Handler` — incluye **`POST /scheduling-flow/setup`** auto-onboarding multi-tenant del WhatsApp Flow CalendarPicker v7.3 (crea + sube JSON + publica + guarda flow_id en config_pro, idempotente)
 - `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** + **Auto-onboarding Scheduling Flow** + **Wizard 2.0 Premium** (~18,170 líneas, ~126 endpoints, **v185** — wizard quota descontada en `generate-images-preview` con flag `append` para rondas adicionales; `generate-strategy` gratis; cap multi-tenant desde `config_pro.wizard_max_images_per_round`) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
@@ -871,8 +872,20 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Causa**: 2 `payment_table.update_item` (L3712 y L4138) usaban `Key={"contact_id": phone}` pero la tabla tiene PK `phoneNumber`. DynamoDB no lanza error — el update simplemente no aplica.
 - **Fix (Bot v152)**: cambiar a `Key={"phoneNumber": ...}` en ambos call sites.
 - **Lección 40 reincidencia**: este es el 4to bug del estilo "PK incorrecta en update silencioso" del año. Necesario: auditoría automatizada que recorra todos los `update_item(Table=X, Key=Y)` y valide Y contra el KeySchema real.
-#### Pendientes detectados (no bloquean — siguiente sprint)
-- **2 `ValidationException` latentes en `handle_payment_webhook`** (L2904-3036): 2 call sites pasan `""` a `get_config_pro` o `get_services_catalog` antes de tener el item. No rompen el flow (try/except los traga) pero ensucian CloudWatch.
+### 13 mayo 2026 (madrugada) — Limpieza ValidationException Bot v164 🦁
+> Sesión ~15 min. Cerrado pendiente declarado en sprint 11 mayo. 4 call sites en `handle_payment_webhook` (Bot L3087, L3089, L3112, L3124) hacían `item.get("company_id", DEFAULT_COMPANY_ID)` — pero `.get(key, default)` NO usa el default si la key existe vacía. Con `DEFAULT_COMPANY_ID=""` (strict mode v19) → 2 ValidationException latentes en CloudWatch.
+#### Fix (Bot v164)
+- [x] Extraer `_cid_pay = (item.get("company_id") or DEFAULT_COMPANY_ID or "").strip()` UNA vez tras el item resuelto.
+- [x] Guard explícito: si `_cid_pay` vacío tras blindaje → `logger.warning` + return 200 OK con `OK_NO_TENANT` (sin procesar post-pago, sin romper Wompi/Bold).
+- [x] Reusar `_cid_pay` en los 4 call sites (`get_config_pro`, `get_services_catalog` x3) → 0 ValidationException posibles.
+- [x] py_compile OK + deploy v164 verificado.
+#### Lección 48
+- **🟢 `.get(key, default)` ≠ `(item.get(key) or default)`**: el primero solo usa default si la key NO existe. Si existe con valor falsy (`""`, `None`, `0`) lo retorna tal cual. En multi-tenant strict con `DEFAULT_COMPANY_ID=""`, este patrón rompe silente. Patrón seguro: `(item.get(key) or default or "").strip()`.
+### Próximos pendientes
+- **M19/M20** — Test event code + Dashboard Match Rate por tenant.
+- **B6.5.6/B6.5.10** — Push FCM ads + sistema aprende post-apply.
+- **Stripe** — billing US/EU (crítico para mercados globales).
+- **Fase F** — Soporte/ticketing real. el item. No rompen el flow (try/except los traga) pero ensucian CloudWatch.
 - **`Tipo: ${data.service_type_label}` renderizado literal en DATE_SCREEN**: el bot manda la key bien, pero Meta no la interpola en el `TextBody`. Workaround acordado: eliminar el `TextBody` del flow JSON publicado (no es necesario que aparezca tipo de servicio, el cliente ya sabe qué pagó).
 - **Datos JMC sin `service.scheduling.time_slots`**: el código está bien escrito (lee `time_slots` del servicio), pero el servicio `seminario-tiro-pistola-9mm` no tiene el campo configurado → cae al rango completo de `business_hours` (9-17). Pendiente: agregar el dato a DDB + construir UI multi-tenant en `/dashboard/services` para que clientes configuren sus horarios sin tocar DDB.
 ### 13 mayo 2026 (madrugada) — Sprint Wizard 2.0 Step 8 Premium 🦁
