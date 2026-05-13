@@ -182,7 +182,49 @@ export default function TerminosCondiciones() {
               Estos Términos se rigen por las leyes de la República de Colombia. Cualquier disputa será resuelta inicialmente mediante negociación directa de buena fe. De no ser posible, las partes se someten a la jurisdicción de los jueces competentes de la ciudad de Medellín, Colombia, renunciando a cualquier otro fuero.
             </p>
           </div>
-          {/* 12. Programa de Afiliados */}
+          {/* 12. Aprendizaje Colaborativo entre Negocios */}
+          <div id="aprendizaje-colaborativo">
+            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+              <span className="text-indigo-500">12.</span> Aprendizaje Colaborativo entre Negocios (Network Effect)
+            </h2>
+            <p className="mb-4">
+              Como parte del valor diferencial de <strong>clientes.bot</strong> frente a competidores genéricos (Manychat, Wati, etc.), nuestra plataforma incluye un sistema de <strong>aprendizaje colaborativo anonimizado</strong> entre todos los negocios de la misma industria. Al usar el servicio, el Usuario acepta participar automáticamente en este sistema, sujeto a las siguientes condiciones:
+            </p>
+            <ul className="list-disc ml-6 space-y-3">
+              <li>
+                <strong className="text-emerald-400">Datos que se comparten:</strong> únicamente metadatos abstractos sobre patrones de mensajes/creativos publicitarios que demuestren alto rendimiento (CTR ≥ +20% vs versión original):
+                tipo de patrón emocional (ej: "escasez", "curiosidad", "prueba social"), longitud del hook, porcentaje de mejora vs versión anterior, e industria (vertical) del negocio.
+              </li>
+              <li>
+                <strong className="text-red-400">Datos que NUNCA se comparten:</strong> el texto literal del anuncio o mensaje, datos del negocio (nombre, marca, ubicación), precios, audiencia objetivo, métricas absolutas (impresiones, conversiones, ingresos), información de clientes finales del Usuario, ni identificación del tenant que aportó el patrón.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Anonimización por diseño:</strong> el sistema utiliza hashing y agrupación por industria. Es técnicamente imposible reconstruir o identificar qué negocio específico aportó cualquier patrón individual del pool colaborativo.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Beneficio recíproco:</strong> a cambio de contribuir patrones ganadores propios, el Usuario recibe sugerencias inteligentes basadas en lo que funciona mejor para otros negocios de su misma industria, mejorando la efectividad de sus campañas desde el día 1.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Activación automática:</strong> el sistema se activa cuando el Usuario configura su <strong>industria de negocio</strong> en el Dashboard (Configuración → Inteligencia de Ads). Sin esta configuración, el sistema no opera para ese tenant en ninguna dirección (ni contribuye ni recibe sugerencias).
+              </li>
+              <li>
+                <strong className="text-indigo-400">No constituye cesión de propiedad intelectual:</strong> el contenido original del Usuario (anuncios, textos, imágenes) permanece de su propiedad exclusiva. Solo se extraen aprendizajes estadísticos abstractos que no afectan derechos de autor.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Cumplimiento Habeas Data / GDPR:</strong> al no compartirse ningún dato personal de clientes finales del Usuario ni información identificable del Usuario mismo, el sistema cumple con la Ley 1581 de 2012 de Colombia (Habeas Data) y con el Reglamento General de Protección de Datos (GDPR) de la Unión Europea.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Retención y eliminación:</strong> los patrones anonimizados se retienen máximo <strong>365 días</strong> en el pool, después del cual se eliminan automáticamente. El Usuario puede solicitar la exclusión de sus aportes futuros enviando un correo a <strong>soporte@clientes.bot</strong>, aunque esto deshabilita el beneficio recíproco de recibir sugerencias.
+              </li>
+              <li>
+                <strong className="text-indigo-400">Modificaciones al sistema:</strong> cualquier cambio sustancial al alcance del aprendizaje colaborativo (qué se comparte, retención, etc.) será notificado al Usuario con al menos 15 días de anticipación al correo registrado.
+              </li>
+            </ul>
+            <p className="mt-4 italic bg-emerald-500/5 p-4 rounded-lg border border-emerald-500/10 text-emerald-300">
+              🌐 <strong>Filosofía:</strong> entre más negocios participan, más inteligente se vuelve el sistema para todos. Esto es lo que diferencia a clientes.bot de un SaaS genérico: cada cliente nuevo se beneficia inmediatamente del aprendizaje colectivo de toda la red.
+            </p>
+          </div>
+          {/* 13. Programa de Afiliados */}
           <div>
             <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
               <span className="text-indigo-500">13.</span> Programa de Afiliados
