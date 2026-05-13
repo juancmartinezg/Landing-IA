@@ -2,6 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
+**v189 + Bot v174 + Frontend `cf1344d`** — Sprint multi-tenant MASTER 🦁 (13 mayo sesión maratón ~13h, 9 sprints + 6 bugs producción). Multi-tenant funnel_mode (6 modos: pay_to_book/book_first/human_close/pay_and_ship/pay_and_deliver/free_booking) + Lead Qualifier IA con Gemini eval + Shipping step-machine + Auto-onboarding 4 templates Meta en 4 idiomas (ES/EN_US/PT_BR/FR) + Lead scoring metadata + Payment link reuse + Welcome menu fix debounce + Anti-hallucination prompt regla 24b. **Bot v153→v174** (21 versiones) — funnel routing, Lead Qualifier, Shipping step-machine, scheduling flow CAPI, payment reuse + lock 60s, welcome menu en debounce_execute, regla 24b prompt anti-mentira. **API v185→v189** (4 versiones) — wizard quota fix, funnel_mode whitelist, lead_qualifier whitelist, scheduling-flow auto-disparo onboarding, locale + templates whitelist, auto-create appointment_reminder_v1 + follow_up_v1 en 4 idiomas con cron poll-status. **Frontend `b4d0670`→`cf1344d`** — funnel mode card 6 modos, Lead Qualifier UI condicional. JMC: ambos templates PENDING en Meta (`appointment_reminder_v1` + `follow_up_v1` IDs reales submitted). Multi-tenant safe, escalable a 1M tenants sin tocar código.
 **v185** — Sprint Wizard 2.0 Step 8 Premium CERRADO 🦁 (13 mayo madrugada). Step 8 separado en 2 fases (incrustar texto con preview → lanzar con every-guard), dropdown copy→imagen por variante, borrador localStorage keyed por `company_id` con auto-save debounced 500ms + TTL 30d + warning si servicio borrado + limpieza post-launch, botón "+N más" con cap configurable desde `config_pro.wizard_max_images_per_round` (default 10), regenerar todo con confirm. **Backend (API v185)**: cuota movida de `generate-strategy` (texto barato) a `generate-images-preview` (donde está el costo real Gemini Image), append y regenerar-todo cobran 1 wizard cada uno (justo y predecible), strategy gratis. Multi-tenant safe, escalable a 1M tenants sin tocar código. Frontend `a904590`, test E2E con CloudWatch confirmando `wizard_quota consumed: company=JMC source=plan_unlimited append=False|True` ✅.
 **v179** — Sprint Brand DNA + Wizard 2.0 CERRADO 🦁 6 fases completadas en 1 sesión maratón (12-13 mayo).Brand DNA con scraping multi-source + Gemini (API v165). Brand Assets Library con 5 endpoints CRUD + thumbnails + Bucket Policy S3 (API v167). Wizard Backend 9 endpoints: check-quota + generate-strategy (10 Andromeda prompts) + generate-images-preview (10×512px paralelo) + generate-images-final (3×1K) + generate-copies (5 variantes social proof legal) + launch multi-canal + billing packs wizards (API v168-v179). Wizard Frontend 8 pasos full-screen (`246103f`). Andromeda overlay+resize via Gemini sin Pillow (API v174-v177). Cross-tenant siempre ON (network effect, API v166 + TyC sección 12). 5 tablas DDB nuevas (BrandDNA + BrandAssets + AdsCreativeLibrary + AdsHookVariants + AdsCrossTenantPool). 3 productos Wizard Packs en Lemon Squeezy. Bucket Policy S3 para brand-assets público. 27 deploys backend + 8 commits frontend.
 **v164** — Ads Pro v2 CERRADO 🎯 Regla #8 KILL_CREATIVE en motor B6.5 (API v153) + `POST /ads/generate-hook-variants` Gemini Flash Lite con cache 5min (API v155) + frontend botón ✨ Variantes en el 🏆 + modal con 3 hooks copiables y patrón emocional detectado (`92a3dcd`). JMC verificado: 0 KILL_CREATIVE (creatives sanos 2.43-4.99% CTR) + Gemini detectó patrón "escasez" del ganador.
@@ -98,10 +99,10 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~7,790 líneas, **v164** — payment-webhook blindado contra `item.get("company_id")=""`; Calendly mode:
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~8,330 líneas, **v174** — funnel_mode routing 6 modos + Lead Qualifier QUALIFYING_LEAD state + Gemini eval + Shipping step-machine + payment reuse + lock 60s + welcome menu en debounce_execute + regla 24b prompt anti-hallucination; Calendly mode:
  CalendarPicker v7.3 (`min_date`/`max_date`/`unavailable_dates`) + `_get_available_dates` y `_get_available_slots` con cascada svc→tenant→default + `available_weekdays` y `booking_mode` por servicio + handler async `_internal_action=post_booking_messages` (no bloquea flow) + `post_payment_flow=send_group_link` con mensaje custom + `screen` y `selected_slot` del nivel raíz v6.0/7.3 + scheduling_flow_id desde config_pro) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
 - `SaaS_API_Handler` — incluye **`POST /scheduling-flow/setup`** auto-onboarding multi-tenant del WhatsApp Flow CalendarPicker v7.3 (crea + sube JSON + publica + guarda flow_id en config_pro, idempotente)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** + **Auto-onboarding Scheduling Flow** + **Wizard 2.0 Premium** (~18,170 líneas, ~126 endpoints, **v185** — wizard quota descontada en `generate-images-preview` con flag `append` para rondas adicionales; `generate-strategy` gratis; cap multi-tenant desde `config_pro.wizard_max_images_per_round`) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** + **Auto-onboarding Scheduling Flow + Templates Reminder/Follow-up multi-idioma** + **Wizard 2.0 Premium** + **Multi-tenant funnel_mode + Lead Qualifier whitelist** (~18,400 líneas, ~129 endpoints, **v189** — auto-create `appointment_reminder_v1` + `follow_up_v1` en 4 idiomas (ES/EN_US/PT_BR/FR) + endpoint `POST /templates/auto-create` + `GET /templates/poll-status` + auto-disparo en `handle_meta_exchange` + helper `_detect_tenant_locale` + whitelist `locale`/`templates`/`payment_link_ttl_hours`/`funnel_mode`/`lead_qualifier`) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
 - `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os + SOURCE_THRESHOLDS human_agent=2 + preserva source SK)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -872,6 +873,166 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Causa**: 2 `payment_table.update_item` (L3712 y L4138) usaban `Key={"contact_id": phone}` pero la tabla tiene PK `phoneNumber`. DynamoDB no lanza error — el update simplemente no aplica.
 - **Fix (Bot v152)**: cambiar a `Key={"phoneNumber": ...}` en ambos call sites.
 - **Lección 40 reincidencia**: este es el 4to bug del estilo "PK incorrecta en update silencioso" del año. Necesario: auditoría automatizada que recorra todos los `update_item(Table=X, Key=Y)` y valide Y contra el KeySchema real.
+### 13 mayo 2026 (sesión maratón ~13h) — Multi-tenant MASTER + 6 bugs críticos producción 🦁
+> 9 sprints completos en una sesión. Bot v153→v174 (21 versiones), API v185→v189 (4 versiones), Frontend `a904590`→`cf1344d` (5 commits). Test E2E real con WhatsApp validando cada deploy. Sprint A+B+C+D-lite+E.3+E.1.b backend completos.
+#### ✅ Sprints cerrados HOY
+**Sprint Wizard 2.0 Step 8 Premium** (API v185 + Frontend `a904590`)
+- Step 8 separado: incrustar texto con preview → lanzar con every-guard
+- Dropdown copy→imagen por variante, borrador localStorage company_id+TTL 30d
+- Cap configurable `config_pro.wizard_max_images_per_round`, regenerar con confirm
+- Cuota movida a `generate-images-preview` (donde está costo real Gemini Image)
+**Sprint Scheduling UI multi-tenant** — verificación E2E sin código (frontend ya tenía UI, backend agnóstico al schema)
+**Sprint ValidationException latente Bot v164** — `_cid_pay = (item.get("company_id") or DEFAULT_COMPANY_ID or "").strip()` blindando 4 call sites en `handle_payment_webhook`
+**Sprint A — funnel_mode multi-tenant** (Bot v165 + Frontend `b4d0670`)
+- 6 modos: `pay_to_book` (JMC), `book_first` (clínicas), `human_close` (B2B), `pay_and_ship` (e-commerce), `pay_and_deliver` (digital), `free_booking` (lead magnet)
+- Bot rutea según `funnel_mode` en `process_ai_response`
+- CAPI granular: pay_to_book → Lead+Checkout+Purchase+Schedule | book_first → Lead+Schedule | human_close → Lead solo si calificado | free_booking → Lead+Schedule
+- Frontend card 6 modos en `/dashboard/settings`
+**Sprint B — Auto-disparo flows en onboarding** (API v187)
+- `handle_meta_exchange` dispara automáticamente `/scheduling-flow/setup` tras Embedded Signup exitoso
+- Idempotente, NUNCA rompe el flujo principal (try/except)
+**Sprint C — Lead Qualifier IA** (Bot v166 + API v188 + Frontend `cf1344d`)
+- Estado nuevo `QUALIFYING_LEAD` cuando `funnel_mode=human_close`
+- Helper `_evaluate_lead_with_gemini(answers, questions, brand_name)` retorna `{qualified, score, reason}`
+- Solo leads calificados disparan handoff humano + CAPI Lead
+- Fríos siguen con bot (opción B sin descartar)
+- Card UI condicional `funnelMode === 'human_close'` con preguntas editables
+**Sprint D-lite — Shipping step-machine** (Bot v167)
+- Reemplazo del chat lineal de 4 preguntas por step-machine campo a campo
+- Validación inline: nombre completo, dirección, teléfono, email, ciudad, depto, código postal, ID, notas
+- Campos configurables `config_pro.shipping.required_fields`
+- CAPI `AddShippingInfo` al completar
+- Mensaje confirmación custom desde `config_pro.shipping.confirmation_message`
+**Sprint E.3 — Lead scoring metadata** (Bot v169)
+- `initiate_human_handoff` acepta `metadata` opcional
+- Sesión guarda `handoff_metadata` con `lead_score`/`lead_reason`/`qualifier_qa`/`customer_name`/`service_slug`
+- Frontend dashboard del agente puede leer metadata para mostrar "🔥 Lead caliente"
+**Sprint E.1.b backend — Templates auto-create multi-idioma** (API v189)
+- Diccionarios `APPOINTMENT_REMINDER_TEMPLATES` + `FOLLOW_UP_TEMPLATES` en 4 idiomas (ES/EN_US/PT_BR/FR)
+- Helper `_detect_tenant_locale(config)` cascada: locale > timezone > currency > default `es`
+- Helper `_create_meta_template(client_id, waba_id, access_token, spec)` idempotente
+- Endpoint `POST /templates/auto-create` crea ambos templates en idioma del tenant
+- Endpoint `GET /templates/poll-status` para cron refresh estado Meta
+- Auto-disparo en `handle_meta_exchange` tras scheduling-flow/setup
+- JMC submitted: `appointment_reminder_v1` ID `1527540475669134` (PENDING) + `follow_up_v1` ID `1776237060039872` (PENDING)
+- Whitelist `locale`, `templates`, `payment_link_ttl_hours` en `handle_update_config`
+#### 🐛 Bugs producción detectados + arreglados HOY
+#### Bug #53 (CRÍTICO 🔴) — `initiate_chatwoot_handoff` no existía (NameError silente x3 sprints)
+- **Síntoma**: 3 call sites llamaban función inexistente. Sprint A+C usaban nombre antiguo que ya no existe en el bot. NameError silente dentro de try/except → handoff humano nunca disparaba en producción.
+- **Causa**: cuando migramos handoff de Chatwoot a in-house (API v82-v85), la función se renombró a `initiate_human_handoff` pero los nuevos call sites en Sprint A Bloque 2 (`process_ai_response` L6167) y Sprint C Bloque 1 (handler qualifying L1658+1697) usaron el nombre viejo. 6 sprints después se detectó.
+- **Fix**: Bot v168 — `c.replace("initiate_chatwoot_handoff", "initiate_human_handoff")` × 3 ocurrencias. La firma de `initiate_human_handoff` ya acepta los kwargs `dynamic_token`/`dynamic_phone_id` → cero refactor extra.
+- **Lección 49**: en sprints incrementales que llaman funciones antiguas, hacer **grep pre-deploy** verificando que la función existe (`grep -n "^def NOMBRE"`). NameError dentro de try/except es invisible hasta producción.
+#### Bug #54 (CRÍTICO 🔴) — Welcome menu NUNCA salía al saludar (bypassed por debounce async)
+- **Síntoma**: cliente escribe "Hola" → Gemini procesa como conversación normal y manda carrusel directo. El guard `is_greeting + flow_state != "CHAT_MODE" + word_count <= 3` en L7831 NUNCA se ejecutaba.
+- **Causa raíz**: el bot tiene **debounce async** con 5s de delay. Cuando llega "Hola" → encola `pending_inputs` → 5s después invoca `debounce_execute` → este path llama directo a `call_gemini` **saltándose el guard síncrono completo**. El path síncrono donde está el guard solo aplica a casos especiales (botones, flows activos).
+- **Fix**: Bot v173 — inyectar guard del welcome menu DENTRO de `debounce_execute`, antes del `call_gemini`. Replica la condición `is_greeting + flow_state != "CHAT_MODE" + word_count <= 3` y manda `send_welcome_menu` + limpia pending_inputs + return.
+- **Lección 50**: si el bot tiene debounce async/buffer/queue, **CUALQUIER guard de procesamiento síncrono DEBE replicarse en el path async**. Auditar todos los handlers que terminen en `call_gemini` para verificar guards consistentes.
+#### Bug #55 (CRÍTICO 🔴) — Payment link reuse no detectaba slug normalizado (Lección 17 reincidida)
+- **Síntoma**: cliente generó link → confirma "Si" → bot genera link nuevo en vez de reusar el existente. Log: `PAYMENT REUSE skip: slug_match=False`.
+- **Causa**: reuse guard ejecutaba ANTES del bloque `slug_normalize_v1` que resuelve nombre→slug. DDB tenía `service_slug="seminario-tiro-pistola-9mm"` pero el guard comparaba contra el nombre crudo "Seminario de Tiro Con Pistola 9mm" que Gemini había devuelto.
+- **Fix**: Bot v171 — mover el guard DESPUÉS de los 3 intentos de normalización (`slug_normalize_v1`). Mismo patrón Lección 17 (Bug #28 del 5 mayo).
+- **Lección 17 reincidida**: guards condicionales que dependen de campos normalizados DEBEN ir AFTER toda la cadena de normalización. Repite Bug #28.
+#### Bug #56 (ALTO 🟡) — Doble envío de payment link (race condition Gemini + intercept Si/Ok)
+- **Síntoma**: cliente confirmaba flow → bot enviaba 2 mensajes de pago con misma URL (1 del intercept Si/Ok + 1 del Gemini intent=payment async).
+- **Causa**: intercept Si/Ok dispara `trigger_payment_flow` síncrono. En paralelo, debounce_execute manda mensaje a Gemini que también devuelve `intent=payment` → segunda llamada a `trigger_payment_flow`. Ambas pasan el reuse guard porque el lock no existía.
+- **Fix**: Bot v172 — `ANTI_DOUBLE_PAYMENT_SEND` al inicio de `trigger_payment_flow`. Lock 60s con campo `payment_link_sent_at` en sesión. Cubre TODOS los call sites de un solo lugar.
+- **Lección 51**: handlers que disparan acciones costosas (envío de mensajes, generación de links) en bot con debounce async, NECESITAN lock idempotente en sesión. Patrón: `if last_action_at + ttl > now: skip`.
+#### Bug #57 (UX 🟡) — Bot inventaba envío de link 3 veces (anti-hallucination)
+- **Síntoma**: cliente recibió link → dice "Gracias / Ahora pago / Voy a pagar / Mandame el link" → bot responde "Te envío el link de pago seguro" pero NO lo envía. Gemini hallucina envío que no va a pasar.
+- **Causa**: Gemini detectaba `intent=payment` con `detected_service=null`. Código decide "solo enviar reply" pero Gemini había inventado en el reply "te envío el link" → mentira al usuario.
+- **Fix**: Bot v174 — fix combinado:
+  - **Regla 24b en system_prompt**: instrucción explícita "Si cliente YA recibió link y dice frases pasivas (ahora pago, voy a pagar, gracias), responde NEUTRAL. NUNCA inventes envío. Si PIDE explícitamente (mándame el link, no me llegó), responde tipo 'te lo reenvío'".
+  - **Code condicional**: re-envío solo si el reply de Gemini contiene keywords ("reenvi", "te lo paso", "te lo envio", "aqui te va") + cliente tiene PENDING en DDB válido.
+- **Test E2E verificado** ✅: "Gracias" → neutral. "Ahora pago" → neutral. "El link no funciona" → reenvío del link existente.
+- **Lección 52**: LLMs hallucinan acciones que NO ejecutan. El system_prompt debe enseñar la diferencia entre "anunciar acción" vs "ejecutar acción". Y el code debe ser último guardián condicionando ejecución a señales claras del prompt (keywords en reply).
+#### Bug #58 (REVENUE 🟥) — Payment link no se reusaba entre conversaciones
+- **Síntoma**: cliente generó link → no paga → vuelve 4h después → bot genera link NUEVO en Wompi. Cliente tiene 2-3 links diferentes para misma compra. Caos UX + costo extra de generación.
+- **Fix**: Bot v170-v171 — reuse guard al inicio de `trigger_payment_flow` post slug-normalize. Si hay PENDING reciente (< 24h TTL) con mismo phone+slug+company+pax → reusa `payment_url` existente. TTL configurable `config_pro.payment_link_ttl_hours` default 24.
+- **Test E2E verificado** ✅: log `PAYMENT REUSE OK: ... age=228s`. Cliente recibe MISMO link "válido por ~23h más".
+- **Lección 53**: payment links son costosos de generar (rate limit + UX). Reusar entre conversaciones es revenue protection. Lock keyed por (phone, slug, company, pax, status, age<ttl).
+#### Lecciones nuevas (49-53)
+- **Lección 49**: NameError silente en sprints incrementales — grep pre-deploy verificando función existe.
+- **Lección 50**: debounce async puede saltar guards síncronos — replicar guards en path async.
+- **Lección 51**: lock idempotente con `last_action_at + ttl` en sesión es regla para handlers costosos.
+- **Lección 52**: LLMs hallucinan acciones — system_prompt debe enseñar a no inventar + code condiciona ejecución a keywords del reply.
+- **Lección 53**: Templates Meta multi-idioma se crean N veces (uno por idioma). Cada tenant onboardea con SU locale → backend crea SOLO el template de SU idioma.
+---
+## ⏳ PENDIENTE PARA CONTINUAR — Sprint E sin terminar
+### Sprint E.1.b Frontend (continuar mañana)
+- [ ] **Onboarding wizard**: selector locale con auto-detect `navigator.language` → mapear a es/en_US/pt_BR/fr → enviar a `/onboarding` o `/config`
+- [ ] **Settings**: card "🌐 Idioma del negocio" con selector + botón "🔄 Recrear plantillas WhatsApp" tras cambiar locale (llama `POST /templates/auto-create` con `force_locale`)
+### Sprint E.0 — Capturar email (no empezado)
+- [ ] **E.0a Bot**: estado nuevo `AWAITING_EMAIL` post-scheduling exitoso. Validación regex. Guarda en `Leads_CRM_v2.email` + `StudentPaymentState.customer_email`. Skip si ya tiene email guardado.
+- [ ] **E.0b Bot**: helper `_send_appointment_confirmation_email(sender, payment_item, config)` con Resend al confirmar agendamiento. Subject + body desde `config_pro.email.confirmation_subject` y `confirmation_body` con variables `{brand}`, `{name}`, `{date}`, `{hour}`, `{service}`, `{location}`.
+### Sprint E.1.a — Cron recordatorios cascada (no empezado)
+- [ ] **Bot endpoint** `POST /cron/reminders` con header `X-Cron-Secret`
+- [ ] **EventBridge rule** `appointment-reminders-hourly`
+- [ ] **Lógica cascada**:
+  1. `hours_since_last_user_msg < 24` → texto libre WhatsApp ✅
+  2. Si CTWA recent → ventana extendida 72h → texto libre 
+  3. Fuera de ventana → enviar template `appointment_reminder_v1` (debe estar APPROVED en Meta)
+  4. Si template aún PENDING → fallback email Resend
+  5. Si no hay email → skip silente + log warning
+- [ ] **Idempotencia**: campo `reminders_sent: [24, 1]` en `StudentPaymentState` para no duplicar
+- [ ] **Mensaje configurable** desde `config_pro.scheduling.reminder_message`
+- [ ] **Ventanas configurables** desde `config_pro.scheduling.reminder_hours: [24, 1]` (default 24h antes + 1h antes)
+### Sprint E.2 — Reprogramar/cancelar/no-show (no empezado)
+- [ ] **Botones interactivos** en recordatorios: "✅ Confirmar / 📅 Reprogramar / ❌ Cancelar"
+- [ ] **Reprogramar** → dispara scheduling flow nuevo (reusa `_trigger_scheduling_flow`)
+- [ ] **Cancelar** → `schedule_status=CANCELLED` + email Resend al tenant + libera slot Google Cal
+- [ ] **No-show**: cron horario marca `no_show=true` si 1h después de la cita el cliente no respondió + email al tenant
+### Cron poll templates Meta (para auto-aprobación)
+- [ ] **EventBridge rule** `templates-poll-status-6h` (cada 6h)
+- [ ] **Endpoint** ya creado: `GET /templates/poll-status` (lo creamos en v189)
+- [ ] **Target**: invocar el endpoint para CADA tenant con templates en PENDING
+- [ ] Cuando `status=APPROVED` → log + audit + email opcional al owner "Tu plantilla quedó aprobada, ya puedes enviar recordatorios"
+---
+## 📋 BACKLOG GRANDE — Sprints dedicados separados (NO HOY)
+### Sprint Templates Manager UI (~2.5h dedicados)
+> Diferenciador real vs Manychat/Wati. Cliente puede crear templates custom.
+- [ ] Página `/dashboard/templates/manage` con lista (auto + custom)
+- [ ] Botón "+ Crear plantilla custom" con preview WhatsApp visual
+- [ ] Selector categoría UTILITY/MARKETING/AUTHENTICATION con tooltips de costo
+- [ ] Selector idioma + multi-idioma (crear mismo `name` en N idiomas)
+- [ ] Banner permanente "Meta cobra cada mensaje a tu tarjeta Facebook Business"
+- [ ] Modal pre-crear MARKETING con tabla precios estimados por país
+- [ ] Endpoints: `GET /templates/list`, `POST /templates/custom`, `DELETE /templates/{name}/{language}`
+- [ ] Botón "Test send" enviar template de prueba al admin
+- [ ] **Precios reales mayo 2026** (Meta puede actualizarlos, mostrar disclaimer):
+  - UTILITY: $0.008 (CO/MX) → $0.04 (ES) por msg
+  - MARKETING: $0.012 (CO) → $0.08 (BR) por msg
+  - AUTHENTICATION: $0.030 (CO/MX/BR) → $0.057 (ES) por msg
+### Sprint Bulk Send / Campañas Marketing (~5-6h dedicados)
+> ⚠️ Sprint de ALTO RIESGO. Mandar mensajes equivocados a 1000 clientes = pesadilla. Requiere tests E2E exhaustivos.
+- [ ] Quotas por plan: Solo 100/mes, Pro 1000/mes, Agency ilimitado
+- [ ] Selector destinatarios desde CRM con filtros (tags, stage, score, días sin actividad)
+- [ ] Validación pre-envío: cantidad + estimación costo + checkbox "Entiendo el cargo"
+- [ ] Modal de confirmación con monto estimado + tabla de precios actualizada
+- [ ] Disclaimer legal "Meta cobra esto a tu tarjeta de Facebook Business, no a clientes.bot"
+- [ ] Tabla `MarketingCampaigns` con audit_log por campaña
+- [ ] Métricas: sent / delivered / read / replied / converted / unsubscribed
+- [ ] Botón "Cancelar campaña en vuelo" si detecta bug
+### Sprint Multi-idioma plataforma completa (~12-15h código + ~30h traducción)
+> NO bot UI multi-idioma — eso es sprint diferente. Hoy bot está hardcoded a español.
+- [ ] **Bot**: 24 reglas del system_prompt traducidas por locale (es/en_US/pt_BR/fr)
+- [ ] **Bot**: helper `_t(locale, key)` que lee diccionario por idioma
+- [ ] **Bot**: ~200 strings hardcoded en send_text del flow comercial → diccionario por locale
+- [ ] **Bot**: welcome menu, shipping, qualifier, scheduling success → todos i18n
+- [ ] **Frontend**: instalar next-intl + extraer strings a JSON por idioma
+- [ ] **Frontend**: ~50 páginas, miles de strings traducidos
+- [ ] **Resend**: templates email por idioma
+- [ ] **DDB seed**: prompts default por idioma (`templates/wizard-prompt`)
+- [ ] **Tests E2E**: por idioma (manual al inicio, automatizado después)
+### Backlog menor (de sprints anteriores aún pendiente)
+- [ ] **B6.5.6** Push FCM al owner para recs ads alto impacto
+- [ ] **B6.5.10** Resultado 48h post-apply (sistema aprende)
+- [ ] **M19** Test event code mode (validar primeros 5 eventos CAPI)
+- [ ] **M20** Dashboard Match Rate por tenant en `/admin/tenants/{id}`
+- [ ] **Stripe** billing US/EU (Sprint K completo)
+- [ ] **Fase F** Soporte/ticketing real
+- [ ] Tests E2E pendientes Remarketing (info abandonment + cart abandonment con número real)
+- [ ] Subir `REMARKETING_DELAY_HOURS` a 24h tras validar (actualmente 1h testing)
+---
 ### 13 mayo 2026 (madrugada) — Limpieza ValidationException Bot v164 🦁
 > Sesión ~15 min. Cerrado pendiente declarado en sprint 11 mayo. 4 call sites en `handle_payment_webhook` (Bot L3087, L3089, L3112, L3124) hacían `item.get("company_id", DEFAULT_COMPANY_ID)` — pero `.get(key, default)` NO usa el default si la key existe vacía. Con `DEFAULT_COMPANY_ID=""` (strict mode v19) → 2 ValidationException latentes en CloudWatch.
 #### Fix (Bot v164)
