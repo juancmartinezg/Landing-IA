@@ -3,6 +3,22 @@ import { useState } from 'react';
 import { useAuth } from '../providers';
 import { useRouter } from 'next/navigation';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+// Sprint E.1.b — Auto-detect locale del navegador (es/en_US/pt_BR/fr).
+// El tenant podra cambiarlo despues en /dashboard/settings.
+const detectInitialLocale = (): string => {
+  if (typeof navigator === 'undefined') return 'es';
+  const raw = (navigator.language || 'es').toLowerCase();
+  if (raw.startsWith('pt')) return 'pt_BR';
+  if (raw.startsWith('en')) return 'en_US';
+  if (raw.startsWith('fr')) return 'fr';
+  return 'es';
+};
+const detectInitialTimezone = (): string => {
+  if (typeof Intl === 'undefined') return 'America/Bogota';
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Bogota';
+  } catch { return 'America/Bogota'; }
+};
 export default function OnboardingPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -14,7 +30,8 @@ export default function OnboardingPage() {
     what_you_sell: '',
     item_type: 'servicio',
     currency: 'COP',
-    timezone: 'America/Bogota',
+    timezone: detectInitialTimezone(),
+    locale: detectInitialLocale(),
   });
   const handleFinish = async () => {
     if (!form.business_name || !form.what_you_sell) {
@@ -37,6 +54,7 @@ export default function OnboardingPage() {
           item_type: form.item_type,
           currency: form.currency,
           timezone: form.timezone,
+          locale: form.locale,
           prompt: `Eres el asistente virtual de ${form.business_name}. Vendes: ${form.what_you_sell}. Responde de forma amable, profesional y breve. Siempre cierra invitando al cliente a comprar o agendar.`,
           btn_book: `Reservar ${form.item_type}`,
           business_hours: { start: 8, end: 18 },

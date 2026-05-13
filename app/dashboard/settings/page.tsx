@@ -29,6 +29,12 @@ const BUSINESS_PRESETS: Record<string, { label: string; fields: string[] }> = {
   salud: { label: '🏥 Salud', fields: ['product_name', 'purchase_date', 'renewal_date', 'renewal_frequency'] },
   todos: { label: '⚙️ Todos', fields: CRM_FIELD_OPTIONS.map(f => f.id) },
 };
+const LOCALES = [
+  { id: 'es',    flag: '🌎', label: 'Español',    desc: 'LATAM + España' },
+  { id: 'en_US', flag: '🇺🇸', label: 'English',    desc: 'USA + Canadá + UK' },
+  { id: 'pt_BR', flag: '🇧🇷', label: 'Português', desc: 'Brasil + Portugal' },
+  { id: 'fr',    flag: '🇫🇷', label: 'Français',  desc: 'France + Canadá francés' },
+];
 const FUNNEL_MODES = [
   { id: 'pay_to_book',     emoji: '💳', label: 'Pagar para reservar',     desc: 'Cliente paga, luego agenda. Ideal para: cursos premium, talleres pagos, escuelas.' },
   { id: 'book_first',      emoji: '📅', label: 'Reservar y pagar después', desc: 'Cliente agenda primero, paga en sitio o link. Ideal para: clínicas, consultorios, salones, spas.' },
@@ -64,6 +70,9 @@ export default function SettingsPage() {
   const [shippingProviders, setShippingProviders] = useState<string[]>([]);
   const [postPaymentFlow, setPostPaymentFlow] = useState('scheduling');
   const [funnelMode, setFunnelMode] = useState('pay_to_book');
+  const [locale, setLocale] = useState('es');
+  const [templatesState, setTemplatesState] = useState<any>({});
+  const [recreatingTemplates, setRecreatingTemplates] = useState(false);
   const [leadQualifier, setLeadQualifier] = useState<{
     questions: string[];
     min_answered: number;
@@ -173,6 +182,8 @@ export default function SettingsPage() {
         setShippingProviders((data.shipping || {}).providers || []);
         setPostPaymentFlow(data.post_payment_flow || 'scheduling');
         setFunnelMode(data.funnel_mode || 'pay_to_book');
+        setLocale(data.locale || 'es');
+        setTemplatesState(data.templates || {});
         const lq = data.lead_qualifier || {};
         setLeadQualifier({
           questions: Array.isArray(lq.questions) ? lq.questions : [],
@@ -441,6 +452,74 @@ export default function SettingsPage() {
      }
      setSaving(false);
    };
+  const handleSaveLocale = async () => {
+    setSaving(true);
+    try {
+      await fetch(`${API_URL}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ locale }),
+      });
+      setConfig({ ...config, locale });
+      showToast('✓ Idioma guardado');
+    } catch {
+      showToast('Error guardando idioma');
+    }
+    setSaving(false);
+  };
+  const handleRecreateTemplates = async () => {
+    if (!confirm(`¿Recrear plantillas WhatsApp en ${LOCALES.find(l => l.id === locale)?.label}? Meta tarda 5min-7 días en aprobarlas. Las anteriores no se borran.`)) return;
+    setRecreatingTemplates(true);
+    try {
+      const res = await fetch(`${API_URL}/templates/auto-create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ force_locale: locale }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setTemplatesState({
+          appointment_reminder: data.templates?.[0]?.ok ? {
+            template_id: data.templates[0].template_id,
+            template_name: data.templates[0].template_name,
+            language: data.templates[0].language,
+            status: data.templates[0].status,
+          } : null,
+          follow_up: data.templates?.[1]?.ok ? {
+            template_id: data.templates[1].template_id,
+            template_name: data.templates[1].template_name,
+            language: data.templates[1].language,
+            status: data.templates[1].status,
+          } : null,
+        });
+        showToast(`✓ Plantillas enviadas a Meta (${data.locale}). Estado: PENDING aprobación.`);
+      } else {
+        showToast(`❌ ${data.error || 'Error creando plantillas'}`);
+      }
+    } catch {
+      showToast('Error de conexión');
+    }
+    setRecreatingTemplates(false);
+  };
+  const handlePollTemplateStatus = async () => {
+    try {
+      const res = await fetch(`${API_URL}/templates/poll-status`, {
+        method: 'GET',
+        headers: { 'client-id': user?.companyId || '' },
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setTemplatesState(data.current || {});
+        if (data.updated?.length > 0) {
+          showToast(`✓ ${data.updated.length} plantilla(s) actualizada(s)`);
+        } else {
+          showToast('Sin cambios en Meta');
+        }
+      }
+    } catch {
+      showToast('Error consultando Meta');
+    }
+  };
   const handleSaveLeadQualifier = async () => {
     setSaving(true);
     try {
@@ -1183,6 +1262,82 @@ export default function SettingsPage() {
           <p className="text-[10px] text-gray-600 mt-3">
             💡 Modo actual: <strong className="text-indigo-400">{FUNNEL_MODES.find(m => m.id === funnelMode)?.label || '—'}</strong>
           </p>
+        </div>
+        {/* Idioma del negocio — Multi-tenant template Meta + futuro i18n */}
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold">🌐 Idioma del negocio</h3>
+            <button onClick={handleSaveLocale} disabled={saving}
+              className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
+              {saving ? '...' : 'Guardar'}
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-500 mb-4">
+            Define el idioma de los mensajes automáticos a tus clientes (recordatorios, follow-ups, confirmaciones).
+            <strong className="text-amber-400"> Cambiar el idioma requiere recrear las plantillas en Meta</strong> (3-7 días aprobación).
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            {LOCALES.map(l => (
+              <button key={l.id} onClick={() => setLocale(l.id)}
+                className={`p-4 rounded-xl text-center transition-all border ${
+                  locale === l.id
+                    ? 'border-indigo-500 bg-indigo-600/10 shadow-lg shadow-indigo-600/20'
+                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                }`}>
+                <p className="text-2xl mb-1">{l.flag}</p>
+                <p className="text-xs font-bold">{l.label}</p>
+                <p className="text-[9px] text-gray-500 leading-relaxed">{l.desc}</p>
+              </button>
+            ))}
+          </div>
+          {/* Estado de plantillas Meta */}
+          <div className="border-t border-white/5 pt-4">
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-xs font-bold text-gray-300">📨 Estado plantillas WhatsApp</p>
+              <div className="flex gap-2">
+                <button onClick={handlePollTemplateStatus}
+                  className="text-[10px] px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 font-bold transition-all">
+                  🔄 Verificar estado
+                </button>
+                <button onClick={handleRecreateTemplates} disabled={recreatingTemplates}
+                  className="text-[10px] px-3 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-bold transition-all disabled:opacity-50">
+                  {recreatingTemplates ? '⏳...' : '🔧 Crear / Recrear'}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {['appointment_reminder', 'follow_up'].map(key => {
+                const t = templatesState?.[key];
+                const label = key === 'appointment_reminder' ? '📅 Recordatorio cita' : '💬 Follow-up sin respuesta';
+                const status = t?.status || 'NO_CREADA';
+                const statusColor = status === 'APPROVED' ? 'emerald'
+                                  : status === 'PENDING' ? 'yellow'
+                                  : status === 'REJECTED' ? 'red'
+                                  : 'gray';
+                const statusLabel = status === 'APPROVED' ? '✅ Aprobada'
+                                   : status === 'PENDING' ? '⏳ En revisión'
+                                   : status === 'REJECTED' ? '❌ Rechazada'
+                                   : '⚪ No creada';
+                return (
+                  <div key={key} className={`flex justify-between items-center bg-white/[0.02] rounded-lg px-3 py-2 border border-${statusColor}-500/20`}>
+                    <div>
+                      <p className="text-xs font-medium">{label}</p>
+                      {t?.template_name && (
+                        <p className="text-[9px] text-gray-500 font-mono">{t.template_name} · {t.language}</p>
+                      )}
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold bg-${statusColor}-500/20 text-${statusColor}-400`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-gray-600 mt-3 leading-relaxed">
+              💡 Las plantillas son obligatorias para enviar mensajes a clientes <strong>fuera de la ventana de 24h</strong> de WhatsApp.
+              Meta cobra cada envío a la tarjeta de tu cuenta de Facebook Business (UTILITY ~$0.008-0.04 USD por mensaje según país).
+            </p>
+          </div>
         </div>
         {/* Lead Qualifier — solo visible cuando funnel_mode = human_close */}
         {funnelMode === 'human_close' && (
