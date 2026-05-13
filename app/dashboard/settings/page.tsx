@@ -116,7 +116,19 @@ export default function SettingsPage() {
     include_facebook: true,
   });
   const [brandDnaGenerating, setBrandDnaGenerating] = useState(false);
-  const showToast = (msg: string) => {
+   // Brand Assets Library (Sprint A.5) — Fotos del negocio
+   const [brandAssets, setBrandAssets] = useState<any[]>([]);
+   const [brandAssetsByType, setBrandAssetsByType] = useState<Record<string, number>>({});
+   const [uploadingAsset, setUploadingAsset] = useState<string | null>(null);
+   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
+   const [editAssetName, setEditAssetName] = useState('');
+   const ASSET_TYPES = [
+     { id: 'product', label: 'Productos', icon: '📦', placeholder: 'Botellas, prendas, productos físicos...' },
+     { id: 'location', label: 'Lugares', icon: '📍', placeholder: 'Tu local, oficina, polígono, taller...' },
+     { id: 'team', label: 'Equipo', icon: '👥', placeholder: 'Instructores, vendedores, empleados...' },
+     { id: 'logo', label: 'Logo', icon: '🏷️', placeholder: 'Logos en distintos formatos/colores...' },
+   ];
+   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
@@ -162,9 +174,106 @@ export default function SettingsPage() {
          setLoading(false);
        })
        .catch(() => setLoading(false));
-     // Cargar Brand DNA si existe
-     loadBrandDna();
-   }, []);
+     // Cargar Brand DNA + Brand Assets si existen
+      loadBrandDna();
+      loadBrandAssets();
+    }, []);
+   const loadBrandAssets = async () => {
+     try {
+       const res = await fetch(`${API_URL}/brand-assets`, {
+         headers: { 'client-id': user?.companyId || '' }
+       });
+       if (res.ok) {
+         const data = await res.json();
+         setBrandAssets(data.assets || []);
+         setBrandAssetsByType(data.by_type || {});
+       }
+     } catch {}
+   };
+   const uploadBrandAsset = async (file: File, assetType: string) => {
+     if (!file) return;
+     setUploadingAsset(assetType);
+     try {
+       // 1. Pedir presigned URL
+       const presignRes = await fetch(
+         `${API_URL}/brand-assets/upload-url?file_name=${encodeURIComponent(file.name)}&type=${assetType}`,
+         { headers: { 'client-id': user?.companyId || '' } }
+       );
+       const presignData = await presignRes.json();
+       if (!presignData.upload_url) {
+         showToast('❌ Error obteniendo URL de subida');
+         setUploadingAsset(null);
+         return;
+       }
+       // 2. Subir a S3
+       const uploadRes = await fetch(presignData.upload_url, {
+         method: 'PUT',
+         headers: { 'Content-Type': presignData.content_type },
+         body: file,
+       });
+       if (!uploadRes.ok) {
+         showToast('❌ Error subiendo a S3');
+         setUploadingAsset(null);
+         return;
+       }
+       // 3. Registrar en backend
+       const createRes = await fetch(`${API_URL}/brand-assets`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+         body: JSON.stringify({
+           asset_type: assetType,
+           name: file.name.replace(/\.[^/.]+$/, ''),
+           s3_url: presignData.public_url,
+         }),
+       });
+       const createData = await createRes.json();
+       if (createData.ok) {
+         showToast(`✅ Imagen subida a ${assetType}`);
+         loadBrandAssets();
+       } else {
+         showToast(`❌ ${createData.error || 'Error registrando'}`);
+       }
+     } catch {
+       showToast('Error de conexión');
+     }
+     setUploadingAsset(null);
+   };
+   const deleteBrandAsset = async (assetId: string, assetName: string) => {
+     if (!confirm(`¿Eliminar "${assetName}"? Esta acción es permanente.`)) return;
+     try {
+       const res = await fetch(`${API_URL}/brand-assets/${encodeURIComponent(assetId)}`, {
+         method: 'DELETE',
+         headers: { 'client-id': user?.companyId || '' },
+       });
+       if (res.ok) {
+         showToast('🗑️ Imagen eliminada');
+         loadBrandAssets();
+       } else {
+         showToast('❌ Error eliminando');
+       }
+     } catch {
+       showToast('Error de conexión');
+     }
+   };
+   const renameBrandAsset = async (assetId: string) => {
+     if (!editAssetName.trim()) {
+       setEditingAssetId(null);
+       return;
+     }
+     try {
+       const res = await fetch(`${API_URL}/brand-assets/${encodeURIComponent(assetId)}`, {
+         method: 'PUT',
+         headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+         body: JSON.stringify({ name: editAssetName.trim() }),
+       });
+       if (res.ok) {
+         showToast('✅ Nombre actualizado');
+         loadBrandAssets();
+       }
+     } catch {}
+     setEditingAssetId(null);
+     setEditAssetName('');
+   };
    const loadBrandDna = async () => {
      try {
        const res = await fetch(`${API_URL}/brand-dna`, {
@@ -1002,31 +1111,164 @@ const handleSaveAdsConfig = async () => {
             ))}
           </div>
         </div>
-        {/* Descripción Visual del Negocio */}
+        {/* Identidad Visual — Descripción textual + Biblioteca de fotos */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold">Identidad Visual 🎨</h3>
-            <button onClick={async () => {
-              setSaving(true);
-              const el = document.getElementById('visual-desc') as HTMLTextAreaElement;
-              await fetch(`${API_URL}/config`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
-                body: JSON.stringify({ visual_description: el?.value || '' }),
-              });
-              showToast('✓ Descripción visual guardada');
-              setSaving(false);
-            }} disabled={saving}
-              className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
-              {saving ? '...' : 'Guardar'}
-            </button>
+            <span className="text-[10px] text-gray-500">
+              {brandAssets.length} foto{brandAssets.length !== 1 ? 's' : ''} en biblioteca
+            </span>
           </div>
-          <p className="text-[10px] text-gray-500 mb-3">Describe cómo se ve tu negocio. La IA usará esto para generar imágenes publicitarias más fieles a tu marca.</p>
-          <textarea id="visual-desc" defaultValue={config?.visual_description || ''}
-            placeholder="Ej: Polígono de tiro al aire libre, rodeado de montañas, zona rural verde, personas con camisetas negras y gafas de protección..."
-            rows={3}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white resize-none" />
-          <p className="text-[9px] text-gray-600 mt-2">Incluye: colores de tu marca, tipo de instalaciones, vestimenta del equipo, ambiente general.</p>
+          {/* Sub-sección 1: Descripción textual */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-xs font-bold text-gray-300">📝 Descripción textual</p>
+              <button onClick={async () => {
+                setSaving(true);
+                const el = document.getElementById('visual-desc') as HTMLTextAreaElement;
+                await fetch(`${API_URL}/config`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                  body: JSON.stringify({ visual_description: el?.value || '' }),
+                });
+                showToast('✓ Descripción visual guardada');
+                setSaving(false);
+              }} disabled={saving}
+                className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 rounded-lg text-[10px] font-bold transition-all disabled:opacity-50">
+                {saving ? '...' : 'Guardar'}
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-500 mb-2">Describe cómo se ve tu negocio. La IA usará esto cuando NO tengas fotos disponibles.</p>
+            <textarea id="visual-desc" defaultValue={config?.visual_description || ''}
+              placeholder="Ej: Polígono de tiro al aire libre, rodeado de montañas, zona rural verde, personas con camisetas negras y gafas de protección..."
+              rows={3}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500 text-white resize-none" />
+            <p className="text-[9px] text-gray-600 mt-1">Incluye: colores de tu marca, tipo de instalaciones, vestimenta del equipo, ambiente general.</p>
+          </div>
+          {/* Sub-sección 2: Biblioteca de fotos */}
+          <div className="border-t border-white/5 pt-5">
+            <p className="text-xs font-bold text-gray-300 mb-2">📚 Biblioteca de fotos (recomendado +400% CTR)</p>
+            <p className="text-[10px] text-gray-500 mb-4">
+              Sube fotos reales de tu negocio. La IA las usará como <strong>referencia visual</strong> en el wizard de Ads para generar imágenes fieles a tu marca (no genéricas).
+              Una vez subidas, quedan en tu librería para reusarlas N veces.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {ASSET_TYPES.map(type => {
+                const typeAssets = brandAssets.filter(a => a.asset_type === type.id);
+                const isUploading = uploadingAsset === type.id;
+                return (
+                  <div key={type.id} className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{type.icon}</span>
+                        <div>
+                          <p className="text-xs font-bold">{type.label}</p>
+                          <p className="text-[9px] text-gray-500">{typeAssets.length} foto{typeAssets.length !== 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+                      <label className="bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all whitespace-nowrap">
+                        {isUploading ? '⏳ Subiendo...' : '+ Subir'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={isUploading}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) uploadBrandAsset(file, type.id);
+                            e.target.value = ''; // permite re-subir mismo archivo
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {typeAssets.length === 0 ? (
+                      <div className="text-center py-4 bg-white/[0.02] rounded-lg">
+                        <p className="text-[10px] text-gray-600 italic">
+                          {type.placeholder}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {typeAssets.slice(0, 6).map(asset => (
+                          <div key={asset.asset_id} className="relative group">
+                            <img
+                              src={asset.thumbnail_url || asset.s3_url}
+                              alt={asset.name}
+                              className="w-full aspect-square object-cover rounded-lg bg-white/5"
+                              loading="lazy"
+                            />
+                            {/* Overlay con acciones */}
+                            <div className="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-1">
+                              {editingAssetId === asset.asset_id ? (
+                                <>
+                                  <input
+                                    type="text"
+                                    value={editAssetName}
+                                    onChange={(e) => setEditAssetName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && renameBrandAsset(asset.asset_id)}
+                                    className="w-full bg-white/10 border border-white/20 rounded px-1 py-0.5 text-[9px] text-white outline-none"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => renameBrandAsset(asset.asset_id)}
+                                    className="text-[8px] px-2 py-0.5 rounded bg-emerald-600 text-white font-bold">
+                                    ✓ OK
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-[9px] text-white text-center truncate w-full px-1" title={asset.name}>
+                                    {asset.name}
+                                  </p>
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => {
+                                        setEditingAssetId(asset.asset_id);
+                                        setEditAssetName(asset.name);
+                                      }}
+                                      className="text-[8px] px-1.5 py-0.5 rounded bg-indigo-600/80 text-white font-bold"
+                                      title="Renombrar">
+                                      ✏️
+                                    </button>
+                                    <button
+                                      onClick={() => deleteBrandAsset(asset.asset_id, asset.name)}
+                                      className="text-[8px] px-1.5 py-0.5 rounded bg-red-600/80 text-white font-bold"
+                                      title="Eliminar">
+                                      🗑️
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            {asset.usage_count > 0 && (
+                              <span className="absolute top-1 right-1 text-[8px] px-1 py-0.5 rounded bg-purple-600/80 text-white font-bold">
+                                {asset.usage_count}×
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                        {typeAssets.length > 6 && (
+                          <div className="flex items-center justify-center bg-white/5 rounded-lg aspect-square">
+                            <span className="text-[10px] text-gray-400 font-bold">
+                              +{typeAssets.length - 6}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {brandAssets.length === 0 && (
+              <div className="mt-4 p-3 bg-purple-500/5 border border-purple-500/20 rounded-xl">
+                <p className="text-[10px] text-purple-300 leading-relaxed">
+                  💡 <strong>Tip:</strong> sube al menos 1-2 fotos por categoría que aplique a tu negocio.
+                  Productos físicos, lugar real, equipo en acción, y tu logo. Cuanto más fiel sea la referencia, más impactante el anuncio generado.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
         {/* Importar Sitio Web */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
