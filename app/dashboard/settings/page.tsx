@@ -64,6 +64,12 @@ export default function SettingsPage() {
   const [shippingProviders, setShippingProviders] = useState<string[]>([]);
   const [postPaymentFlow, setPostPaymentFlow] = useState('scheduling');
   const [funnelMode, setFunnelMode] = useState('pay_to_book');
+  const [leadQualifier, setLeadQualifier] = useState<{
+    questions: string[];
+    min_answered: number;
+    handoff_message: string;
+  }>({ questions: [], min_answered: 2, handoff_message: '' });
+  const [newQuestion, setNewQuestion] = useState('');
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptText, setPromptText] = useState('');
   const [wizardStep, setWizardStep] = useState(1);
@@ -167,6 +173,12 @@ export default function SettingsPage() {
         setShippingProviders((data.shipping || {}).providers || []);
         setPostPaymentFlow(data.post_payment_flow || 'scheduling');
         setFunnelMode(data.funnel_mode || 'pay_to_book');
+        const lq = data.lead_qualifier || {};
+        setLeadQualifier({
+          questions: Array.isArray(lq.questions) ? lq.questions : [],
+          min_answered: typeof lq.min_answered === 'number' ? lq.min_answered : 2,
+          handoff_message: lq.handoff_message || '',
+        });
         const hh = data.human_support_hours || {};
          setHumanHours({
            start: hh.start ?? 8,
@@ -428,6 +440,50 @@ export default function SettingsPage() {
        showToast('Error guardando funnel');
      }
      setSaving(false);
+   };
+  const handleSaveLeadQualifier = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        lead_qualifier: {
+          questions: leadQualifier.questions.filter(q => q.trim().length > 0).slice(0, 10),
+          min_answered: Math.max(1, Math.min(leadQualifier.min_answered, leadQualifier.questions.length || 1)),
+          handoff_message: leadQualifier.handoff_message.trim().slice(0, 500),
+        },
+      };
+      await fetch(`${API_URL}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify(payload),
+      });
+      setConfig({ ...config, lead_qualifier: payload.lead_qualifier });
+      showToast('✓ Calificador de leads guardado');
+    } catch (err) {
+      showToast('Error guardando calificador');
+    }
+    setSaving(false);
+  };
+  const addQualifierQuestion = () => {
+    const q = newQuestion.trim();
+    if (!q || leadQualifier.questions.length >= 10) return;
+    if (leadQualifier.questions.includes(q)) { showToast('Esa pregunta ya existe'); return; }
+    setLeadQualifier(prev => ({ ...prev, questions: [...prev.questions, q] }));
+    setNewQuestion('');
+  };
+  const removeQualifierQuestion = (idx: number) => {
+    setLeadQualifier(prev => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== idx),
+    }));
+  };
+  const moveQualifierQuestion = (idx: number, dir: -1 | 1) => {
+    setLeadQualifier(prev => {
+      const arr = [...prev.questions];
+      const target = idx + dir;
+      if (target < 0 || target >= arr.length) return prev;
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      return { ...prev, questions: arr };
+    });
   };
  const handleSaveAdsConfig = async () => {
     setSaving(true);
@@ -1128,6 +1184,96 @@ export default function SettingsPage() {
             💡 Modo actual: <strong className="text-indigo-400">{FUNNEL_MODES.find(m => m.id === funnelMode)?.label || '—'}</strong>
           </p>
         </div>
+        {/* Lead Qualifier — solo visible cuando funnel_mode = human_close */}
+        {funnelMode === 'human_close' && (
+          <div className="bg-white/[0.03] border border-amber-500/20 rounded-2xl p-6 md:col-span-2">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold">🎯 Calificación de leads (filtro de curiosos)</h3>
+              <button onClick={handleSaveLeadQualifier} disabled={saving}
+                className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
+                {saving ? '...' : 'Guardar'}
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-500 mb-4">
+              El bot hará estas preguntas ANTES de pasar al asesor humano. Una IA evalúa las respuestas y solo te notifica los leads <strong className="text-emerald-400">calientes</strong>.
+              Los curiosos siguen conversando con el bot — no se pierden, solo no te interrumpen.
+            </p>
+            <div className="mb-4">
+              <label className="block text-xs text-gray-500 uppercase tracking-widest mb-2">
+                Preguntas ({leadQualifier.questions.length}/10)
+              </label>
+              <div className="space-y-2 mb-3">
+                {leadQualifier.questions.map((q, i) => (
+                  <div key={i} className="flex gap-2 items-center bg-white/[0.02] rounded-lg p-2">
+                    <span className="text-xs text-gray-500 w-5">{i + 1}.</span>
+                    <input value={q}
+                      onChange={(e) => setLeadQualifier(prev => ({
+                        ...prev,
+                        questions: prev.questions.map((qq, ii) => ii === i ? e.target.value : qq),
+                      }))}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500 text-white" />
+                    <button onClick={() => moveQualifierQuestion(i, -1)} disabled={i === 0}
+                      className="text-gray-500 hover:text-white disabled:opacity-20 px-1" title="Subir">↑</button>
+                    <button onClick={() => moveQualifierQuestion(i, 1)} disabled={i === leadQualifier.questions.length - 1}
+                      className="text-gray-500 hover:text-white disabled:opacity-20 px-1" title="Bajar">↓</button>
+                    <button onClick={() => removeQualifierQuestion(i)}
+                      className="text-red-400 hover:text-red-300 px-2 text-sm">✕</button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input value={newQuestion} onChange={(e) => setNewQuestion(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addQualifierQuestion()}
+                  placeholder="Ej: ¿Cuál es tu presupuesto aproximado?"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-amber-500 text-white" />
+                <button onClick={addQualifierQuestion} disabled={leadQualifier.questions.length >= 10}
+                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 px-3 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+                  + Agregar
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-600 mt-2">
+                💡 Ejemplos: "¿En qué zona buscas?", "¿Para cuándo lo necesitas?", "¿Cuál es tu presupuesto?", "¿Eres el decisor?"
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
+                  Mínimo de respuestas para evaluar
+                </label>
+                <input type="number" min="1" max={Math.max(1, leadQualifier.questions.length)}
+                  value={leadQualifier.min_answered}
+                  onChange={(e) => setLeadQualifier(prev => ({
+                    ...prev,
+                    min_answered: Math.max(1, parseInt(e.target.value) || 1),
+                  }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-amber-500 text-white" />
+                <p className="text-[10px] text-gray-600 mt-1">
+                  La IA evalúa tras esta cantidad de respuestas (recomendado: {Math.max(2, Math.ceil(leadQualifier.questions.length / 2))} de {leadQualifier.questions.length || 'N'}).
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
+                  Mensaje al lead calificado <span className="text-gray-600 normal-case font-normal">(opcional)</span>
+                </label>
+                <input value={leadQualifier.handoff_message}
+                  onChange={(e) => setLeadQualifier(prev => ({ ...prev, handoff_message: e.target.value }))}
+                  placeholder="Ej: ¡Perfecto! Te conecto con un asesor experto en {service}."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-amber-500 text-white" />
+                <p className="text-[10px] text-gray-600 mt-1">
+                  Variable disponible: <code className="text-amber-400">{'{service}'}</code>
+                </p>
+              </div>
+            </div>
+            <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
+              <p className="text-[10px] text-amber-300 leading-relaxed">
+                🧠 <strong>Cómo funciona:</strong> cuando un cliente muestra interés real (intent=booking/payment + nombre capturado),
+                el bot inicia las preguntas. Una IA (Gemini) clasifica el lead como <strong className="text-emerald-400">caliente</strong>,
+                <strong className="text-yellow-400"> tibio</strong> o <strong className="text-gray-400">frío</strong>.
+                Solo calientes/tibios → handoff humano + CAPI Lead. Los fríos siguen con el bot (no se pierden, no te interrumpen).
+              </p>
+            </div>
+          </div>
+        )}
         {/* Después del Pago */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
           <div className="flex justify-between items-center mb-4">
