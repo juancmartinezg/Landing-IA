@@ -28,20 +28,109 @@ export default function WizardPage() {
   const [copies, setCopies] = useState<any[]>([]);
   const [generatingCopies, setGeneratingCopies] = useState(false);
   const [launching, setLaunching] = useState(false);
+  const [imageHookMap, setImageHookMap] = useState<Record<number, number>>({});
+  const [overlayInProgress, setOverlayInProgress] = useState(false);
   const [budgetDaily, setBudgetDaily] = useState('20000');
   const [duration, setDuration] = useState('7');
   const [campaignName, setCampaignName] = useState('');
   const [generatingPlan, setGeneratingPlan] = useState(false);
+  const [imagesPerRound, setImagesPerRound] = useState(5);
+  const [maxImagesCap, setMaxImagesCap] = useState(10);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const draftKey = user?.companyId ? `cb_wizard_draft_${user.companyId}` : '';
   useEffect(() => {
     fetch(`${API_URL}/brand-dna`, { headers: h }).then(r => r.ok ? r.json() : null).then(d => setHasBrandDna(d?.ok || false)).catch(() => setHasBrandDna(false));
     fetch(`${API_URL}/ads/wizard/check-quota`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' } }).then(r => r.json()).then(d => setQuota(d)).catch(() => {});
     fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).then(d => setServices(d.services || [])).catch(() => {});
     fetch(`${API_URL}/brand-assets`, { headers: h }).then(r => r.json()).then(d => setBrandAssets(d.assets || [])).catch(() => {});
-  }, []);
+    // Leer cap multi-tenant desde config_pro (sin hardcode)
+    fetch(`${API_URL}/config`, { headers: h }).then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.wizard_max_images_per_round) setMaxImagesCap(parseInt(d.wizard_max_images_per_round));
+      if (d?.wizard_default_images_per_round) setImagesPerRound(parseInt(d.wizard_default_images_per_round));
+    }).catch(() => {});
+    // Hidratar borrador desde localStorage (keyed por company_id — multi-tenant safe)
+    if (typeof window !== 'undefined' && draftKey) {
+      try {
+        const raw = localStorage.getItem(draftKey);
+        if (raw) {
+          const d = JSON.parse(raw);
+          if (d.step) setStep(d.step);
+          if (d.strategy) setStrategy(d.strategy);
+          if (Array.isArray(d.channels)) setChannels(d.channels);
+          if (d.language) setLanguage(d.language);
+          if (d.selectedSlug !== undefined) setSelectedSlug(d.selectedSlug);
+          if (Array.isArray(d.benefits)) setBenefits(d.benefits);
+          if (d.refMode) setRefMode(d.refMode);
+          if (Array.isArray(d.selectedRefs)) setSelectedRefs(d.selectedRefs);
+          if (d.plan) setPlan(d.plan);
+          if (Array.isArray(d.previewImages)) setPreviewImages(d.previewImages);
+          if (Array.isArray(d.selectedImages)) setSelectedImages(d.selectedImages);
+          if (Array.isArray(d.copies)) setCopies(d.copies);
+          if (d.campaignName) setCampaignName(d.campaignName);
+          if (d.budgetDaily) setBudgetDaily(d.budgetDaily);
+          if (d.duration) setDuration(d.duration);
+          if (d.imageHookMap) setImageHookMap(d.imageHookMap);
+          showToast('📂 Borrador restaurado');
+        }
+      } catch {}
+    }
+    setDraftHydrated(true);
+  }, [draftKey]);
+  // Auto-guardado del borrador (debounced 500ms)
+  useEffect(() => {
+    if (!draftHydrated || !draftKey || typeof window === 'undefined') return;
+    const t = setTimeout(() => {
+      try {
+        const draft = { step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, savedAt: Date.now() };
+        localStorage.setItem(draftKey, JSON.stringify(draft));
+        setDraftSaved(true);
+        setTimeout(() => setDraftSaved(false), 1500);
+      } catch {}
+    }, 500);
+    return () => clearTimeout(t);
+  }, [step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, draftHydrated, draftKey]);
+  // Warning si el servicio del borrador ya no existe
+  useEffect(() => {
+    if (!draftHydrated || !selectedSlug || services.length === 0) return;
+    const exists = services.find((s: any) => s.slug === selectedSlug && s.active !== false);
+    if (!exists) {
+      showToast('⚠️ El servicio del borrador ya no existe. Elige otro o descarta.');
+      setSelectedSlug('');
+    }
+  }, [services, draftHydrated]);
   const toggleChannel = (ch: string) => setChannels(prev => prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch]);
   const addBenefit = () => { if (newBenefit.trim() && benefits.length < 10) { setBenefits([...benefits, newBenefit.trim()]); setNewBenefit(''); } };
   const toggleRef = (url: string) => setSelectedRefs(prev => prev.includes(url) ? prev.filter(u => u !== url) : prev.length < 5 ? [...prev, url] : prev);
   const toggleImage = (idx: number) => setSelectedImages(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : prev.length < 3 ? [...prev, idx] : prev);
+  const generateMoreImages = async () => {
+    if (!plan) { showToast('⚠️ Primero genera la estrategia'); return; }
+    if (previewImages.length >= maxImagesCap) { showToast(`⚠️ Cap alcanzado (${maxImagesCap} imágenes máx)`); return; }
+    const remaining = maxImagesCap - previewImages.length;
+    const toGenerate = Math.min(imagesPerRound, remaining);
+    setGeneratingImages(true);
+    try {
+      // Refrescar quota antes (descuenta 1 wizard por ronda)
+      showToast(`⏳ Generando ${toGenerate} imagen${toGenerate > 1 ? 'es' : ''} más... (descuenta 1 wizard)`);
+      const ir = await fetch(`${API_URL}/ads/wizard/generate-images-preview`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ image_prompts: (plan.image_prompts || []).slice(0, toGenerate), brand_asset_urls: refMode === 'real' ? selectedRefs : [], append: true }) });
+      const id = await ir.json();
+      if (id.ok) {
+        const offset = previewImages.length;
+        const newImgs = (id.images || []).map((img: any, i: number) => ({ ...img, index: offset + i }));
+        setPreviewImages(prev => [...prev, ...newImgs]);
+        showToast(`✅ ${newImgs.length} nuevas en ${id.elapsed_seconds}s — total ${offset + newImgs.length}`);
+        // Refrescar quota tras descuento
+        fetch(`${API_URL}/ads/wizard/check-quota`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' } }).then(r => r.json()).then(d => setQuota(d)).catch(() => {});
+      } else showToast('❌ ' + (id.error || 'Error generando más'));
+    } catch { showToast('Error de conexión'); }
+    setGeneratingImages(false);
+  };
+  const discardDraft = () => {
+    if (!confirm('¿Descartar el borrador? Perderás todo el progreso (imágenes, textos, configuración).')) return;
+    if (typeof window !== 'undefined' && draftKey) localStorage.removeItem(draftKey);
+    setStep(1); setPlan(null); setPreviewImages([]); setSelectedImages([]); setCopies([]); setBenefits([]); setSelectedRefs([]); setImageHookMap({}); setCampaignName(''); setSelectedSlug('');
+    showToast('🗑️ Borrador descartado');
+  };
   const generatePlanAndImages = async () => {
     setGeneratingImages(true); setPreviewImages([]); setSelectedImages([]);
     try {
@@ -67,7 +156,17 @@ export default function WizardPage() {
       const svc = services.find((s: any) => s.slug === selectedSlug);
       const r = await fetch(`${API_URL}/ads/wizard/generate-copies`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ copy_angles: plan.copy_angles || [], product_name: svc?.name || selectedSlug || 'Mi producto', cta_text: plan.cta_text || 'Compra ahora', tone: plan.tone || 'profesional', language, benefits, use_brand_dna: true }) });
       const d = await r.json();
-      if (d.ok) { setCopies(d.copies || []); setCampaignName(svc?.name ? `${svc.name} - ${new Date().toLocaleDateString()}` : `Campaña ${new Date().toLocaleDateString()}`); showToast(`✅ ${(d.copies || []).length} textos generados`); }
+      if (d.ok) {
+        const newCopies = d.copies || [];
+        setCopies(newCopies);
+        if (newCopies.length > 0 && selectedImages.length > 0) {
+          const map: Record<number, number> = {};
+          selectedImages.forEach((imgIdx, i) => { map[imgIdx] = i % newCopies.length; });
+          setImageHookMap(map);
+        }
+        setCampaignName(svc?.name ? `${svc.name} - ${new Date().toLocaleDateString()}` : `Campaña ${new Date().toLocaleDateString()}`);
+        showToast(`✅ ${newCopies.length} textos generados`);
+      }
       else showToast('❌ ' + (d.error || 'Error'));
     } catch { showToast('Error de conexión'); }
     setGeneratingCopies(false);
@@ -75,8 +174,19 @@ export default function WizardPage() {
   const launchCampaign = async () => {
     setLaunching(true);
     try {
-      const urls = selectedImages.map(idx => previewImages.find((i: any) => i.index === idx)?.image_url || '').filter((u: string) => u);
-      const r = await fetch(`${API_URL}/ads/campaigns/publish`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: campaignName, objective: strategy === 'branding' || strategy === 'promote' ? 'OUTCOME_AWARENESS' : 'OUTCOME_ENGAGEMENT', budget_daily: parseInt(budgetDaily) || 20000, variants: copies.slice(0, urls.length).map((c: any, i: number) => ({ headline: campaignName?.substring(0, 60), text: typeof c === 'string' ? c : c.text, description: plan?.cta_text || '', image_url: urls[i] || urls[0] })), country: 'CO', duration, service_slug: selectedSlug, age_min: 18, age_max: 65, gender: 'all', cities: [], interests: [] }) });
+      // Construir variants respetando el mapping imagen→copy elegido por el cliente
+      const variants = selectedImages.map((imgIdx) => {
+        const img = previewImages.find((i: any) => i.index === imgIdx);
+        const copyIdx = imageHookMap[imgIdx] ?? 0;
+        const c = copies[copyIdx] || copies[0] || {};
+        return {
+          headline: campaignName?.substring(0, 60),
+          text: typeof c === 'string' ? c : (c.text || ''),
+          description: plan?.cta_text || '',
+          image_url: img?.image_url || '',
+        };
+      }).filter((v: any) => v.image_url);
+      const r = await fetch(`${API_URL}/ads/campaigns/publish`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: campaignName, objective: strategy === 'branding' || strategy === 'promote' ? 'OUTCOME_AWARENESS' : 'OUTCOME_ENGAGEMENT', budget_daily: parseInt(budgetDaily) || 20000, variants, country: 'CO', duration, service_slug: selectedSlug, age_min: 18, age_max: 65, gender: 'all', cities: [], interests: [] }) });
       if (r.ok) { showToast('🚀 ¡Campaña publicada!'); setTimeout(() => { window.location.href = '/dashboard/ads'; }, 2000); }
       else { const d = await r.json(); showToast('❌ ' + (d.error || 'Error')); }
     } catch { showToast('Error de conexión'); }
@@ -92,16 +202,14 @@ export default function WizardPage() {
           <Link href="/dashboard/ads" className="text-gray-400 hover:text-white text-sm">← Volver</Link>
           <h1 className="text-xl font-bold">Wizard de Campaña ✨</h1>
           {step > 1 && (
-            <button onClick={() => {
-              if (!confirm('¿Descartar el borrador? Perderás todo el progreso.')) return;
-              setStep(1); setPlan(null); setPreviewImages([]); setSelectedImages([]); setCopies([]); setBenefits([]); setSelectedRefs([]);
-              showToast('Borrador descartado');
-            }} className="text-[9px] px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 font-bold transition-all">
+            <button onClick={discardDraft} className="text-[9px] px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 font-bold transition-all">
               🗑️ Descartar
             </button>
           )}
+          {draftSaved && <span className="text-[9px] text-emerald-400 font-bold animate-pulse">💾 Guardado</span>}
         </div>
         {quota && <span className="text-[10px] px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 font-bold">🎨 {quota.source === 'plan_unlimited' ? '∞' : quota.remaining_plan} wizards</span>}
+
       </div>
       <div className="flex gap-1 mb-8">
         {STEPS.map(s => (
@@ -296,11 +404,29 @@ export default function WizardPage() {
                       </button>
                     ))}
                   </div>
-                  <p className="text-[10px] text-gray-500 mb-4">{selectedImages.length}/3 seleccionadas — click para seleccionar/deseleccionar</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => setStep(6)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
-                    <button onClick={generatePlanAndImages} className="border border-white/10 px-4 py-3 rounded-xl text-xs font-bold hover:bg-white/5">🔄 Regenerar</button>
-                    <button onClick={() => { setStep(8); generateCopies(); }} disabled={selectedImages.length === 0 || generatingCopies} className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] text-gray-500">{selectedImages.length}/3 seleccionadas — total generadas: {previewImages.filter((p: any) => p.ok).length}/{maxImagesCap}</p>
+                    {previewImages.length < maxImagesCap && (
+                      <div className="flex items-center gap-2">
+                        <label className="text-[10px] text-gray-500">Generar</label>
+                        <select value={imagesPerRound} onChange={(e) => setImagesPerRound(parseInt(e.target.value))}
+                          className="bg-[#1a1f2e] border border-white/10 rounded-lg px-2 py-1 text-[11px] outline-none focus:border-purple-500 text-white">
+                          {Array.from({ length: Math.min(maxImagesCap - previewImages.length, 10) }, (_, i) => i + 1).map(n => (
+                            <option key={n} value={n}>+{n}</option>
+                          ))}
+                        </select>
+                        <button onClick={generateMoreImages} disabled={generatingImages}
+                          className="text-[11px] px-3 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 font-bold transition-all disabled:opacity-50"
+                          title="Genera más sin perder las actuales (descuenta 1 wizard)">
+                          {generatingImages ? '⏳...' : '➕ Generar más'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <button onClick={() => setStep(6)} className="flex-1 min-w-[100px] border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
+                    <button onClick={() => { if (confirm('Esto borra TODAS las imágenes actuales y genera nuevas (descuenta 1 wizard). ¿Continuar?')) { setPreviewImages([]); setSelectedImages([]); generatePlanAndImages(); } }} className="border border-white/10 px-4 py-3 rounded-xl text-xs font-bold hover:bg-white/5" title="Borra todas y empieza de cero">🔄 Regenerar todo</button>
+                    <button onClick={() => { setStep(8); generateCopies(); }} disabled={selectedImages.length === 0 || generatingCopies} className="flex-1 min-w-[200px] bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
                       {generatingCopies ? '⏳...' : `📝 Generar textos (${selectedImages.length} img) →`}
                     </button>
                   </div>
@@ -323,35 +449,58 @@ export default function WizardPage() {
                 </div>
               ) : (
                 <>
-                  <p className="text-xs text-gray-400 mb-4">Revisa los textos generados. Puedes editarlos. El texto de la primera variante se incrustará en las imágenes.</p>
+                  <p className="text-xs text-gray-400 mb-4">Revisa los textos (editables). Luego elige cuál copy se incrusta en cada imagen.</p>
                   <div className="space-y-3 mb-6">
-                    {copies.map((c: any, i: number) => (
-                      <div key={i} className={`bg-white/[0.02] border rounded-xl p-3 ${i === 0 ? 'border-purple-500/50 ring-1 ring-purple-500/30' : 'border-white/5'}`}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">V{i + 1}</span>
-                          <span className="text-[9px] text-gray-500">{c.angle}</span>
-                          {i === 0 && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">📸 Se incrusta en imagen</span>}
-                          <span className="text-[9px] text-gray-600 ml-auto">{c.char_count || c.text?.length || 0} chars</span>
+                    {copies.map((c: any, i: number) => {
+                      const usedIn = Object.entries(imageHookMap).filter(([_, ci]) => ci === i).map(([ii]) => parseInt(ii));
+                      const usedLabels = usedIn.map(ii => selectedImages.indexOf(ii) + 1).filter(n => n > 0);
+                      return (
+                        <div key={i} className={`bg-white/[0.02] border rounded-xl p-3 ${usedLabels.length > 0 ? 'border-purple-500/50 ring-1 ring-purple-500/30' : 'border-white/5'}`}>
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">V{i + 1}</span>
+                            <span className="text-[9px] text-gray-500">{c.angle}</span>
+                            {usedLabels.length > 0 && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">📸 En imagen{usedLabels.length > 1 ? 'es' : ''} {usedLabels.join(', ')}</span>}
+                            <span className="text-[9px] text-gray-600 ml-auto">{c.char_count || c.text?.length || 0} chars</span>
+                          </div>
+                          <textarea value={c.text} onChange={(e) => { const updated = [...copies]; updated[i] = { ...c, text: e.target.value }; setCopies(updated); }}
+                            rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white resize-none" />
+                          {c.social_proof_used && <p className="text-[9px] text-emerald-400 mt-1 italic">🛡️ {c.social_proof_used}</p>}
                         </div>
-                        <textarea value={c.text} onChange={(e) => { const updated = [...copies]; updated[i] = { ...c, text: e.target.value }; setCopies(updated); }}
-                          rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white resize-none" />
-                        {c.social_proof_used && <p className="text-[9px] text-emerald-400 mt-1 italic">🛡️ {c.social_proof_used}</p>}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                  {previewImages.some((p: any) => p.overlay_applied) && (
-                    <div className="mb-6">
-                      <h3 className="text-xs font-bold text-emerald-400 mb-3">✅ Preview con texto incrustado</h3>
-                      <div className="grid grid-cols-3 gap-3">
-                        {selectedImages.map(idx => {
-                          const img = previewImages.find((i: any) => i.index === idx);
-                          return img ? (
-                            <div key={idx} className="rounded-xl overflow-hidden border border-emerald-500/30">
-                              <img src={img.image_url} alt={`Final ${idx}`} className="w-full aspect-square object-cover" />
+                  <div className="mb-6">
+                    <h3 className="text-xs font-bold text-gray-300 mb-3">🎯 Asigna un copy a cada imagen</h3>
+                    <div className={`grid gap-3 ${selectedImages.length === 1 ? 'grid-cols-1' : selectedImages.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                      {selectedImages.map((imgIdx, pos) => {
+                        const img = previewImages.find((i: any) => i.index === imgIdx);
+                        const currentCopyIdx = imageHookMap[imgIdx] ?? 0;
+                        if (!img) return null;
+                        return (
+                          <div key={imgIdx} className={`rounded-xl overflow-hidden border-2 ${img.overlay_applied ? 'border-emerald-500/50' : 'border-white/10'}`}>
+                            <div className="relative">
+                              <img src={img.image_url} alt={`Img ${pos + 1}`} className="w-full aspect-square object-cover" />
+                              <div className="absolute top-2 left-2 w-7 h-7 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">{pos + 1}</div>
+                              {img.overlay_applied && <div className="absolute top-2 right-2 bg-emerald-600 text-white text-[9px] font-bold px-2 py-1 rounded-full shadow-lg">✓ Con texto</div>}
                             </div>
-                          ) : null;
-                        })}
-                      </div>
+                            <div className="p-2 bg-[#0f1320]">
+                              <label className="text-[9px] text-gray-500 uppercase tracking-widest block mb-1">Copy a incrustar</label>
+                              <select value={currentCopyIdx} onChange={(e) => setImageHookMap(prev => ({ ...prev, [imgIdx]: parseInt(e.target.value) }))}
+                                className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-2 py-1.5 text-[11px] outline-none focus:border-purple-500 text-white">
+                                {copies.map((c: any, i: number) => {
+                                  const preview = (typeof c === 'string' ? c : c.text || '').substring(0, 40);
+                                  return <option key={i} value={i}>V{i + 1} — {c.angle || 'copy'} — {preview}{preview.length >= 40 ? '...' : ''}</option>;
+                                })}
+                              </select>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {selectedImages.every((idx) => previewImages.find((i: any) => i.index === idx)?.overlay_applied) && selectedImages.length > 0 && (
+                    <div className="mb-6 bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3">
+                      <p className="text-[11px] text-emerald-400 font-bold">✅ Todas las imágenes tienen texto incrustado. Listo para lanzar.</p>
                     </div>
                   )}
                   <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 mb-6">
@@ -373,43 +522,63 @@ export default function WizardPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setStep(7)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
-                    {!previewImages.some((p: any) => p.overlay_applied) ? (
-                      <button onClick={async () => {
-                        if (copies.length > 0 && selectedImages.length > 0) {
-                          showToast('⏳ Incrustando texto en imágenes (~30s)...');
-                          const hookText = (copies[0]?.text || '').split('.')[0]?.substring(0, 30) || 'Ver más';
-                          let success = 0;
-                          for (let i = 0; i < selectedImages.length; i++) {
-                            const img = previewImages.find((im: any) => im.index === selectedImages[i]);
-                            if (!img?.image_url) continue;
-                            try {
-                              const ovRes = await fetch(`${API_URL}/ads/overlay-and-resize`, {
-                                method: 'POST',
-                                headers: { ...h, 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ image_url: img.image_url, overlay_text: hookText, include_overlay: true }),
-                              });
-                              const ovData = await ovRes.json();
-                              if (ovData.ok && ovData.square) {
-                                setPreviewImages((prev: any[]) => prev.map((p: any) => p.index === selectedImages[i] ? { ...p, image_url: ovData.square, overlay_applied: true } : p));
-                                success++;
-                              }
-                            } catch {}
-                          }
-                          if (success > 0) showToast(`✅ Texto incrustado en ${success} imagen${success > 1 ? 'es' : ''}. Revisa el preview abajo.`);
-                          else showToast('❌ No se pudo incrustar el texto');
+                  <div className="flex gap-2 flex-wrap">
+                    <button onClick={() => setStep(7)} className="flex-1 min-w-[100px] border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
+                    {(() => {
+                      const allOverlaid = selectedImages.length > 0 && selectedImages.every((idx) => previewImages.find((i: any) => i.index === idx)?.overlay_applied);
+                      const someOverlaid = selectedImages.some((idx) => previewImages.find((i: any) => i.index === idx)?.overlay_applied);
+                      const doOverlay = async () => {
+                        if (copies.length === 0 || selectedImages.length === 0) return;
+                        setOverlayInProgress(true);
+                        showToast(`⏳ Incrustando texto en ${selectedImages.length} imagen${selectedImages.length > 1 ? 'es' : ''} (~${selectedImages.length * 10}s)...`);
+                        let success = 0;
+                        for (let i = 0; i < selectedImages.length; i++) {
+                          const imgIdx = selectedImages[i];
+                          const img = previewImages.find((im: any) => im.index === imgIdx);
+                          if (!img?.image_url) continue;
+                          const copyIdx = imageHookMap[imgIdx] ?? (i % copies.length);
+                          const copyText = copies[copyIdx]?.text || copies[0]?.text || '';
+                          // Hook: primera oración, máx 30 chars
+                          const hookText = (copyText.split('.')[0] || copyText).substring(0, 30).trim() || 'Ver más';
+                          try {
+                            const ovRes = await fetch(`${API_URL}/ads/overlay-and-resize`, {
+                              method: 'POST',
+                              headers: { ...h, 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ image_url: img.image_url, overlay_text: hookText, include_overlay: true }),
+                            });
+                            const ovData = await ovRes.json();
+                            if (ovData.ok && ovData.square) {
+                              setPreviewImages((prev: any[]) => prev.map((p: any) => p.index === imgIdx ? { ...p, image_url: ovData.square, overlay_applied: true } : p));
+                              success++;
+                            }
+                          } catch {}
                         }
-                      }} disabled={launching || copies.length === 0}
-                        className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50">
-                        ✏️ Incrustar texto en imágenes
-                      </button>
-                    ) : (
-                      <button onClick={launchCampaign} disabled={launching}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50">
-                        {launching ? '⏳ Publicando en Meta...' : '🚀 Lanzar campaña'}
-                      </button>
-                    )}
+                        setOverlayInProgress(false);
+                        if (success === selectedImages.length) showToast(`✅ Texto incrustado en ${success} imagen${success > 1 ? 'es' : ''}. Revisa arriba antes de lanzar.`);
+                        else if (success > 0) showToast(`⚠️ ${success}/${selectedImages.length} incrustadas. Reintenta para completar.`);
+                        else showToast('❌ No se pudo incrustar el texto');
+                      };
+                      if (!allOverlaid) {
+                        return (
+                          <button onClick={doOverlay} disabled={launching || overlayInProgress || copies.length === 0 || selectedImages.length === 0}
+                            className="flex-1 min-w-[200px] bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50">
+                            {overlayInProgress ? '⏳ Incrustando...' : someOverlaid ? '🔁 Reintentar incrustar faltantes' : '✏️ Incrustar texto en imágenes'}
+                          </button>
+                        );
+                      }
+                      return (
+                        <>
+                          <button onClick={doOverlay} disabled={launching || overlayInProgress}
+                            className="border border-white/10 px-4 py-3 rounded-xl text-xs font-bold hover:bg-white/5 disabled:opacity-50" title="Re-incrustar con copies actualizados">
+                            🔄 Re-incrustar
+                          </button>
+                          <button onClick={launchCampaign} disabled={launching || overlayInProgress}
+                            className="flex-1 min-w-[200px] bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50">
+                            {launching ? '⏳ Publicando en Meta...' : '🚀 Lanzar campaña'}
+                          </button>
+                        </>
+                      );
+                    })()}
                   </div>
                 </>
               )}
