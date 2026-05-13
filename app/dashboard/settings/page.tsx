@@ -429,22 +429,7 @@ export default function SettingsPage() {
      }
      setSaving(false);
   };
- const handleSaveFunnelMode = async () => {
-    setSaving(true);
-    try {
-      await fetch(`${API_URL}/config`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
-        body: JSON.stringify({ funnel_mode: funnelMode }),
-      });
-      setConfig({ ...config, funnel_mode: funnelMode });
-      showToast('✓ Tipo de funnel guardado');
-    } catch (err) {
-      showToast('Error guardando funnel');
-    }
-    setSaving(false);
-  };
-const handleSaveAdsConfig = async () => {
+ const handleSaveAdsConfig = async () => {
     setSaving(true);
     try {
       await fetch(`${API_URL}/config`, {
