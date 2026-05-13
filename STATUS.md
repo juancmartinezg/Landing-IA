@@ -2,8 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**v165** — AI Creative Loop CERRADO 🦁 5 motores en producción: Content Ingestion + Winner Analysis + Hook Generation multi_pattern + Creative Production (Meta Graph asset_feed_spec real) + Publish+Learn con cross-tenant pool opt-in. 3 tablas DDB con PITR + 2 crons EventBridge ENABLED
-**v165** — AI Creative Loop CERRADO 🦁 5 motores en producción: Content Ingestion + Winner Analysis + Hook Generation multi_pattern + Creative Production (Meta Graph asset_feed_spec real) + Publish+Learn con cross-tenant pool opt-in. 3 tablas DDB con PITR + 2 crons EventBridge ENABLED (`ads-ingestion-daily` 7AM UTC, `ads-variant-learn-daily` 8AM UTC). API v156-v164 + frontend `e96fd2a` (botón 🚀 Publicar + modal + 3 sub-tabs) + `2e38b21` (Inteligencia de Ads en settings). Test E2E real: ad PAUSED creado en Meta de JMC heredando asset_feed_spec. Próximo sprint: Brand DNA + Wizard 2.0 + BrandAssets + Wizard Packs (~17h).
+**v179** — Sprint Brand DNA + Wizard 2.0 CERRADO 🦁 6 fases completadas en 1 sesión maratón (12-13 mayo). Brand DNA con scraping multi-source + Gemini (API v165). Brand Assets Library con 5 endpoints CRUD + thumbnails + Bucket Policy S3 (API v167). Wizard Backend 9 endpoints: check-quota + generate-strategy (10 Andromeda prompts) + generate-images-preview (10×512px paralelo) + generate-images-final (3×1K) + generate-copies (5 variantes social proof legal) + launch multi-canal + billing packs wizards (API v168-v179). Wizard Frontend 8 pasos full-screen (`246103f`). Andromeda overlay+resize via Gemini sin Pillow (API v174-v177). Cross-tenant siempre ON (network effect, API v166 + TyC sección 12). 5 tablas DDB nuevas (BrandDNA + BrandAssets + AdsCreativeLibrary + AdsHookVariants + AdsCrossTenantPool). 3 productos Wizard Packs en Lemon Squeezy. Bucket Policy S3 para brand-assets público. 27 deploys backend + 8 commits frontend.
 **v164** — Ads Pro v2 CERRADO 🎯 Regla #8 KILL_CREATIVE en motor B6.5 (API v153) + `POST /ads/generate-hook-variants` Gemini Flash Lite con cache 5min (API v155) + frontend botón ✨ Variantes en el 🏆 + modal con 3 hooks copiables y patrón emocional detectado (`92a3dcd`). JMC verificado: 0 KILL_CREATIVE (creatives sanos 2.43-4.99% CTR) + Gemini detectó patrón "escasez" del ganador.
 **v163** — deuda técnica cerrada: CAPI Schedule funnel completo + Google Calendar multi-tenant + ValidationException fix + Ads dashboard cache L1+L2 DDB (0 rate limits Meta) + fix frontend tab sobreescritura métricas)
 Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
@@ -522,8 +521,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] `AdsCreativeLibrary` (PK: `company_id`, SK: `creative_id`, GSI: `pattern-ctr-index`, PITR ✅, sin TTL — persistente) ✅ creada Sprint AI Creative Loop — librería de creatives ganadores del tenant
 - [x] `AdsHookVariants` (PK: `company_id`, SK: `variant_id`, GSI: `original_ad_id-index`, TTL 90d, PITR ✅) ✅ creada Sprint AI Creative Loop — tracking variantes publicadas (Motor 4 → Motor 5)
 - [x] `AdsCrossTenantPool` (PK: `vertical`, SK: `pattern#ts#company_short`, GSI: `pattern-ctr-index`, TTL 365d, PITR ✅) ✅ creada Sprint AI Creative Loop — patrones anonimizados cross-tenant opt-in
-- [ ] `BrandDNA` (PK: `company_id`, TTL 90d, PITR) — pendiente Sprint Brand DNA + Wizard 2.0
-- [ ] `BrandAssets` (PK: `company_id`, SK: `asset_id`, GSI: `asset_type-index`, TTL 365d auto-cleanup inactivos, PITR) — pendiente Sprint Brand DNA + Wizard 2.0
+- [x] `BrandDNA` (PK: `company_id`, TTL 90d, PITR ✅) ✅ creada Sprint Brand DNA (12 mayo) — ADN de marca con scraping multi-source + Gemini
+- [x] `BrandAssets` (PK: `company_id`, SK: `asset_id`, GSI: `asset_type-index`, TTL 365d, PITR ✅) ✅ creada Sprint Brand Assets (12 mayo) — biblioteca de fotos del negocio
 - [ ] Modificar `KnowledgeBase config_pro`: agregar `feature_overrides`, `tenant_notes`, `tags`, `events_timeline`, `pixel_id`, `business_vertical`, `ads_cross_tenant_optin`, `wizards_pack_balance`
 - [ ] Modificar `Leads_CRM`: agregar `source_campaign_id`, `source_type`, `paid_amount`
 ### ⚙️ Env vars nuevas
@@ -1495,7 +1494,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-██████████████████████████████████░ 95%
+██████████████████████████████████░ 98%
 ### ⏱️ Métricas de desarrollo reales
 | Métrica | Valor |
 |---|---|
@@ -1595,9 +1594,10 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **90% → 92%** — Memoria source-aware (Bot v136 + promote-cron v2) + 6 bugs CRM masivos cerrados (Bug #9 reincidió 3 veces, Bug #44 fix CRÍTICO created_at GSI con paid_count 0→83 y revenue $23.38M COP) + cleanup memoria 615 entries — API v117-v122 🦁
 - [x] **92% → 94%** — Sprint 1 COMPLETADO 🍾 Trial 14d E2E + QUOTA_ENFORCE=true + billing LS E2E (test real $297) + cron trial-expire + email warning + landing+dashboard dinámicos DDB + admin editor planes + 7 bugs más (Bug #45 router /billing/me) — Bot v137-v138, API v123-v133, 8 commits frontend 🦁
 - [x] **94% → 95%** — Calendly Mode CERRADO 📅 CalendarPicker v7.3 + auto-onboarding multi-tenant del flow (1 POST = flow creado en Meta) + UI completa `/dashboard/services` con `time_slots` / `available_weekdays` / `booking_mode` solapable+exclusive / `max_days_ahead` / `post_payment_flow=send_group_link` / recordatorios async post-agendamiento — Bot v154-v162, API v148, 4 commits frontend (4b0d78c, 8f8775b, a4c3172, fc069b1). Bug #56 falsa alarma (testing pipeline borraba scheduled_*). 5 lecciones nuevas (48-53). 🦁
-- [x] **95% → 96%** — Ads Pro v2 CERRADO 🎯 Regla #8 KILL_CREATIVE (B6.5 motor) + `/ads/generate-hook-variants` Gemini Flash Lite con cache 5min + frontend botón ✨ Variantes en el 🏆 + modal con 3 hooks copiables y patrón emocional detectado. JMC verificado: 0 KILL_CREATIVE (creatives sanos 2.43-4.99% CTR) + Gemini detectó patrón "escasez" del ganador. API v153-v155, frontend `92a3dcd`. 3 lecciones nuevas (56-58). ⭐ ESTÁS AQUÍ
-- [ ] **96% → 100%** — Sprints 3-7 + Admin D-K completo + Feature Flags UI + Impersonate + Hook agente humano memoria + Web Chat Widget + Google Calendar multi-tenant fix + CAPI Schedule + RUGIDO 🦁
-
+- [x] **95% → 96%** — Ads Pro v2 CERRADO 🎯 Regla #8 KILL_CREATIVE + Hook Generation + frontend ✨ Variantes. API v153-v155, frontend `92a3dcd`. 🦁
+- [x] **96% → 97%** — AI Creative Loop CERRADO 🦁 5 motores E2E (Content Ingestion + Winner Analysis + Hook Gen multi_pattern + Creative Production Meta Graph + Publish+Learn cross-tenant). API v156-v164, frontend `e96fd2a` + `2e38b21`. 🦁
+- [x] **97% → 98%** — Sprint Brand DNA + Wizard 2.0 CERRADO 🦁 Brand DNA scraping multi-source + Brand Assets Library + Wizard Backend 9 endpoints (strategy + images paralelo Gemini + copies social proof + launch multi-canal) + Wizard Frontend 8 pasos full-screen + Andromeda overlay via Gemini + cross-tenant siempre ON + TyC sección 12 + Wizard Packs LS + Bucket Policy S3. API v165-v179, frontend `246103f` + settings `c4f053e`/`7427627`/`ea84b49` + TyC `7d021b7`. 27 deploys + 8 commits en 1 sesión. ⭐ ESTÁS AQUÍ
+- [ ] **98% → 100%** — Sprints 3-7 + Admin D-K completo + Ads Pro v3 (Andromeda text-on-image + auto 3 formatos) + Web Chat Widget + RUGIDO 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
 ## 📞 CONTACTO
