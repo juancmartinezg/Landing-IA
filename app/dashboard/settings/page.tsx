@@ -29,6 +29,14 @@ const BUSINESS_PRESETS: Record<string, { label: string; fields: string[] }> = {
   salud: { label: '🏥 Salud', fields: ['product_name', 'purchase_date', 'renewal_date', 'renewal_frequency'] },
   todos: { label: '⚙️ Todos', fields: CRM_FIELD_OPTIONS.map(f => f.id) },
 };
+const FUNNEL_MODES = [
+  { id: 'pay_to_book',     emoji: '💳', label: 'Pagar para reservar',     desc: 'Cliente paga, luego agenda. Ideal para: cursos premium, talleres pagos, escuelas.' },
+  { id: 'book_first',      emoji: '📅', label: 'Reservar y pagar después', desc: 'Cliente agenda primero, paga en sitio o link. Ideal para: clínicas, consultorios, salones, spas.' },
+  { id: 'human_close',     emoji: '🤝', label: 'Bot filtra, humano cierra', desc: 'Bot califica al lead, humano cierra venta. Ideal para: B2B alto ticket, agencias, propiedades.' },
+  { id: 'pay_and_ship',    emoji: '📦', label: 'Pagar y enviar a domicilio', desc: 'Tras pago, captura dirección de envío. Ideal para: e-commerce físico.' },
+  { id: 'pay_and_deliver', emoji: '⬇️', label: 'Pagar y entregar digital',  desc: 'Tras pago, envía descarga o acceso. Ideal para: cursos digitales, ebooks, software.' },
+  { id: 'free_booking',    emoji: '🆓', label: 'Reservar gratis',           desc: 'Lead magnet sin pago. Ideal para: demos, consulta gratuita, primera cita gratis.' },
+];
 const SHIPPING_PROVIDERS = [
   { id: 'servientrega', name: 'Servientrega', country: '🇨🇴 CO' },
   { id: 'coordinadora', name: 'Coordinadora', country: '🇨🇴 CO' },
@@ -55,6 +63,7 @@ export default function SettingsPage() {
   const [businessType, setBusinessType] = useState('servicios');
   const [shippingProviders, setShippingProviders] = useState<string[]>([]);
   const [postPaymentFlow, setPostPaymentFlow] = useState('scheduling');
+  const [funnelMode, setFunnelMode] = useState('pay_to_book');
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptText, setPromptText] = useState('');
   const [wizardStep, setWizardStep] = useState(1);
@@ -157,6 +166,7 @@ export default function SettingsPage() {
         setBusinessType(data.business_type || 'servicios');
         setShippingProviders((data.shipping || {}).providers || []);
         setPostPaymentFlow(data.post_payment_flow || 'scheduling');
+        setFunnelMode(data.funnel_mode || 'pay_to_book');
         const hh = data.human_support_hours || {};
          setHumanHours({
            start: hh.start ?? 8,
@@ -404,7 +414,22 @@ export default function SettingsPage() {
     }
     setSaving(false);
   };
-const handleSaveAdsConfig = async () => {
+ const handleSaveFunnelMode = async () => {
+     setSaving(true);
+     try {
+       await fetch(`${API_URL}/config`, {
+         method: 'PUT',
+         headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+         body: JSON.stringify({ funnel_mode: funnelMode }),
+       });
+       setConfig({ ...config, funnel_mode: funnelMode });
+       showToast('✓ Tipo de funnel guardado');
+     } catch (err) {
+       showToast('Error guardando funnel');
+     }
+     setSaving(false);
+  };
+ const handleSaveAdsConfig = async () => {
     setSaving(true);
     try {
       await fetch(`${API_URL}/config`, {
@@ -1072,6 +1097,37 @@ const handleSaveAdsConfig = async () => {
             <p className="text-[10px] text-gray-600 mt-3">Se guarda con el botón "Guardar campos" de arriba.</p>
           </div>
         )}
+        {/* Tipo de Funnel — Multi-tenant: define cómo cobra/agenda el bot */}
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold">🎯 Tipo de funnel del negocio</h3>
+            <button onClick={handleSaveFunnelMode} disabled={saving}
+              className="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
+              {saving ? '...' : 'Guardar'}
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-500 mb-4">
+            Define cómo opera tu bot de principio a fin. Cambia el flujo completo según tu modelo de negocio.
+            <strong className="text-amber-400"> Elige bien: este es el corazón del comportamiento del bot.</strong>
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {FUNNEL_MODES.map(mode => (
+              <button key={mode.id} onClick={() => setFunnelMode(mode.id)}
+                className={`p-4 rounded-xl text-left transition-all border ${
+                  funnelMode === mode.id
+                    ? 'border-indigo-500 bg-indigo-600/10 shadow-lg shadow-indigo-600/20'
+                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                }`}>
+                <p className="text-lg mb-1">{mode.emoji}</p>
+                <p className="text-xs font-bold mb-1">{mode.label}</p>
+                <p className="text-[9px] text-gray-500 leading-relaxed">{mode.desc}</p>
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-600 mt-3">
+            💡 Modo actual: <strong className="text-indigo-400">{FUNNEL_MODES.find(m => m.id === funnelMode)?.label || '—'}</strong>
+          </p>
+        </div>
         {/* Después del Pago */}
         <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 md:col-span-2">
           <div className="flex justify-between items-center mb-4">
