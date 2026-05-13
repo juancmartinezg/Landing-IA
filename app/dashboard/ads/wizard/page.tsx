@@ -323,13 +323,14 @@ export default function WizardPage() {
                 </div>
               ) : (
                 <>
-                  <p className="text-xs text-gray-400 mb-4">Revisa los textos generados. Puedes editarlos antes de lanzar.</p>
+                  <p className="text-xs text-gray-400 mb-4">Revisa los textos generados. Puedes editarlos. El texto de la primera variante se incrustará en las imágenes.</p>
                   <div className="space-y-3 mb-6">
                     {copies.map((c: any, i: number) => (
-                      <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                      <div key={i} className={`bg-white/[0.02] border rounded-xl p-3 ${i === 0 ? 'border-purple-500/50 ring-1 ring-purple-500/30' : 'border-white/5'}`}>
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">V{i + 1}</span>
                           <span className="text-[9px] text-gray-500">{c.angle}</span>
+                          {i === 0 && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">📸 Se incrusta en imagen</span>}
                           <span className="text-[9px] text-gray-600 ml-auto">{c.char_count || c.text?.length || 0} chars</span>
                         </div>
                         <textarea value={c.text} onChange={(e) => { const updated = [...copies]; updated[i] = { ...c, text: e.target.value }; setCopies(updated); }}
@@ -338,6 +339,21 @@ export default function WizardPage() {
                       </div>
                     ))}
                   </div>
+                  {previewImages.some((p: any) => p.overlay_applied) && (
+                    <div className="mb-6">
+                      <h3 className="text-xs font-bold text-emerald-400 mb-3">✅ Preview con texto incrustado</h3>
+                      <div className="grid grid-cols-3 gap-3">
+                        {selectedImages.map(idx => {
+                          const img = previewImages.find((i: any) => i.index === idx);
+                          return img ? (
+                            <div key={idx} className="rounded-xl overflow-hidden border border-emerald-500/30">
+                              <img src={img.image_url} alt={`Final ${idx}`} className="w-full aspect-square object-cover" />
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 mb-6">
                     <h3 className="text-xs font-bold text-gray-300 mb-3">⚙️ Configuración de campaña</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -359,34 +375,41 @@ export default function WizardPage() {
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setStep(7)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
-                    <button onClick={async () => {
-                      // Auto-overlay: incrustar el texto del primer copy en las imágenes seleccionadas
-                      if (copies.length > 0 && selectedImages.length > 0) {
-                        showToast('⏳ Incrustando texto en imágenes...');
-                        const hookText = (copies[0]?.text || '').split('.')[0]?.substring(0, 30) || 'Ver más';
-                        for (let i = 0; i < selectedImages.length; i++) {
-                          const img = previewImages.find((im: any) => im.index === selectedImages[i]);
-                          if (!img?.image_url) continue;
-                          try {
-                            const ovRes = await fetch(`${API_URL}/ads/overlay-and-resize`, {
-                              method: 'POST',
-                              headers: { ...h, 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ image_url: img.image_url, overlay_text: hookText, include_overlay: true }),
-                            });
-                            const ovData = await ovRes.json();
-                            if (ovData.ok && ovData.square) {
-                              // Reemplazar la URL de preview con la versión con overlay
-                              setPreviewImages((prev: any[]) => prev.map((p: any) => p.index === selectedImages[i] ? { ...p, image_url: ovData.square, overlay_applied: true } : p));
-                            }
-                          } catch {}
+                    {!previewImages.some((p: any) => p.overlay_applied) ? (
+                      <button onClick={async () => {
+                        if (copies.length > 0 && selectedImages.length > 0) {
+                          showToast('⏳ Incrustando texto en imágenes (~30s)...');
+                          const hookText = (copies[0]?.text || '').split('.')[0]?.substring(0, 30) || 'Ver más';
+                          let success = 0;
+                          for (let i = 0; i < selectedImages.length; i++) {
+                            const img = previewImages.find((im: any) => im.index === selectedImages[i]);
+                            if (!img?.image_url) continue;
+                            try {
+                              const ovRes = await fetch(`${API_URL}/ads/overlay-and-resize`, {
+                                method: 'POST',
+                                headers: { ...h, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ image_url: img.image_url, overlay_text: hookText, include_overlay: true }),
+                              });
+                              const ovData = await ovRes.json();
+                              if (ovData.ok && ovData.square) {
+                                setPreviewImages((prev: any[]) => prev.map((p: any) => p.index === selectedImages[i] ? { ...p, image_url: ovData.square, overlay_applied: true } : p));
+                                success++;
+                              }
+                            } catch {}
+                          }
+                          if (success > 0) showToast(`✅ Texto incrustado en ${success} imagen${success > 1 ? 'es' : ''}. Revisa el preview abajo.`);
+                          else showToast('❌ No se pudo incrustar el texto');
                         }
-                        showToast('✅ Texto incrustado. Revisa y lanza.');
-                      }
-                      await launchCampaign();
-                    }} disabled={launching || copies.length === 0}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50">
-                      {launching ? '⏳ Publicando en Meta...' : '🚀 Incrustar texto + Lanzar'}
-                    </button>
+                      }} disabled={launching || copies.length === 0}
+                        className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50">
+                        ✏️ Incrustar texto en imágenes
+                      </button>
+                    ) : (
+                      <button onClick={launchCampaign} disabled={launching}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50">
+                        {launching ? '⏳ Publicando en Meta...' : '🚀 Lanzar campaña'}
+                      </button>
+                    )}
                   </div>
                 </>
               )}
