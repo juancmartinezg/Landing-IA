@@ -898,8 +898,21 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 45. **🔴 Cuota debe descontarse donde está el costo real**: cobrar por la operación cara (Gemini Image), no por la barata (texto). Audit cada endpoint de generación con LLM antes de marcar quota como "implementada".
 46. **🟡 Multi-tenant config-driven**: cuando un parámetro pueda variar por tenant (cap de imágenes, max días scheduling, time_slots), siempre leerlo de `config_pro` con default sensato. Nunca hardcodear en código ni env var.
 47. **🟢 Hidratación con gate**: cuando hidratas estado complejo desde storage en un useEffect, usa un flag `hydrated` que el auto-save respete con `if (!hydrated) return`. Sino el auto-save inicial pisa con vacío.
-### Próximo sprint: Scheduling UI multi-tenant
-- **API SaaS_API_Handler**: whitelist `service.scheduling.time_slots`, `duration_hours`, `max_days_ahead` en `handle_add_service` + `handle_update_service`.
+### 13 mayo 2026 (madrugada) — Sprint Scheduling UI multi-tenant CERRADO 🦁
+> Sesión ~10 min. Sprint cerrado sin código nuevo — auditoría reveló que frontend (SHA `bd3cad7`) ya tenía la UI completa y el backend (`handle_add_service`/`handle_update_service`) acepta el dict `scheduling` agnósticamente. **Cero patch necesario.**
+#### Validación E2E
+- [x] Frontend `app/dashboard/services/page.tsx:543-668`: UI completa con toggle `time_slots` (7 AM-8 PM), `available_weekdays` (Lun-Dom), `booking_mode` (solapable/exclusive), `max_days_ahead`. Payload manda `scheduling.*` con los 4 campos nuevos.
+- [x] Backend `handle_add_service` (`:5469-5493`) y `handle_update_service` (`:5518-5544`) aceptan dict `scheduling` completo sin filtrar campos. Cero whitelist innecesaria.
+- [x] DDB JMC verificado: 2 servicios (`seminario-tiro-pistola-9mm` y `seminario-personalizado-9mm`) ya tienen `time_slots`, `available_weekdays: [1-6]` (sin lunes), `booking_mode`, `max_days_ahead: 30` persistidos.
+- [x] Bot v162 ya lee estos campos con cascada svc→tenant→default (`STATUS.md:100`).
+#### Lección 48
+- **🟢 Auditar antes de codear**: cuando un sprint parece complejo, primero verificar si el frontend, backend y datos ya están alineados. En este caso 3 sprints anteriores (Bot v152 + Frontend `bd3cad7` + auto-update DDB del cliente) ya cerraron el sistema sin que nadie se diera cuenta. Sprint de 10 minutos en lugar de 4 horas.
+### Próximos pendientes
+- **2 `ValidationException` latentes en `handle_payment_webhook`** (L2904-3036 del bot): limpieza CloudWatch (no bloquea producción).
+- **M19/M20** — Test event code + Dashboard Match Rate por tenant.
+- **B6.5.6/B6.5.10** — Push FCM ads + sistema aprende post-apply.
+- **Stripe** — billing US/EU (crítico para mercados globales).
+- **Fase F** — Soporte/ticketing real. `handle_add_service` + `handle_update_service`.
 - **Frontend `/dashboard/services`**: bloque colapsable "⚙️ Agendamiento avanzado" en el modal de servicio con multi-checkbox 8AM-8PM + select duración + input max_days_ahead. Default `[]` = usa business_hours del config_pro.
 - **Bot**: extender `_handle_scheduling_flow_exchange` para leer `max_days_ahead` del servicio individual (override sobre config_pro global) — citas a 3 meses para consultorios.
 - **DatePicker nativo**: investigar componente WhatsApp Flows v5.0+ para reemplazar `RadioButtonsGroup` (limite 30 items). Necesario para consultorios que agendan hasta 90 días adelante.
