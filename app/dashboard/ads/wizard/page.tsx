@@ -91,6 +91,15 @@ export default function WizardPage() {
         <div className="flex items-center gap-3">
           <Link href="/dashboard/ads" className="text-gray-400 hover:text-white text-sm">← Volver</Link>
           <h1 className="text-xl font-bold">Wizard de Campaña ✨</h1>
+          {step > 1 && (
+            <button onClick={() => {
+              if (!confirm('¿Descartar el borrador? Perderás todo el progreso.')) return;
+              setStep(1); setPlan(null); setPreviewImages([]); setSelectedImages([]); setCopies([]); setBenefits([]); setSelectedRefs([]);
+              showToast('Borrador descartado');
+            }} className="text-[9px] px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 font-bold transition-all">
+              🗑️ Descartar
+            </button>
+          )}
         </div>
         {quota && <span className="text-[10px] px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 font-bold">🎨 {quota.source === 'plan_unlimited' ? '∞' : quota.remaining_plan} wizards</span>}
       </div>
@@ -350,9 +359,33 @@ export default function WizardPage() {
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setStep(7)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
-                    <button onClick={launchCampaign} disabled={launching || copies.length === 0}
+                    <button onClick={async () => {
+                      // Auto-overlay: incrustar el texto del primer copy en las imágenes seleccionadas
+                      if (copies.length > 0 && selectedImages.length > 0) {
+                        showToast('⏳ Incrustando texto en imágenes...');
+                        const hookText = (copies[0]?.text || '').split('.')[0]?.substring(0, 30) || 'Ver más';
+                        for (let i = 0; i < selectedImages.length; i++) {
+                          const img = previewImages.find((im: any) => im.index === selectedImages[i]);
+                          if (!img?.image_url) continue;
+                          try {
+                            const ovRes = await fetch(`${API_URL}/ads/overlay-and-resize`, {
+                              method: 'POST',
+                              headers: { ...h, 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ image_url: img.image_url, overlay_text: hookText, include_overlay: true }),
+                            });
+                            const ovData = await ovRes.json();
+                            if (ovData.ok && ovData.square) {
+                              // Reemplazar la URL de preview con la versión con overlay
+                              setPreviewImages((prev: any[]) => prev.map((p: any) => p.index === selectedImages[i] ? { ...p, image_url: ovData.square, overlay_applied: true } : p));
+                            }
+                          } catch {}
+                        }
+                        showToast('✅ Texto incrustado. Revisa y lanza.');
+                      }
+                      await launchCampaign();
+                    }} disabled={launching || copies.length === 0}
                       className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50">
-                      {launching ? '⏳ Publicando en Meta...' : '🚀 Lanzar campaña'}
+                      {launching ? '⏳ Publicando en Meta...' : '🚀 Incrustar texto + Lanzar'}
                     </button>
                   </div>
                 </>
