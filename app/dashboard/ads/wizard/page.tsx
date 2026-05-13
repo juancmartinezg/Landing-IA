@@ -55,6 +55,13 @@ export default function WizardPage() {
         const raw = localStorage.getItem(draftKey);
         if (raw) {
           const d = JSON.parse(raw);
+          // TTL 30 días — borrador viejo se descarta silente
+          const ageMs = Date.now() - (d.savedAt || 0);
+          if (ageMs > 30 * 24 * 60 * 60 * 1000) {
+            localStorage.removeItem(draftKey);
+            setDraftHydrated(true);
+            return;
+          }
           if (d.step) setStep(d.step);
           if (d.strategy) setStrategy(d.strategy);
           if (Array.isArray(d.channels)) setChannels(d.channels);
@@ -187,7 +194,12 @@ export default function WizardPage() {
         };
       }).filter((v: any) => v.image_url);
       const r = await fetch(`${API_URL}/ads/campaigns/publish`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: campaignName, objective: strategy === 'branding' || strategy === 'promote' ? 'OUTCOME_AWARENESS' : 'OUTCOME_ENGAGEMENT', budget_daily: parseInt(budgetDaily) || 20000, variants, country: 'CO', duration, service_slug: selectedSlug, age_min: 18, age_max: 65, gender: 'all', cities: [], interests: [] }) });
-      if (r.ok) { showToast('🚀 ¡Campaña publicada!'); setTimeout(() => { window.location.href = '/dashboard/ads'; }, 2000); }
+      if (r.ok) {
+        // Limpiar borrador tras lanzamiento exitoso — sino relanza al volver al wizard
+        if (typeof window !== 'undefined' && draftKey) localStorage.removeItem(draftKey);
+        showToast('🚀 ¡Campaña publicada!');
+        setTimeout(() => { window.location.href = '/dashboard/ads'; }, 2000);
+      }
       else { const d = await r.json(); showToast('❌ ' + (d.error || 'Error')); }
     } catch { showToast('Error de conexión'); }
     setLaunching(false);
