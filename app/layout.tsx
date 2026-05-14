@@ -12,20 +12,50 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 export const metadata: Metadata = {
-  title: 'clientes.bot | Automatiza tu WhatsApp con IA',
-  description: 'El único SaaS que combina WhatsApp, CRM y pagos locales con Inteligencia Artificial. Ahorra 20h a la semana y vende más.',
-  manifest: "/manifest.json",
+  metadataBase: new URL('https://clientes.bot'),
+  title: {
+    default: 'clientes.bot · Todo tu negocio conectado a WhatsApp',
+    template: '%s · clientes.bot',
+  },
+  description: 'CRM, IA, Atribución de anuncios, Pagos y Citas en una sola plataforma. Captura desde anuncios, vende por WhatsApp y mide ventas reales — no clics. 14 días gratis sin tarjeta.',
+  keywords: [
+    'WhatsApp Business API', 'CRM WhatsApp', 'bot WhatsApp IA',
+    'Facebook Ads atribución', 'Meta CAPI', 'plataforma ventas WhatsApp',
+    'alternativa GoHighLevel', 'alternativa Manychat', 'alternativa HubSpot',
+    'SaaS multi-tenant', 'CRM Kanban IA', 'lead scoring IA',
+    'multicanal WhatsApp Instagram Facebook', 'cobros WhatsApp',
+    'agenda inteligente WhatsApp', 'voz IA llamadas', 'pasarela pagos LATAM',
+  ],
+  authors: [{ name: 'SGC Technology S.A.S.' }],
+  creator: 'clientes.bot',
+  publisher: 'SGC Technology S.A.S.',
+  alternates: {
+    canonical: 'https://clientes.bot',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  manifest: '/manifest.json',
   openGraph: {
-    title: 'clientes.bot | Automatiza tu WhatsApp con IA',
-    description: 'El único SaaS que combina WhatsApp, CRM y pagos locales con IA.',
+    title: 'clientes.bot · Todo tu negocio conectado a WhatsApp',
+    description: 'CRM + IA + Atribución de Anuncios + Pagos + Citas en una sola plataforma. La infraestructura que reemplaza GoHighLevel, Manychat y HubSpot por un solo precio.',
     url: 'https://clientes.bot',
     siteName: 'clientes.bot',
     images: [
       {
-        url: '/dashboard-preview.webp',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'clientes.bot Dashboard Preview',
+        alt: 'clientes.bot — Infraestructura SaaS para negocios que venden por WhatsApp',
+        type: 'image/png',
       },
     ],
     locale: 'es_ES',
@@ -33,19 +63,21 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'clientes.bot | IA para WhatsApp',
-    description: 'SaaS de automatización con pagos integrados y CRM.',
-    images: ['/dashboard-preview.webp'],
+    title: 'clientes.bot · Todo tu negocio conectado a WhatsApp',
+    description: 'CRM + IA + Atribución + Pagos + Citas en una sola plataforma. Reemplaza GoHighLevel, Manychat y HubSpot por un solo precio.',
+    images: ['/og-image.png'],
+    creator: '@clientesbot',
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "clientes.bot",
+    statusBarStyle: 'default',
+    title: 'clientes.bot',
   },
   icons: {
-    icon: "/icon-192x192.png",
-    apple: "/icon-192x192.png",
+    icon: '/icon-192x192.png',
+    apple: '/icon-192x192.png',
   },
+  category: 'business',
 };
 export const viewport: Viewport = {
   themeColor: "#6366F1",

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ChatWidget from './components/ChatWidget';
 import InstallPWAPrompt from './components/InstallPWAPrompt';
+import FadeInOnScroll from './components/FadeInOnScroll';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 // ============================================================
 // TIPOS — Catálogo de planes desde /billing/plans-public
@@ -192,6 +193,7 @@ export default function LandingPage() {
           {/* ============================================================ */}
           {/* DEMO EMBEBIDO — La pieza más impactante */}
           {/* ============================================================ */}
+          <FadeInOnScroll delay={150}>
           <div className="relative max-w-5xl mx-auto">
             {/* Marco ventana de navegador */}
             <div className="bg-[#080B14] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
@@ -374,6 +376,7 @@ export default function LandingPage() {
               <span className="text-indigo-400"> Explora todo libremente.</span>
             </p>
           </div>
+          </FadeInOnScroll>
         </div>
       </section>
       {/* ============================================================ */}
@@ -392,6 +395,7 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            <FadeInOnScroll>
             {/* Antes — Stack roto */}
             <div className="md:col-span-1 bg-red-500/[0.03] border border-red-500/20 rounded-3xl p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -421,13 +425,17 @@ export default function LandingPage() {
                 <p className="text-[10px] text-gray-500 mt-1">Sin contar el caos operativo</p>
               </div>
             </div>
+            </FadeInOnScroll>
+            <FadeInOnScroll delay={200}>
             {/* Flecha */}
             <div className="md:col-span-1 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-6xl mb-2 opacity-40">↓</div>
+                <div className="text-6xl mb-2 opacity-40 animate-bounce">↓</div>
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Reemplaza todo con</p>
               </div>
             </div>
+            </FadeInOnScroll>
+            <FadeInOnScroll delay={400}>
             {/* Después — clientes.bot */}
             <div className="md:col-span-1 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-emerald-500/10 border border-indigo-500/30 rounded-3xl p-6 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/20 blur-3xl" />
@@ -469,6 +477,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+            </FadeInOnScroll>
           </div>
           <div className="text-center mt-10">
             <Link
@@ -496,7 +505,7 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="space-y-6">
-            {[
+            {([
               {
                 n: '01',
                 icon: '🎯',
@@ -567,9 +576,9 @@ export default function LandingPage() {
                   { label: 'Cron diario', value: 'IA recomienda' },
                 ],
               },
-            ].map((step, i) => (
+            ] as any[]).map((step, i) => (
+              <FadeInOnScroll key={i} delay={i * 80}>
               <div
-                key={i}
                 className={`grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-gradient-to-br ${step.bg} border ${step.border} rounded-3xl p-6 md:p-8 transition-all hover:scale-[1.01]`}
               >
                 <div className="md:col-span-1 flex md:flex-col items-center gap-4 md:gap-2">
@@ -581,7 +590,7 @@ export default function LandingPage() {
                   <p className="text-sm text-gray-400 leading-relaxed">{step.desc}</p>
                 </div>
                 <div className="md:col-span-4 grid grid-cols-3 gap-2">
-                  {step.metrics.map((m, j) => (
+                  {step.metrics.map((m: any, j: number) => (
                     <div key={j} className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5 text-center">
                       <p className="text-[8px] text-gray-500 uppercase tracking-widest">{m.label}</p>
                       <p className={`text-xs font-black ${step.color} mt-1`}>{m.value}</p>
@@ -589,6 +598,7 @@ export default function LandingPage() {
                   ))}
                 </div>
               </div>
+              </FadeInOnScroll>
             ))}
           </div>
           <div className="text-center mt-12">
@@ -688,6 +698,7 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <FadeInOnScroll delay={0}>
             {/* Módulo CRM */}
             <Link href="/demo/crm" target="_blank" className="group bg-gradient-to-br from-indigo-500/10 to-indigo-500/0 border border-indigo-500/30 rounded-3xl p-6 hover:border-indigo-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
               <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-indigo-500/20 text-indigo-300 font-bold rounded-full">
@@ -726,6 +737,8 @@ export default function LandingPage() {
                 ))}
               </div>
             </Link>
+            </FadeInOnScroll>
+            <FadeInOnScroll delay={100}>
             {/* Módulo Ads IA */}
             <Link href="/demo/ads" target="_blank" className="group bg-gradient-to-br from-purple-500/10 to-purple-500/0 border border-purple-500/30 rounded-3xl p-6 hover:border-purple-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
               <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-purple-500/20 text-purple-300 font-bold rounded-full">
@@ -764,6 +777,8 @@ export default function LandingPage() {
                 </div>
               </div>
             </Link>
+            </FadeInOnScroll>
+            <FadeInOnScroll delay={200}>
             {/* Módulo Chat / WhatsApp */}
             <Link href="/demo/chat" target="_blank" className="group bg-gradient-to-br from-emerald-500/10 to-emerald-500/0 border border-emerald-500/30 rounded-3xl p-6 hover:border-emerald-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
               <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-emerald-500/20 text-emerald-300 font-bold rounded-full">
@@ -799,7 +814,8 @@ export default function LandingPage() {
                 </div>
               </div>
             </Link>
-            {/* Módulo Pagos + Citas */}
+            </FadeInOnScroll>
+            <FadeInOnScroll delay={300}>
             {/* Módulo Pagos + Citas */}
             <Link href="/demo/analytics" target="_blank" className="group bg-gradient-to-br from-yellow-500/10 to-yellow-500/0 border border-yellow-500/30 rounded-3xl p-6 hover:border-yellow-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
               <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-yellow-500/20 text-yellow-300 font-bold rounded-full">
@@ -842,6 +858,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </Link>
+            </FadeInOnScroll>
           </div>
         </div>
       </section>
@@ -1142,6 +1159,7 @@ export default function LandingPage() {
       {/* CTA FINAL */}
       {/* ============================================================ */}
       <section className="py-20 px-6 border-t border-white/5">
+        <FadeInOnScroll>
         <div className="max-w-4xl mx-auto relative">
           <div className="absolute inset-0 bg-indigo-600/10 blur-[120px] -z-10" />
           <div className="absolute top-1/2 left-1/4 w-[300px] h-[300px] bg-emerald-600/8 blur-[150px] -z-10" />
@@ -1179,6 +1197,7 @@ export default function LandingPage() {
             </p>
           </div>
         </div>
+        </FadeInOnScroll>
       </section>
       {/* ============================================================ */}
       {/* FOOTER */}
