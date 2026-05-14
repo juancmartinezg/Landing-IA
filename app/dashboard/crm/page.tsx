@@ -1357,6 +1357,40 @@ export default function CRMPage() {
                     <span className="font-medium text-xs">{selectedLead.lead.import_source === 'csv_import' ? '📤 Importado' : selectedLead.lead.import_source}</span>
                   </div>
                 )}
+                {selectedLead.lead?.source_first_campaign_id && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">📢 Anuncio</span>
+                    <span className="font-medium text-xs text-purple-400 truncate max-w-[200px]" title={selectedLead.lead.source_first_campaign_id}>
+                      {selectedLead.lead.source_first_campaign_name || `ID: ${selectedLead.lead.source_first_campaign_id.slice(-8)}`}
+                    </span>
+                  </div>
+                )}
+                {selectedLead.lead?.source_first_ctwa_clid && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">🔗 Click ID</span>
+                    <span className="font-medium text-xs text-gray-400 truncate max-w-[200px]" title={selectedLead.lead.source_first_ctwa_clid}>
+                      {selectedLead.lead.source_first_ctwa_clid.slice(0, 12)}...
+                    </span>
+                  </div>
+                )}
+                {selectedLead.lead?.customer_email && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">📧 Email</span>
+                    <span className="font-medium text-xs text-indigo-400">{selectedLead.lead.customer_email}</span>
+                  </div>
+                )}
+                {selectedLead.lead?.customer_city && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">🏙️ Ciudad</span>
+                    <span className="font-medium text-xs">{selectedLead.lead.customer_city}</span>
+                  </div>
+                )}
+                {selectedLead.lead?.customer_dni && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">🆔 Documento</span>
+                    <span className="font-medium text-xs">{selectedLead.lead.customer_dni}</span>
+                  </div>
+                )}
               </div>
               
               {/* Score + Stage + Tags manuales */}
