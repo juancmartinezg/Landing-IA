@@ -132,34 +132,29 @@ export default function LandingPage() {
         )}
       </nav>
       {/* ============================================================ */}
-      {/* HERO — Reposicionamiento total */}
+      {/* HERO — Revenue OS */}
       {/* ============================================================ */}
       <section className="pt-32 md:pt-40 pb-20 px-6 relative overflow-hidden">
-        {/* Background glow sutil, enterprise */}
         <div className="absolute top-32 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-indigo-600/8 blur-[200px] -z-10" />
         <div className="absolute top-60 left-1/4 w-[400px] h-[400px] bg-purple-600/6 blur-[180px] -z-10" />
         <div className="absolute top-60 right-1/4 w-[400px] h-[400px] bg-emerald-600/6 blur-[180px] -z-10" />
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            {/* Eyebrow categoría */}
             <div className="inline-flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-full px-4 py-1.5 mb-8">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               <span className="text-[10px] md:text-[11px] text-gray-300 font-black tracking-[0.2em] uppercase">
                 WhatsApp Revenue OS · Multi-tenant
               </span>
             </div>
-            {/* H1 — categoría + nicho */}
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-6">
               El Revenue OS para<br />
               negocios que venden por
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-indigo-400 to-purple-400"> WhatsApp.</span>
             </h1>
-            {/* Subheadline operativa */}
             <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-3xl mx-auto mb-10 leading-relaxed">
               Captura, organiza, automatiza y mide cada peso que entra por WhatsApp —
               <span className="text-white font-bold"> desde el anuncio hasta el cobro</span>.
             </p>
-            {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
               <Link
                 href="/demo"
@@ -180,7 +175,7 @@ export default function LandingPage() {
               Sin tarjeta de crédito · Sin código · Cancela cuando quieras
             </p>
           </div>
-          {/* Trust bar — métricas Revenue OS */}
+          {/* Trust bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-5xl mx-auto mb-14">
             {[
               { v: '$2.4M', l: 'Revenue trazado', desc: 'COP en 30 días JMC' },
@@ -195,16 +190,11 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          {/* ============================================================ */}
-          {/* HERO VISUAL — Revenue/Attribution Dashboard (estilo Bloomberg) */}
-          {/* ============================================================ */}
+          {/* HERO VISUAL — Revenue/Attribution Dashboard */}
           <FadeInOnScroll delay={150}>
           <div className="relative max-w-6xl mx-auto">
-            {/* Glow sutil detrás */}
             <div className="absolute -inset-6 bg-gradient-to-r from-indigo-600/20 via-purple-600/15 to-emerald-600/20 blur-3xl -z-10" />
-            {/* Marco ventana navegador */}
             <div className="bg-[#080B14] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-              {/* Barra del navegador */}
               <div className="flex items-center gap-2 px-4 py-2.5 bg-[#050810] border-b border-white/5">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
@@ -224,10 +214,8 @@ export default function LandingPage() {
                   Abrir demo ↗
                 </Link>
               </div>
-              {/* Dashboard de Revenue/Attribution */}
               <Link href="/demo/analytics" target="_blank" className="block relative group">
                 <div className="p-4 md:p-6">
-                  {/* Top bar */}
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-0.5">Revenue Dashboard</p>
@@ -241,7 +229,7 @@ export default function LandingPage() {
                       ))}
                     </div>
                   </div>
-                  {/* 4 KPIs principales — Revenue, ROAS, CPA, Leads */}
+                  {/* 4 KPIs */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
                     <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/0 border border-emerald-500/20 rounded-xl p-3">
                       <div className="flex items-center justify-between mb-1">
@@ -276,9 +264,8 @@ export default function LandingPage() {
                       <p className="text-[9px] text-gray-500 mt-1">vs 4.0 estándar Meta</p>
                     </div>
                   </div>
-                  {/* Grid principal: revenue chart + funnel + canales */}
+                  {/* Grid revenue chart + funnel */}
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3">
-                    {/* Revenue chart — 7 col */}
                     <div className="md:col-span-7 bg-white/[0.02] border border-white/5 rounded-xl p-3">
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Revenue por día</p>
@@ -291,23 +278,13 @@ export default function LandingPage() {
                           </span>
                         </div>
                       </div>
-                      {/* Bar chart */}
                       <div className="flex items-end justify-between gap-1 h-32 mb-2">
                         {[
-                          { paid: 45, pend: 12 },
-                          { paid: 62, pend: 18 },
-                          { paid: 38, pend: 8 },
-                          { paid: 78, pend: 24 },
-                          { paid: 55, pend: 15 },
-                          { paid: 84, pend: 22 },
-                          { paid: 71, pend: 19 },
-                          { paid: 92, pend: 26 },
-                          { paid: 68, pend: 14 },
-                          { paid: 88, pend: 31 },
-                          { paid: 75, pend: 18 },
-                          { paid: 96, pend: 28 },
-                          { paid: 82, pend: 22 },
-                          { paid: 100, pend: 35 },
+                          { paid: 45, pend: 12 }, { paid: 62, pend: 18 }, { paid: 38, pend: 8 },
+                          { paid: 78, pend: 24 }, { paid: 55, pend: 15 }, { paid: 84, pend: 22 },
+                          { paid: 71, pend: 19 }, { paid: 92, pend: 26 }, { paid: 68, pend: 14 },
+                          { paid: 88, pend: 31 }, { paid: 75, pend: 18 }, { paid: 96, pend: 28 },
+                          { paid: 82, pend: 22 }, { paid: 100, pend: 35 },
                         ].map((d, i) => (
                           <div key={i} className="flex-1 flex flex-col-reverse items-stretch gap-0.5 group">
                             <div className="bg-emerald-500/70 rounded-sm group-hover:bg-emerald-400 transition-colors" style={{height: `${d.paid * 0.8}%`}} />
@@ -319,7 +296,6 @@ export default function LandingPage() {
                         <span>1 abr</span><span>8 abr</span><span>15 abr</span><span>22 abr</span><span>30 abr</span>
                       </div>
                     </div>
-                    {/* Funnel — 5 col */}
                     <div className="md:col-span-5 bg-white/[0.02] border border-white/5 rounded-xl p-3">
                       <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-3">Embudo conversacional</p>
                       <div className="space-y-2">
@@ -393,7 +369,6 @@ export default function LandingPage() {
                     </div>
                   </div>
                 </div>
-                {/* Overlay hover */}
                 <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/50 to-transparent opacity-0 group-hover:opacity-100 transition-all flex items-end justify-center pb-12">
                   <div className="bg-white text-indigo-700 px-6 py-3 rounded-2xl font-black shadow-2xl text-sm flex items-center gap-2 transform group-hover:scale-105 transition-all">
                     Navegar el dashboard en pantalla completa →
@@ -401,7 +376,6 @@ export default function LandingPage() {
                 </div>
               </Link>
             </div>
-            {/* Botones flotantes accesos directos */}
             <div className="mt-6 flex flex-wrap gap-2 justify-center">
               {[
                 { label: '📊 Atribución', href: '/demo/analytics' },
@@ -419,121 +393,12 @@ export default function LandingPage() {
                 </Link>
               ))}
             </div>
-            {/* Pie del demo */}
             <p className="text-center text-[11px] text-gray-500 mt-4 max-w-xl mx-auto">
               Dashboard real · Datos demo de Inmobiliaria Aurora.
               <span className="text-indigo-400"> Explora libremente, sin login.</span>
             </p>
           </div>
           </FadeInOnScroll>
-        </div>
-      </section>      
-      <section className="py-20 px-6 border-t border-white/5">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-[11px] text-red-400 uppercase tracking-[0.3em] font-black mb-4">El problema</p>
-            <h2 className="text-3xl md:text-5xl font-black mb-4">
-              Tu negocio está pagando por <span className="text-red-400">8 herramientas</span><br />
-              que no se hablan entre ellas.
-            </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
-              CRM por un lado, WhatsApp por otro, Ads en otra ventana, pasarela aparte, calendario aparte, automatizaciones aparte. <span className="text-white font-bold">Cada peso que pagas por unirlos es un peso que pierdes.</span>
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-            <FadeInOnScroll>
-            {/* Antes — Stack roto */}
-            <div className="md:col-span-1 bg-red-500/[0.03] border border-red-500/20 rounded-3xl p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-2xl">😩</span>
-                <p className="text-xs font-black text-red-400 uppercase tracking-widest">Antes · Stack roto</p>
-              </div>
-              <div className="space-y-2">
-                {[
-                  { tool: 'CRM externo', cost: '$50-300/mes' },
-                  { tool: 'Bot WhatsApp básico', cost: '$30-80/mes' },
-                  { tool: 'Plataforma de Ads', cost: '$50-200/mes' },
-                  { tool: 'Calendario online', cost: '$15-30/mes' },
-                  { tool: 'Pasarela 1', cost: '% transacción' },
-                  { tool: 'Email marketing', cost: '$20-100/mes' },
-                  { tool: 'Atribución / analytics', cost: '$200-890/mes' },
-                  { tool: 'Automatización (Zapier)', cost: '$30-100/mes' },
-                ].map((t, i) => (
-                  <div key={i} className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2">
-                    <p className="text-xs text-gray-300 truncate">❌ {t.tool}</p>
-                    <p className="text-[10px] text-red-400 font-bold whitespace-nowrap ml-2">{t.cost}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 pt-4 border-t border-red-500/20 text-center">
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Total</p>
-                <p className="text-2xl font-black text-red-400">$400-1,700+ /mes</p>
-                <p className="text-[10px] text-gray-500 mt-1">Sin contar el caos operativo</p>
-              </div>
-            </div>
-            </FadeInOnScroll>
-            <FadeInOnScroll delay={200}>
-            {/* Flecha */}
-            <div className="md:col-span-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-6xl mb-2 opacity-40 animate-bounce">↓</div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Reemplaza todo con</p>
-              </div>
-            </div>
-            </FadeInOnScroll>
-            <FadeInOnScroll delay={400}>
-            {/* Después — clientes.bot */}
-            <div className="md:col-span-1 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-emerald-500/10 border border-indigo-500/30 rounded-3xl p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/20 blur-3xl" />
-              <div className="relative">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-2xl">🦁</span>
-                  <p className="text-xs font-black text-indigo-400 uppercase tracking-widest">Después · Una plataforma</p>
-                </div>
-                <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-2xl p-5 mb-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <img src="/cb-logo.webp" alt="" className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
-                    <div>
-                      <p className="text-base font-black">clientes.bot</p>
-                      <p className="text-[10px] text-gray-500">Todo en uno · Multi-tenant · IA real</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {[
-                      'CRM Pro + IA',
-                      'Bot IA 24/7',
-                      'Anuncios IA',
-                      'Multi-pasarela',
-                      'Agenda inteligente',
-                      'Atribución completa',
-                      'Multicanal',
-                      'Voz IA',
-                    ].map((f, i) => (
-                      <div key={i} className="flex items-center gap-1 text-[10px] text-gray-300">
-                        <span className="text-emerald-400">✓</span>
-                        <span>{f}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Desde</p>
-                  <p className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400">$97 /mes</p>
-                  <p className="text-[10px] text-emerald-400 font-bold mt-1">Una sola factura · 0 integraciones manuales</p>
-                </div>
-              </div>
-            </div>
-            </FadeInOnScroll>
-          </div>
-          <div className="text-center mt-10">
-            <Link
-              href="/demo"
-              target="_blank"
-              className="inline-block text-sm px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl shadow-lg shadow-indigo-600/30 transition-all"
-            >
-              🚀 Ver el dashboard en vivo →
-            </Link>
-          </div>
         </div>
       </section>
       {/* ============================================================ */}
@@ -610,7 +475,6 @@ export default function LandingPage() {
               </FadeInOnScroll>
             ))}
           </div>
-          {/* Cierre emocional + transición */}
           <FadeInOnScroll delay={500}>
             <div className="mt-12 text-center max-w-3xl mx-auto">
               <p className="text-xl md:text-2xl font-black text-white leading-tight mb-2">
@@ -629,15 +493,122 @@ export default function LandingPage() {
         </div>
       </section>
       {/* ============================================================ */}
-      {/* STACK ROTO → UNA PLATAFORMA — La solución visual */}
+      {/* STACK ROTO → UNA PLATAFORMA — La solución */}
       {/* ============================================================ */}
       <section className="py-20 px-6 border-t border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <p className="text-[11px] text-red-400 uppercase tracking-[0.3em] font-black mb-4">La solución</p>
+            <p className="text-[11px] text-emerald-400 uppercase tracking-[0.3em] font-black mb-4">La solución</p>
             <h2 className="text-3xl md:text-5xl font-black mb-4">
-              Reemplaza tu stack por <span className="text-red-400">una sola plataforma</span><br />
+              Reemplaza tu stack por <span className="text-emerald-400">una sola plataforma</span><br />
               que sí se habla entre sí.
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
+              CRM, WhatsApp, Ads, pasarela, calendario, automatizaciones — todo en una sola interfaz. <span className="text-white font-bold">Una sola factura. Cero integraciones manuales. Cero datos perdidos entre apps.</span>
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            <FadeInOnScroll>
+            <div className="md:col-span-1 bg-red-500/[0.03] border border-red-500/20 rounded-3xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">😩</span>
+                <p className="text-xs font-black text-red-400 uppercase tracking-widest">Antes · Stack roto</p>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { tool: 'CRM externo', cost: '$50-300/mes' },
+                  { tool: 'Bot WhatsApp básico', cost: '$30-80/mes' },
+                  { tool: 'Plataforma de Ads', cost: '$50-200/mes' },
+                  { tool: 'Calendario online', cost: '$15-30/mes' },
+                  { tool: 'Pasarela 1', cost: '% transacción' },
+                  { tool: 'Email marketing', cost: '$20-100/mes' },
+                  { tool: 'Atribución / analytics', cost: '$200-890/mes' },
+                  { tool: 'Automatización (Zapier)', cost: '$30-100/mes' },
+                ].map((t, i) => (
+                  <div key={i} className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2">
+                    <p className="text-xs text-gray-300 truncate">❌ {t.tool}</p>
+                    <p className="text-[10px] text-red-400 font-bold whitespace-nowrap ml-2">{t.cost}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-4 border-t border-red-500/20 text-center">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Total</p>
+                <p className="text-2xl font-black text-red-400">$400-1,700+ /mes</p>
+                <p className="text-[10px] text-gray-500 mt-1">Sin contar el caos operativo</p>
+              </div>
+            </div>
+            </FadeInOnScroll>
+            <FadeInOnScroll delay={200}>
+            <div className="md:col-span-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-2 opacity-40 animate-bounce">↓</div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Reemplaza todo con</p>
+              </div>
+            </div>
+            </FadeInOnScroll>
+            <FadeInOnScroll delay={400}>
+            <div className="md:col-span-1 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-emerald-500/10 border border-indigo-500/30 rounded-3xl p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/20 blur-3xl" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-2xl">🦁</span>
+                  <p className="text-xs font-black text-indigo-400 uppercase tracking-widest">Después · Una plataforma</p>
+                </div>
+                <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-2xl p-5 mb-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <img src="/cb-logo.webp" alt="" className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                    <div>
+                      <p className="text-base font-black">clientes.bot</p>
+                      <p className="text-[10px] text-gray-500">Todo en uno · Multi-tenant · IA real</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      'CRM Pro + IA',
+                      'Bot IA 24/7',
+                      'Anuncios IA',
+                      'Multi-pasarela',
+                      'Agenda inteligente',
+                      'Atribución completa',
+                      'Multicanal',
+                      'Voz IA',
+                    ].map((f, i) => (
+                      <div key={i} className="flex items-center gap-1 text-[10px] text-gray-300">
+                        <span className="text-emerald-400">✓</span>
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Desde</p>
+                  <p className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400">$97 /mes</p>
+                  <p className="text-[10px] text-emerald-400 font-bold mt-1">Una sola factura · 0 integraciones manuales</p>
+                </div>
+              </div>
+            </div>
+            </FadeInOnScroll>
+          </div>
+          <div className="text-center mt-10">
+            <Link
+              href="/demo"
+              target="_blank"
+              className="inline-block text-sm px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl shadow-lg shadow-indigo-600/30 transition-all"
+            >
+              🚀 Ver el dashboard en vivo →
+            </Link>
+          </div>
+        </div>
+      </section>
+      {/* ============================================================ */}
+      {/* CÓMO FUNCIONA — 5 pasos del flujo de ventas */}
+      {/* ============================================================ */}
+      <section id="producto" className="py-20 px-6 bg-white/[0.02] border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-[11px] text-emerald-400 uppercase tracking-[0.3em] font-black mb-4">Cómo funciona</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              5 pasos. <span className="text-emerald-400">1 flujo completo.</span>
             </h2>
             <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
               Del anuncio al cierre de venta, todo dentro de la misma plataforma. La IA aprende de cada conversión real.
@@ -823,7 +794,7 @@ export default function LandingPage() {
         </div>
       </section>
       {/* ============================================================ */}
-      {/* MÓDULOS PRINCIPALES — 4 cards grandes con screenshots */}
+      {/* MÓDULOS PRINCIPALES — 4 cards grandes */}
       {/* ============================================================ */}
       <section className="py-20 px-6 bg-white/[0.02] border-t border-white/5">
         <div className="max-w-7xl mx-auto">
@@ -838,22 +809,14 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <FadeInOnScroll delay={0}>
-            {/* Módulo CRM */}
             <Link href="/demo/crm" target="_blank" className="group bg-gradient-to-br from-indigo-500/10 to-indigo-500/0 border border-indigo-500/30 rounded-3xl p-6 hover:border-indigo-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
-              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-indigo-500/20 text-indigo-300 font-bold rounded-full">
-                Ver en vivo ↗
-              </div>
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-indigo-500/20 text-indigo-300 font-bold rounded-full">Ver en vivo ↗</div>
               <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1 mb-4">
                 <span className="text-sm">👥</span>
                 <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">CRM + Multi-agente</span>
               </div>
-              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-indigo-400 transition-colors">
-                Cada lead en su lugar.<br />Cada agente con su trabajo.
-              </h3>
-              <p className="text-sm text-gray-400 mb-5 leading-relaxed">
-                Kanban drag & drop, scoring IA de probabilidad de cierre, asignación automática, notas privadas, ranking de performance. Tu equipo cierra más en menos tiempo.
-              </p>
-              {/* Mini mockup CRM */}
+              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-indigo-400 transition-colors">Cada lead en su lugar.<br />Cada agente con su trabajo.</h3>
+              <p className="text-sm text-gray-400 mb-5 leading-relaxed">Kanban drag & drop, scoring IA de probabilidad de cierre, asignación automática, notas privadas, ranking de performance. Tu equipo cierra más en menos tiempo.</p>
               <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-xl p-3 space-y-1.5">
                 {[
                   { name: 'Carlos Méndez', stage: '✅ Ganado', score: 95, color: 'bg-emerald-500' },
@@ -878,22 +841,14 @@ export default function LandingPage() {
             </Link>
             </FadeInOnScroll>
             <FadeInOnScroll delay={100}>
-            {/* Módulo Ads IA */}
             <Link href="/demo/ads" target="_blank" className="group bg-gradient-to-br from-purple-500/10 to-purple-500/0 border border-purple-500/30 rounded-3xl p-6 hover:border-purple-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
-              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-purple-500/20 text-purple-300 font-bold rounded-full">
-                Ver en vivo ↗
-              </div>
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-purple-500/20 text-purple-300 font-bold rounded-full">Ver en vivo ↗</div>
               <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-3 py-1 mb-4">
                 <span className="text-sm">🚀</span>
                 <span className="text-[10px] text-purple-400 font-black uppercase tracking-widest">Anuncios IA + Atribución</span>
               </div>
-              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-purple-400 transition-colors">
-                La IA crea, prueba y mejora<br />tus anuncios sola.
-              </h3>
-              <p className="text-sm text-gray-400 mb-5 leading-relaxed">
-                5 motores IA optimizando todos los días: detecta ganadores, mata perdedores, genera variantes, publica las mejores y aprende de los resultados. Tu inversión rinde 2-5x más.
-              </p>
-              {/* Mini mockup Ads */}
+              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-purple-400 transition-colors">La IA crea, prueba y mejora<br />tus anuncios sola.</h3>
+              <p className="text-sm text-gray-400 mb-5 leading-relaxed">5 motores IA optimizando todos los días: detecta ganadores, mata perdedores, genera variantes, publica las mejores y aprende de los resultados. Tu inversión rinde 2-5x más.</p>
               <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2">
                   <span className="text-base">🏆</span>
@@ -918,81 +873,39 @@ export default function LandingPage() {
             </Link>
             </FadeInOnScroll>
             <FadeInOnScroll delay={200}>
-            {/* Módulo Chat / WhatsApp */}
             <Link href="/demo/chat" target="_blank" className="group bg-gradient-to-br from-emerald-500/10 to-emerald-500/0 border border-emerald-500/30 rounded-3xl p-6 hover:border-emerald-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
-              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-emerald-500/20 text-emerald-300 font-bold rounded-full">
-                Ver en vivo ↗
-              </div>
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-emerald-500/20 text-emerald-300 font-bold rounded-full">Ver en vivo ↗</div>
               <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1 mb-4">
                 <span className="text-sm">💬</span>
                 <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Bot IA + Multicanal</span>
               </div>
-              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-emerald-400 transition-colors">
-                Tu vendedor IA.<br />Nunca duerme. Nunca falla.
-              </h3>
-              <p className="text-sm text-gray-400 mb-5 leading-relaxed">
-                Atiende WhatsApp + Instagram + Facebook desde una sola bandeja. Memoria que recuerda a cada cliente, transcribe audios, agenda, cobra. Tu equipo solo entra cuando hace falta.
-              </p>
-              {/* Mini mockup Chat */}
+              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-emerald-400 transition-colors">Tu vendedor IA.<br />Nunca duerme. Nunca falla.</h3>
+              <p className="text-sm text-gray-400 mb-5 leading-relaxed">Atiende WhatsApp + Instagram + Facebook desde una sola bandeja. Memoria que recuerda a cada cliente, transcribe audios, agenda, cobra. Tu equipo solo entra cuando hace falta.</p>
               <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-xl p-3 space-y-2">
-                <div className="flex justify-end">
-                  <div className="bg-[#005c4b]/40 rounded-lg rounded-tr-sm px-2.5 py-1.5 max-w-[80%]">
-                    <p className="text-[10px]">¿Apto 2H con vista al lago?</p>
-                  </div>
-                </div>
-                <div className="flex justify-start">
-                  <div className="bg-[#1a1f2e] rounded-lg rounded-tl-sm px-2.5 py-1.5 max-w-[80%]">
-                    <p className="text-[8px] text-emerald-400 font-bold mb-0.5">🤖 Bot IA</p>
-                    <p className="text-[10px]">62m², vista al lago, $145k USD. Quedan 8 unidades 🏢 ¿Te envío el link de reserva?</p>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <div className="bg-[#005c4b]/40 rounded-lg rounded-tr-sm px-2.5 py-1.5 max-w-[80%]">
-                    <p className="text-[10px]">¡Sí!</p>
-                  </div>
-                </div>
+                <div className="flex justify-end"><div className="bg-[#005c4b]/40 rounded-lg rounded-tr-sm px-2.5 py-1.5 max-w-[80%]"><p className="text-[10px]">¿Apto 2H con vista al lago?</p></div></div>
+                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-lg rounded-tl-sm px-2.5 py-1.5 max-w-[80%]"><p className="text-[8px] text-emerald-400 font-bold mb-0.5">🤖 Bot IA</p><p className="text-[10px]">62m², vista al lago, $145k USD. Quedan 8 unidades 🏢 ¿Te envío el link de reserva?</p></div></div>
+                <div className="flex justify-end"><div className="bg-[#005c4b]/40 rounded-lg rounded-tr-sm px-2.5 py-1.5 max-w-[80%]"><p className="text-[10px]">¡Sí!</p></div></div>
               </div>
             </Link>
             </FadeInOnScroll>
             <FadeInOnScroll delay={300}>
-            {/* Módulo Pagos + Citas */}
             <Link href="/demo/analytics" target="_blank" className="group bg-gradient-to-br from-yellow-500/10 to-yellow-500/0 border border-yellow-500/30 rounded-3xl p-6 hover:border-yellow-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
-              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-yellow-500/20 text-yellow-300 font-bold rounded-full">
-                Ver en vivo ↗
-              </div>
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-yellow-500/20 text-yellow-300 font-bold rounded-full">Ver en vivo ↗</div>
               <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-3 py-1 mb-4">
                 <span className="text-sm">📈</span>
                 <span className="text-[10px] text-yellow-400 font-black uppercase tracking-widest">Pagos + Agenda + Reportes</span>
               </div>
-              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-yellow-400 transition-colors">
-                Cobra, agenda y mide<br />sin moverte del chat.
-              </h3>
-              <p className="text-sm text-gray-400 mb-5 leading-relaxed">
-                7+ pasarelas de pago integradas, agenda inteligente con disponibilidad real, reportes con atribución completa Lead → Venta. Sabes qué te dio cada peso.
-              </p>
-              {/* Mini mockup Analytics */}
+              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-yellow-400 transition-colors">Cobra, agenda y mide<br />sin moverte del chat.</h3>
+              <p className="text-sm text-gray-400 mb-5 leading-relaxed">7+ pasarelas de pago integradas, agenda inteligente con disponibilidad real, reportes con atribución completa Lead → Venta. Sabes qué te dio cada peso.</p>
               <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-xl p-3 space-y-2">
                 <div className="grid grid-cols-3 gap-1.5">
-                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-2 text-center">
-                    <p className="text-[7px] text-gray-500 uppercase">Revenue</p>
-                    <p className="text-xs font-black text-purple-400">$2.1M</p>
-                  </div>
-                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2 text-center">
-                    <p className="text-[7px] text-gray-500 uppercase">ROAS</p>
-                    <p className="text-xs font-black text-yellow-400">514%</p>
-                  </div>
-                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 text-center">
-                    <p className="text-[7px] text-gray-500 uppercase">CPL</p>
-                    <p className="text-xs font-black text-emerald-400">$58</p>
-                  </div>
+                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-2 text-center"><p className="text-[7px] text-gray-500 uppercase">Revenue</p><p className="text-xs font-black text-purple-400">$2.1M</p></div>
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2 text-center"><p className="text-[7px] text-gray-500 uppercase">ROAS</p><p className="text-xs font-black text-yellow-400">514%</p></div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 text-center"><p className="text-[7px] text-gray-500 uppercase">CPL</p><p className="text-xs font-black text-emerald-400">$58</p></div>
                 </div>
                 <div className="flex items-end gap-1 h-12 mt-2">
                   {[40, 25, 60, 35, 80, 50, 95, 70, 85, 65, 100, 75].map((h, i) => (
-                    <div
-                      key={i}
-                      className="flex-1 bg-gradient-to-t from-yellow-500 to-purple-500 rounded-t"
-                      style={{ height: `${h}%`, opacity: 0.4 + (i / 24) }}
-                    />
+                    <div key={i} className="flex-1 bg-gradient-to-t from-yellow-500 to-purple-500 rounded-t" style={{ height: `${h}%`, opacity: 0.4 + (i / 24) }} />
                   ))}
                 </div>
               </div>
@@ -1002,7 +915,7 @@ export default function LandingPage() {
         </div>
       </section>
       {/* ============================================================ */}
-      {/* PRUEBA TÉCNICA — Badges enterprise sin AI hype */}
+      {/* PRUEBA TÉCNICA — Badges enterprise */}
       {/* ============================================================ */}
       <section className="py-20 px-6 border-t border-white/5">
         <div className="max-w-6xl mx-auto">
@@ -1038,7 +951,6 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          {/* Stats infraestructura */}
           <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
             {[
               { v: '19', l: 'Tablas con PITR' },
@@ -1203,7 +1115,6 @@ export default function LandingPage() {
               })}
             </div>
           )}
-          {/* Affiliate teaser */}
           <div className="mt-12 max-w-4xl mx-auto bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 border border-amber-500/30 rounded-3xl p-6 md:p-8 text-center">
             <p className="text-[10px] text-amber-400 uppercase tracking-[0.3em] font-black mb-3">💰 Programa de afiliados</p>
             <h3 className="text-xl md:text-2xl font-black mb-2">
@@ -1232,54 +1143,18 @@ export default function LandingPage() {
           </div>
           <div className="space-y-3">
             {[
-              {
-                q: '¿Tengo que cambiar mi número de WhatsApp?',
-                a: 'Puedes usar tu número actual o uno nuevo. Si usas el actual, se transforma en WhatsApp Business API en 2 minutos y el bot empieza a responder automáticamente. Recomendamos una línea dedicada para mantener tu personal aparte.'
-              },
-              {
-                q: '¿Qué tan rápido se configura?',
-                a: 'En menos de 10 minutos tienes el bot respondiendo en tu WhatsApp. Conectas con 1 clic vía Facebook (sin QR), subes tu catálogo, ajustas el tono y listo. El wizard te guía paso a paso. Si tienes plan Agency, un especialista te configura todo sin costo extra.'
-              },
-              {
-                q: '¿Qué pasa si el bot no sabe responder algo?',
-                a: 'El bot transfiere automáticamente la conversación a un agente humano de tu equipo. Tu agente recibe notificación instantánea por email, push y sonido. Mientras escribe, el bot se pausa solo para evitar duplicados — tecnología patrón "auto-takeover".'
-              },
-              {
-                q: '¿Funciona en mi país?',
-                a: 'Sí, funcionamos a nivel global. Integramos pasarelas internacionales (Stripe, PayPal) y locales según tu mercado (Bold, Wompi, MercadoPago, OpenPay, PayU y más). Si tu pasarela favorita no está, la integramos sin costo en menos de 48h.'
-              },
-              {
-                q: '¿Cómo es la atribución completa Lead → Venta?',
-                a: 'Cuando un cliente paga, enviamos a Meta los datos del comprador hasheados con SHA-256: email, ciudad, documento, click ID. El algoritmo de Facebook aprende de COMPRAS REALES, no de clics. Resultado: tu costo por venta baja 30-50% en 60 días. Esto es lo que HubSpot cobra $890/mes — aquí va incluido.'
-              },
-              {
-                q: '¿Qué tan real es la IA?',
-                a: 'No son scripts pre-armados. Es IA conversacional con memoria persistente que recuerda a cada cliente como persona, entiende audios, detecta intención de compra, califica leads automáticamente y se adapta a tu tono de marca. Cascada con failover automático en 3 modelos para 99.9% de disponibilidad.'
-              },
-              {
-                q: '¿Puedo cancelar en cualquier momento?',
-                a: 'Sí, sin penalidad. Los 14 días de prueba son gratis y no pedimos tarjeta de crédito para empezar. Después puedes cancelar con 1 clic desde el dashboard. Sin contratos largos, sin letras pequeñas.'
-              },
-              {
-                q: '¿Necesito conocimientos técnicos?',
-                a: 'No. Todo se configura con clicks. El wizard te guía paso a paso. Si en algún momento necesitas ayuda, nuestro equipo te asiste por WhatsApp en menos de 4h hábiles (1h en plan Agency).'
-              },
-              {
-                q: '¿Puedo gestionar varios negocios desde una cuenta?',
-                a: 'Sí, con el plan Growth manejas hasta 5 sub-cuentas (sucursales o marcas). Con el plan Agency manejas clientes ilimitados con white-label total — tu logo, tu dominio, tu marca. Tus clientes finales nunca saben que existimos.'
-              },
-              {
-                q: '¿Mis datos están seguros?',
-                a: 'Sí. Arquitectura multi-tenant con aislamiento estricto (los datos de un cliente jamás se cruzan con otro), backups continuos PITR (point-in-time recovery), 2FA obligatorio para admins (Passkey/TOTP/Email), audit log de toda acción administrativa, y SSL en todos los endpoints. Construido sobre AWS con SLA 99.9%.'
-              },
-              {
-                q: '¿Qué pasa si supero mi quota de mensajes?',
-                a: 'Te avisamos cuando llegues al 80% de tu cuota mensual. Puedes comprar packs adicionales (1k/$19, 5k/$79, 20k/$249) que NO expiran nunca y se suman a tu plan. O subir de plan en cualquier momento sin perder configuración.'
-              },
-              {
-                q: '¿Qué incluye el demo público?',
-                a: 'El dashboard completo con datos de un negocio ficticio (Inmobiliaria Aurora). Puedes navegar por CRM, conversaciones, anuncios IA, reportes, suscripción — exactamente lo mismo que verás al activar tu cuenta. Cero registro, cero compromiso.'
-              },
+              { q: '¿Tengo que cambiar mi número de WhatsApp?', a: 'Puedes usar tu número actual o uno nuevo. Si usas el actual, se transforma en WhatsApp Business API en 2 minutos y el bot empieza a responder automáticamente. Recomendamos una línea dedicada para mantener tu personal aparte.' },
+              { q: '¿Qué tan rápido se configura?', a: 'En menos de 10 minutos tienes el bot respondiendo en tu WhatsApp. Conectas con 1 clic vía Facebook (sin QR), subes tu catálogo, ajustas el tono y listo. El wizard te guía paso a paso. Si tienes plan Agency, un especialista te configura todo sin costo extra.' },
+              { q: '¿Qué pasa si el bot no sabe responder algo?', a: 'El bot transfiere automáticamente la conversación a un agente humano de tu equipo. Tu agente recibe notificación instantánea por email, push y sonido. Mientras escribe, el bot se pausa solo para evitar duplicados — tecnología patrón "auto-takeover".' },
+              { q: '¿Funciona en mi país?', a: 'Sí, funcionamos a nivel global. Integramos pasarelas internacionales (Stripe, PayPal) y locales según tu mercado (Bold, Wompi, MercadoPago, OpenPay, PayU y más). Si tu pasarela favorita no está, la integramos sin costo en menos de 48h.' },
+              { q: '¿Cómo es la atribución completa Lead → Venta?', a: 'Cuando un cliente paga, enviamos a Meta los datos del comprador hasheados con SHA-256: email, ciudad, documento, click ID. El algoritmo de Facebook aprende de COMPRAS REALES, no de clics. Resultado: tu costo por venta baja 30-50% en 60 días. Esto es lo que HubSpot cobra $890/mes — aquí va incluido.' },
+              { q: '¿Qué tan real es la IA?', a: 'No son scripts pre-armados. Es IA conversacional con memoria persistente que recuerda a cada cliente como persona, entiende audios, detecta intención de compra, califica leads automáticamente y se adapta a tu tono de marca. Cascada con failover automático en 3 modelos para 99.9% de disponibilidad.' },
+              { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, sin penalidad. Los 14 días de prueba son gratis y no pedimos tarjeta de crédito para empezar. Después puedes cancelar con 1 clic desde el dashboard. Sin contratos largos, sin letras pequeñas.' },
+              { q: '¿Necesito conocimientos técnicos?', a: 'No. Todo se configura con clicks. El wizard te guía paso a paso. Si en algún momento necesitas ayuda, nuestro equipo te asiste por WhatsApp en menos de 4h hábiles (1h en plan Agency).' },
+              { q: '¿Puedo gestionar varios negocios desde una cuenta?', a: 'Sí, con el plan Growth manejas hasta 5 sub-cuentas (sucursales o marcas). Con el plan Agency manejas clientes ilimitados con white-label total — tu logo, tu dominio, tu marca. Tus clientes finales nunca saben que existimos.' },
+              { q: '¿Mis datos están seguros?', a: 'Sí. Arquitectura multi-tenant con aislamiento estricto (los datos de un cliente jamás se cruzan con otro), backups continuos PITR (point-in-time recovery), 2FA obligatorio para admins (Passkey/TOTP/Email), audit log de toda acción administrativa, y SSL en todos los endpoints. Construido sobre AWS con SLA 99.9%.' },
+              { q: '¿Qué pasa si supero mi quota de mensajes?', a: 'Te avisamos cuando llegues al 80% de tu cuota mensual. Puedes comprar packs adicionales (1k/$19, 5k/$79, 20k/$249) que NO expiran nunca y se suman a tu plan. O subir de plan en cualquier momento sin perder configuración.' },
+              { q: '¿Qué incluye el demo público?', a: 'El dashboard completo con datos de un negocio ficticio (Inmobiliaria Aurora). Puedes navegar por CRM, conversaciones, anuncios IA, reportes, suscripción — exactamente lo mismo que verás al activar tu cuenta. Cero registro, cero compromiso.' },
             ].map((faq, i) => (
               <details key={i} className="group bg-white/[0.03] border border-white/5 rounded-2xl overflow-hidden hover:border-white/10 transition-all">
                 <summary className="flex items-center justify-between p-5 cursor-pointer list-none hover:bg-white/[0.02] transition-all">
@@ -1321,7 +1196,7 @@ export default function LandingPage() {
                 target="_blank"
                 className="bg-white text-indigo-700 hover:bg-gray-100 hover:scale-[1.02] px-8 py-4 rounded-2xl font-black text-base transition-all shadow-2xl inline-flex items-center justify-center gap-2"
               >
-                🚀 Probar el dashboard en vivo
+                Probar el dashboard en vivo
                 <span className="opacity-60">↗</span>
               </Link>
               <Link
@@ -1350,7 +1225,7 @@ export default function LandingPage() {
                 <span className="text-lg font-black tracking-tighter">clientes.bot</span>
               </div>
               <p className="text-xs text-gray-500 leading-relaxed mb-4 max-w-sm">
-                La infraestructura SaaS que conecta WhatsApp, CRM, Anuncios y Pagos en una sola plataforma. Construida para negocios que rugen.
+                El Revenue OS para negocios que venden por WhatsApp. CRM, IA, Atribución y Pagos en una sola plataforma.
               </p>
               <div className="flex gap-3">
                 <a href="https://wa.me/573022205845" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-gray-500 hover:text-emerald-400 flex items-center justify-center transition-all">💬</a>
