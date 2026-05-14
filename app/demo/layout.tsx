@@ -42,7 +42,7 @@ function DemoShell({ children }: { children: React.ReactNode }) {
       <DemoBanner />
       <div className="flex">
         {/* Sidebar Desktop */}
-        <aside className="hidden md:flex w-64 bg-[#080B14] border-r border-white/5 flex-col fixed h-[calc(100vh-44px)] z-30 top-[44px]">
+        <aside className="hidden md:flex w-64 bg-[#080B14] border-r border-white/5 flex-col fixed h-screen z-30 top-0 pt-[44px]">
           <div className="px-6 h-16 flex items-center gap-2 border-b border-white/5">
             <img src="/cb-logo.webp" alt="Logo" className="w-8 h-8 object-contain" />
             <span className="text-lg font-bold tracking-tighter">clientes.bot</span>
@@ -158,7 +158,7 @@ function DemoShell({ children }: { children: React.ReactNode }) {
         {/* Main */}
         <div className="flex-1 md:ml-64 overflow-x-hidden w-full max-w-full">
           {/* Top Navbar */}
-          <header className="h-16 border-b border-white/5 bg-[#0B0F1A]/80 backdrop-blur-md flex items-center px-4 md:px-6 sticky top-[44px] z-20">
+          <header className="h-16 border-b border-white/5 bg-[#0B0F1A] flex items-center px-4 md:px-6 z-20">
             <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-400 text-2xl mr-4">
               ☰
             </button>
