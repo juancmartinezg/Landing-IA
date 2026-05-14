@@ -129,7 +129,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ### 🤖 Bot WhatsApp
 - [x] IA conversacional Gemini + neuroventas + memory hint
 - [x] Multi-pasarela pagos (Wompi, PayPal, MercadoPago, OpenPay, PayU, Bold)
-- [ ] **Integrar Stripe** (crítico para mercados US/EU)
+- [x] **Billing internacional**: Lemon Squeezy (USD) ya integrado ✅ — Stripe NO disponible para merchants Colombia. Planes Starter $97 / Growth $297 / Agency $497 en USD via LS. COP via Wompi/Bold ya integrado.
 - [x] Carrusel visual + fallback lista (template del tenant)
 - [x] Google Calendar + WhatsApp Flows
 - [x] VAPI llamadas IA
@@ -355,7 +355,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [ ] **J5** Cohorts (retención por mes de registro)
 - [ ] **J6** Health score + churn risk por tenant (algoritmo)
 - [ ] **J7** Export CSV de cualquier tabla del admin
-### 💰 Fase K — Billing (cuando llegue Stripe — Sprint 1)
+### 💰 Fase K — Billing avanzado (Lemon Squeezy + Wompi — NO Stripe)
+> Stripe NO opera para merchants en Colombia. Billing USD = Lemon Squeezy (ya integrado). Billing COP = Wompi (ya integrado). Stripe Connect para payouts afiliados USD → reemplazar por LS Affiliates o transferencia manual.
 - [ ] **K1** Rol `billing` en `PlatformAdmins`
 - [ ] **K2** Dashboard MRR / ARR / Churn (estilo Stripe)
 - [ ] **K3** Lista suscripciones activas con próximas fechas
@@ -531,8 +532,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - `SUPER_ADMIN_EMAILS` (ya existe) — bootstrap inicial
 - `IMPERSONATE_HMAC_SECRET` — firma de tickets
 - `PLAN_FEATURES_JSON` — catálogo de features + quotas por plan (Sprint 1)
-- `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` — billing global (Sprint 1)
-- `STRIPE_CONNECT_CLIENT_ID` — payout de afiliados USD (Sprint 1)
+- ~~`STRIPE_SECRET_KEY`~~ — NO APLICA (Stripe no opera en Colombia). Billing USD = Lemon Squeezy. Billing COP = Wompi.
+- ~~`STRIPE_CONNECT_CLIENT_ID`~~ — NO APLICA. Payout afiliados USD via LS o transferencia manual.
 - `WOMPI_SUBSCRIPTIONS_PUBLIC_KEY` / `WOMPI_SUBSCRIPTIONS_PRIVATE_KEY` — billing CO recurrente (Sprint 1)
 - `AFFILIATE_RATE_YEAR1` — default 0.40 (40% primer año) configurable (Sprint 1)
 - `AFFILIATE_RATE_RECURRING` — default 0.30 (30% año 2+) configurable (Sprint 1)
