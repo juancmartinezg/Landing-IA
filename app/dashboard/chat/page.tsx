@@ -34,6 +34,7 @@ export default function ChatPage() {
    const [showLeadPanel, setShowLeadPanel] = useState(false);
    const [leadDetail, setLeadDetail] = useState<any>(null);
    const [loadingLead, setLoadingLead] = useState(false);
+   const [agentsList, setAgentsList] = useState<any[]>([]);
    // Cargar detalle del lead desde /leads?phone=X
    const loadLeadDetail = async (phone: string) => {
      setLoadingLead(true);
@@ -43,6 +44,37 @@ export default function ChatPage() {
        setLeadDetail(data);
      } catch (e) { console.error('Error cargando lead:', e); }
      setLoadingLead(false);
+   };
+   // Cargar agentes (una sola vez)
+   useEffect(() => {
+     if (user?.companyId) {
+       fetch(`${API_URL}/agents`, { headers: { 'client-id': user.companyId } })
+         .then(r => r.json())
+         .then(d => setAgentsList((d.agents || []).filter((a: any) => a.active)))
+         .catch(() => {});
+     }
+   }, [user?.companyId]);
+   // Acciones sobre el lead desde el drawer
+   const assignAgentFromChat = async (phone: string, agentId: string) => {
+     try {
+       await fetch(`${API_URL}/agents/assign-lead`, {
+         method: 'PUT',
+         headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+         body: JSON.stringify({ phone, agent_id: agentId }),
+       });
+       loadLeadDetail(phone);
+       loadBotConvs();
+     } catch (e) { console.error('Error asignando agente:', e); }
+   };
+   const updateStageFromChat = async (phone: string, stage: string) => {
+     try {
+       await fetch(`${API_URL}/leads/stage`, {
+         method: 'PUT',
+         headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+         body: JSON.stringify({ phone, stage }),
+       });
+       loadLeadDetail(phone);
+     } catch (e) { console.error('Error cambiando etapa:', e); }
    };
    // Sonido de nuevo mensaje (2 tonos estilo WhatsApp)
   const playNotificationSound = () => {
@@ -257,14 +289,15 @@ export default function ChatPage() {
     prevLastTsRef.current = lastTs;
   }, [botMessages, cwMessages, tab]);
   const selectBotConv = (phone: string) => {
-    setSelectedPhone(phone);
-    setSelectedConvId(null);
-    setBotMessages([]);
-    const conv = botConvs.find(c => c.phone === phone);
-    setTakenOver(conv?.flow_state === 'PAUSED_FOR_HUMAN');
-    setNewMessage('');
-    loadBotMessages(phone);
-    setMobileView('chat');
+     setSelectedPhone(phone);
+     setSelectedConvId(null);
+     setBotMessages([]);
+     const conv = botConvs.find(c => c.phone === phone);
+     setTakenOver(conv?.flow_state === 'PAUSED_FOR_HUMAN');
+     setNewMessage('');
+     loadBotMessages(phone);
+     loadLeadDetail(phone);
+     setMobileView('chat');
     // Limpiar punto rojo de esta conversacion
     setPhonesWithNew(prev => {
       const next = new Set(prev);
@@ -273,13 +306,13 @@ export default function ChatPage() {
     });
   };
   const selectCwConv = (convId: string) => {
-    // convId aquí es el phone de la conversación pausada
-    setSelectedPhone(convId);
-    setSelectedConvId(null);
-    setBotMessages([]);
-    setTakenOver(true);
-    loadBotMessages(convId);
-    setMobileView('chat');
+     setSelectedPhone(convId);
+     setSelectedConvId(null);
+     setBotMessages([]);
+     setTakenOver(true);
+     loadBotMessages(convId);
+     loadLeadDetail(convId);
+     setMobileView('chat');
   };
   const goBackToList = () => {
     setMobileView('list');
@@ -941,12 +974,53 @@ export default function ChatPage() {
                     )}
                   </div>
                 )}
+                {/* Etapa del pipeline */}
+                <div className="mb-4 pt-4 border-t border-white/5">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">Etapa</p>
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      { id: 'nuevo', label: '🆕 Nuevo', color: 'gray' },
+                      { id: 'contactado', label: '📞 Contactado', color: 'blue' },
+                      { id: 'interesado', label: '🔥 Interesado', color: 'yellow' },
+                      { id: 'negociacion', label: '🤝 Negociación', color: 'purple' },
+                      { id: 'cerrado_ganado', label: '✅ Ganado', color: 'green' },
+                      { id: 'cerrado_perdido', label: '❌ Perdido', color: 'red' },
+                    ].map(s => (
+                      <button key={s.id} onClick={() => updateStageFromChat(selectedPhone!, s.id)}
+                        className={`text-[9px] px-2 py-1 rounded-full font-bold transition-all ${
+                          (l.lead_stage || 'nuevo') === s.id
+                            ? s.color === 'green' ? 'bg-emerald-500 text-white' :
+                              s.color === 'red' ? 'bg-red-500 text-white' :
+                              s.color === 'yellow' ? 'bg-yellow-500 text-black' :
+                              s.color === 'purple' ? 'bg-purple-500 text-white' :
+                              s.color === 'blue' ? 'bg-blue-500 text-white' :
+                              'bg-gray-500 text-white'
+                            : 'bg-white/5 text-gray-500 hover:bg-white/10'
+                        }`}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {/* Agente */}
                 <div className="mb-4 pt-4 border-t border-white/5">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">🧑‍💼 Agente</p>
-                  <p className="text-xs font-bold">
-                    {l.assigned_agent_name || l.assigned_agent_id || '⚠️ Sin asignar'}
-                  </p>
+                  {agentsList.length > 0 ? (
+                    <select
+                      value={l.assigned_agent_id || ''}
+                      onChange={(e) => assignAgentFromChat(selectedPhone!, e.target.value)}
+                      className="w-full bg-[#1a1f2e] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-indigo-500 text-white"
+                    >
+                      <option value="">— Sin asignar —</option>
+                      {agentsList.map((ag: any) => (
+                        <option key={ag.agent_id} value={ag.agent_id}>{ag.name} ({ag.role})</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-xs font-bold">
+                      {l.assigned_agent_name || l.assigned_agent_id || '⚠️ Sin asignar'}
+                    </p>
+                  )}
                 </div>
                 {/* Pago */}
                 {p.status && (
