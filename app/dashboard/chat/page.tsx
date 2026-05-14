@@ -10,8 +10,10 @@ export default function ChatPage() {
   const [loadingBot, setLoadingBot] = useState(true);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [botMessages, setBotMessages] = useState<any[]>([]);
-  const [loadingBotMsgs, setLoadingBotMsgs] = useState(false);
-  
+   const [loadingBotMsgs, setLoadingBotMsgs] = useState(false);
+   const [loadingOlder, setLoadingOlder] = useState(false);
+   const [hasMoreOlder, setHasMoreOlder] = useState(false);
+   const [oldestTs, setOldestTs] = useState<string | null>(null);  
   const [cwConvs, setCwConvs] = useState<any[]>([]);
   const [loadingCw, setLoadingCw] = useState(true);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
@@ -93,24 +95,52 @@ export default function ChatPage() {
       })
       .catch(() => setLoadingBot(false));
   };
-  // Cargar mensajes de una conversacion del bot
-  const loadBotMessages = (phone: string, isPolling = false) => {
-    if (!isPolling) setLoadingBotMsgs(true);
-    fetch(`${API_URL}/conversations?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
-      .then(res => res.json())
-      .then(data => {
-        const msgs = data.messages || [];
-        setBotMessages(prev => {
-          const prevLast = prev[prev.length - 1];
-          const newLast = msgs[msgs.length - 1];
-          if (prev.length !== msgs.length) return msgs;
-          if (prevLast?.text !== newLast?.text || prevLast?.ts !== newLast?.ts) return msgs;
-          return prev;
-        });
-        setLoadingBotMsgs(false);
-      })
-      .catch(() => setLoadingBotMsgs(false));
-  };
+  // Cargar últimos 50 mensajes desde MessagesLog (paginado)
+   const loadBotMessages = (phone: string, isPolling = false) => {
+     if (!isPolling) {
+       setLoadingBotMsgs(true);
+       setOldestTs(null);
+       setHasMoreOlder(false);
+     }
+     fetch(`${API_URL}/messages?contact_id=${phone}&limit=50`, { headers: { 'client-id': user?.companyId || '' } })
+       .then(res => res.json())
+       .then(data => {
+         const msgs = data.messages || [];
+         setBotMessages(prev => {
+           // Solo actualiza si hay cambio real (evita re-renders innecesarios en polling)
+           if (prev.length !== msgs.length) return msgs;
+           const prevLast = prev[prev.length - 1];
+           const newLast = msgs[msgs.length - 1];
+           if (prevLast?.text !== newLast?.text || prevLast?.msg_ts !== newLast?.msg_ts) return msgs;
+           return prev;
+         });
+         setHasMoreOlder(!!data.has_more);
+         setOldestTs(data.oldest_ts || null);
+         setLoadingBotMsgs(false);
+       })
+       .catch(() => setLoadingBotMsgs(false));
+   };
+   // Cargar 50 mensajes más viejos (scroll infinito hacia arriba)
+   const loadOlderMessages = async () => {
+     if (!selectedPhone || !oldestTs || !hasMoreOlder || loadingOlder) return;
+     setLoadingOlder(true);
+     try {
+       const res = await fetch(`${API_URL}/messages?contact_id=${selectedPhone}&limit=50&before_ts=${encodeURIComponent(oldestTs)}`,
+         { headers: { 'client-id': user?.companyId || '' } });
+       const data = await res.json();
+       const older = data.messages || [];
+       if (older.length > 0) {
+         setBotMessages(prev => [...older, ...prev]);
+         setOldestTs(data.oldest_ts || null);
+         setHasMoreOlder(!!data.has_more);
+       } else {
+         setHasMoreOlder(false);
+       }
+     } catch (e) {
+       console.error('Error cargando mensajes viejos:', e);
+     }
+     setLoadingOlder(false);
+   };
   // Cargar conversaciones que necesitan asesor (PAUSED_FOR_HUMAN)
   const loadCwConvs = () => {
     // Filtrar del tab Bot las que están en PAUSED_FOR_HUMAN
@@ -118,18 +148,18 @@ export default function ChatPage() {
     setCwConvs(paused);
     setLoadingCw(false);
   };
-  // Cargar mensajes de conversacion con asesor (misma API que bot)
-  const loadCwMessages = (phone: string, isPolling = false) => {
-    if (!isPolling) setLoadingCwMsgs(true);
-    fetch(`${API_URL}/conversations?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
-      .then(res => res.json())
-      .then(data => {
-        const msgs = data.messages || [];
-        setCwMessages(prev => prev.length !== msgs.length ? msgs : prev);
-        setLoadingCwMsgs(false);
-      })
-      .catch(() => setLoadingCwMsgs(false));
-  };
+  // Cargar mensajes con asesor (misma fuente que bot — MessagesLog)
+   const loadCwMessages = (phone: string, isPolling = false) => {
+     if (!isPolling) setLoadingCwMsgs(true);
+     fetch(`${API_URL}/messages?contact_id=${phone}&limit=50`, { headers: { 'client-id': user?.companyId || '' } })
+       .then(res => res.json())
+       .then(data => {
+         const msgs = data.messages || [];
+         setCwMessages(prev => prev.length !== msgs.length ? msgs : prev);
+         setLoadingCwMsgs(false);
+       })
+       .catch(() => setLoadingCwMsgs(false));
+   };
   // Inicial — polling de lista cada 6s, pausado si pestaña oculta (ahorra ~70% requests)
   useEffect(() => {
     // Pedir permiso de notificaciones del navegador
@@ -589,10 +619,21 @@ export default function ChatPage() {
               </div>
             </div>
             {/* Mensajes */}
-            <div className="flex-1 overflow-y-auto px-6 py-4"
-                 style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(99,102,241,0.03) 0%, transparent 50%)' }}>
-              {activeMessages.length > 0 ? (
-                <div className="max-w-3xl mx-auto space-y-1">
+             <div className="flex-1 overflow-y-auto px-6 py-4"
+                  style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(99,102,241,0.03) 0%, transparent 50%)' }}>
+               {hasMoreOlder && (
+                 <div className="max-w-3xl mx-auto mb-3 flex justify-center">
+                   <button
+                     onClick={loadOlderMessages}
+                     disabled={loadingOlder}
+                     className="text-[11px] px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-gray-300 font-bold transition-all disabled:opacity-50"
+                   >
+                     {loadingOlder ? '⏳ Cargando...' : '⬆ Ver mensajes anteriores'}
+                   </button>
+                 </div>
+               )}
+               {activeMessages.length > 0 ? (
+                 <div className="max-w-3xl mx-auto space-y-1">
                   {activeMessages.map((msg: any, i: number) => {
                     const msgTs = msg.ts || msg.created_at;
                     const prevTs = i > 0 ? (activeMessages[i-1].ts || activeMessages[i-1].created_at) : null;
