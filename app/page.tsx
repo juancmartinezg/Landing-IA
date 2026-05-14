@@ -726,6 +726,117 @@ export default function LandingPage() {
         </div>
       </section>
       {/* ============================================================ */}
+      {/* ADS ATTRIBUTION — Tu diferencial #1 */}
+      {/* ============================================================ */}
+      <section className="py-20 px-6 border-t border-white/5 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-purple-600/5 blur-[200px] -z-10" />
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <p className="text-[11px] text-purple-400 uppercase tracking-[0.3em] font-black mb-4">Diferenciador #1</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4 leading-tight">
+              Conecta cada anuncio con<br />
+              <span className="text-purple-400">cada venta real.</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
+              El algoritmo de Meta aprende de lo que mides. Si solo mandas clics, optimiza para clics. Con atribución completa, optimiza para <span className="text-white font-bold">ventas reales</span>.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            {/* Antes */}
+            <FadeInOnScroll>
+            <div className="bg-red-500/[0.03] border border-red-500/20 rounded-3xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">😩</span>
+                <p className="text-xs font-black text-red-400 uppercase tracking-widest">Sin atribución</p>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                  <span className="text-2xl">📢</span>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold">Lanzas anuncio</p>
+                    <p className="text-[10px] text-gray-500">$100/día en Meta Ads</p>
+                  </div>
+                </div>
+                <div className="flex justify-center text-gray-600">↓</div>
+                <div className="flex items-center gap-3 bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                  <span className="text-2xl">👆</span>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold">Meta ve: 48 clics</p>
+                    <p className="text-[10px] text-gray-500">Optimiza para más clics</p>
+                  </div>
+                </div>
+                <div className="flex justify-center text-gray-600">↓</div>
+                <div className="flex items-center gap-3 bg-red-500/5 border border-red-500/20 rounded-xl p-3">
+                  <span className="text-2xl">❓</span>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-red-400">¿Cuántos compraron?</p>
+                    <p className="text-[10px] text-gray-500">No sabes. Meta tampoco.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-red-500/20 text-center">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Match rate</p>
+                <p className="text-3xl font-black text-red-400">4/10</p>
+                <p className="text-[10px] text-gray-500 mt-1">Estándar del mercado</p>
+              </div>
+            </div>
+            </FadeInOnScroll>
+            {/* Después */}
+            <FadeInOnScroll delay={200}>
+            <div className="bg-gradient-to-br from-purple-500/10 via-indigo-500/10 to-emerald-500/10 border border-purple-500/30 rounded-3xl p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/20 blur-3xl" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-2xl">🎯</span>
+                  <p className="text-xs font-black text-purple-400 uppercase tracking-widest">Con clientes.bot</p>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-xl p-3">
+                    <span className="text-2xl">📢</span>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold">Lanzas anuncio</p>
+                      <p className="text-[10px] text-gray-500">$100/día en Meta Ads</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-center text-purple-400">↓</div>
+                  <div className="flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-xl p-3">
+                    <span className="text-2xl">💬</span>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold">Bot atiende + califica + cobra</p>
+                      <p className="text-[10px] text-gray-500">Captura email, ciudad, documento</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-center text-purple-400">↓</div>
+                  <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3">
+                    <span className="text-2xl">💳</span>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-emerald-400">12 ventas · $2.4M trazados</p>
+                      <p className="text-[10px] text-gray-500">Datos enviados a Meta automáticamente</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-purple-500/20 text-center">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Match rate</p>
+                  <p className="text-3xl font-black text-emerald-400">7.8/10</p>
+                  <p className="text-[10px] text-emerald-400 font-bold mt-1">Meta aprende de VENTAS, no de clics</p>
+                </div>
+              </div>
+            </div>
+            </FadeInOnScroll>
+          </div>
+          <FadeInOnScroll delay={400}>
+          <div className="bg-gradient-to-r from-purple-500/5 via-indigo-500/5 to-emerald-500/5 border border-purple-500/20 rounded-2xl p-6 max-w-4xl mx-auto text-center">
+            <p className="text-lg md:text-xl font-black mb-2">
+              Resultado: <span className="text-emerald-400">-47% costo por venta</span> en 60 días.
+            </p>
+            <p className="text-sm text-gray-400">
+              Esto es lo que HubSpot cobra $890/mes. Aquí va incluido desde el plan Starter.
+            </p>
+          </div>
+          </FadeInOnScroll>
+        </div>
+      </section>
+      {/* ============================================================ */}
       {/* COMPARATIVA — Por qué nosotros */}
       {/* ============================================================ */}
       <section id="comparativa" className="py-20 px-6 border-t border-white/5">
