@@ -1,9 +1,19 @@
 # 📊 STATUS — clientes.bot
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
-> Marca `[x]` cuando cierres una tarea.**API v192 + Bot v191 + Frontend `4c51579`** — Sprint Enhanced CAPI + Sprint E COMPLETO 🦁 (14 mayo sesión 3, ~6h). Enhanced CAPI: PII completo en TODOS los eventos (email+name+city+document hash SHA-256 + fbc click ID formato `fb.1.{ts}.{ctwa_clid}`) + value=regular_price (no anticipo) en Purchase. Bot wrapper `send_meta_capi_event` auto-enriquece desde Leads_CRM_v2. API bulk import + report-purchase enriquecidos con city+fbc+doc+regular_price. Lead re-send con PII tras captura email. CRM: tarjeta del lead muestra anuncio (campaign_id) + click ID + email + ciudad + documento. **Meta Match Rate esperado: 4/10 → 7-8/10.** Falta IP+UserAgent para 9-10 (requiere pixel en landing, sprint separado).
-**API v191 + Bot v189 + Frontend `bbcdbb7`** — Sprint E COMPLETO + Multi-tenant MASTER 🦁**API v191 + Bot v189 + Frontend `bbcdbb7`** — Sprint E COMPLETO + Multi-tenant MASTER 🦁 (13-14 mayo, 2 sesiones ~20h total, 12 sprints + 10 bugs producción). **Sprint E cerrado 100%**: captura 5 campos PII post-scheduling (name+dni+phone+email+city) single + multi-persona (N asistentes × 5 campos c/u con validación duplicados), email confirmación Resend multi-idioma, cron recordatorios cascada (WA libre→template Meta→email) cada hora con idempotencia, botones interactivos 1h antes (Confirmar/Reprogramar/Cancelar), no-show detection, lead scoring metadata en handoff. **Templates Meta APPROVED**: `appointment_reminder_v1` + `follow_up_v1` en ES (auto-create 4 idiomas ES/EN_US/PT_BR/FR). **Multi-tenant funnel_mode** (6 modos) + Lead Qualifier IA + Shipping step-machine + Payment link reuse + Welcome menu fix debounce + Anti-hallucination prompt regla 24b + FLOW_STATE_GUARD_UNIVERSAL en debounce. **Bot v153→v189** (36 versiones). **API v185→v191** (6 versiones). **Frontend 7 commits**. 2 EventBridge rules nuevas (templates-poll-6h + reminders-hourly). Multi-tenant safe, escalable a 1M tenants sin tocar código.
-**v185** — Sprint Wizard 2.0 Step 8 Premium CERRADO 🦁 (13 mayo madrugada). Step 8 separado en 2 fases (incrustar texto con preview → lanzar con every-guard), dropdown copy→imagen por variante, borrador localStorage keyed por `company_id` con auto-save debounced 500ms + TTL 30d + warning si servicio borrado + limpieza post-launch, botón "+N más" con cap configurable desde `config_pro.wizard_max_images_per_round` (default 10), regenerar todo con confirm. **Backend (API v185)**: cuota movida de `generate-strategy` (texto barato) a `generate-images-preview` (donde está el costo real Gemini Image), append y regenerar-todo cobran 1 wizard cada uno (justo y predecible), strategy gratis. Multi-tenant safe, escalable a 1M tenants sin tocar código. Frontend `a904590`, test E2E con CloudWatch confirmando `wizard_quota consumed: company=JMC source=plan_unlimited append=False|True` ✅.
+> Marca `[x]` cuando cierres una tarea.
+**API v193 + Bot v191 + Frontend `6c91137`**
+ — Sprint Enhanced CAPI + Templates Manager + Sprint E COMPLETO 🦁 (14 mayo sesión 3, ~6h). Enhanced CAPI: PII completo en TODOS los eventos (email+name+city+document SHA-256 + fbc click ID) + value=regular_price + Lead re-send con PII. **Templates Manager UI**: `/dashboard/templates/manage` crear/listar/borrar templates UTILITY+MARKETING + preview WhatsApp + banner costos Meta + auto-refresh status. CRM: tarjeta lead muestra anuncio+click ID+email+ciudad+documento. **Meta Match Rate: 4/10 → 7-8/10.**
+**API v192 + Bot v191 + Frontend `4c51579`** 
+— Sprint Enhanced CAPI + Sprint E COMPLETO 🦁 (14 mayo sesión 3, ~6h). Enhanced CAPI: PII completo en TODOS los eventos (email+name+city+document hash SHA-256 + fbc click ID formato `fb.1.{ts}.{ctwa_clid}`) + value=regular_price (no anticipo) en Purchase. Bot wrapper `send_meta_capi_event` auto-enriquece desde Leads_CRM_v2. API bulk import + report-purchase enriquecidos con city+fbc+doc+regular_price. Lead re-send con PII tras captura email. CRM: tarjeta del lead muestra anuncio (campaign_id) + click ID + email + ciudad + documento. 
+**Meta Match Rate esperado: 4/10 → 7-8/10.** Falta IP+UserAgent para 9-10 (requiere pixel en landing, sprint separado).
+**API v191 + Bot v189 + Frontend `bbcdbb7`** — Sprint E COMPLETO + Multi-tenant MASTER 🦁
+**API v191 + Bot v189 + Frontend `bbcdbb7`** — Sprint E COMPLETO + Multi-tenant MASTER 🦁 (13-14 mayo, 2 sesiones ~20h total, 12 sprints + 10 bugs producción). 
+**Sprint E cerrado 100%**: captura 5 campos PII post-scheduling (name+dni+phone+email+city) single + multi-persona (N asistentes × 5 campos c/u con validación duplicados), email confirmación Resend multi-idioma, cron recordatorios cascada (WA libre→template Meta→email) cada hora con idempotencia, botones interactivos 1h antes (Confirmar/Reprogramar/Cancelar), no-show detection, lead scoring metadata en handoff. 
+**Templates Meta APPROVED**: `appointment_reminder_v1` + `follow_up_v1` en ES (auto-create 4 idiomas ES/EN_US/PT_BR/FR). **Multi-tenant funnel_mode** (6 modos) + Lead Qualifier IA + Shipping step-machine + Payment link reuse + Welcome menu fix debounce + Anti-hallucination prompt regla 24b + FLOW_STATE_GUARD_UNIVERSAL en debounce. **Bot v153→v189** (36 versiones). **API v185→v191** (6 versiones). 
+**Frontend 7 commits**. 2 EventBridge rules nuevas (templates-poll-6h + reminders-hourly). Multi-tenant safe, escalable a 1M tenants sin tocar código.
+**v185** — Sprint Wizard 2.0 Step 8 Premium CERRADO 🦁 (13 mayo madrugada). Step 8 separado en 2 fases (incrustar texto con preview → lanzar con every-guard), dropdown copy→imagen por variante, borrador localStorage keyed por `company_id` con auto-save debounced 500ms + TTL 30d + warning si servicio borrado + limpieza post-launch, botón "+N más" con cap configurable desde `config_pro.wizard_max_images_per_round` (default 10), regenerar todo con confirm. 
+**Backend (API v185)**: cuota movida de `generate-strategy` (texto barato) a `generate-images-preview` (donde está el costo real Gemini Image), append y regenerar-todo cobran 1 wizard cada uno (justo y predecible), strategy gratis. Multi-tenant safe, escalable a 1M tenants sin tocar código. Frontend `a904590`, test E2E con CloudWatch confirmando `wizard_quota consumed: company=JMC source=plan_unlimited append=False|True` ✅.
 **v179** — Sprint Brand DNA + Wizard 2.0 CERRADO 🦁 6 fases completadas en 1 sesión maratón (12-13 mayo).Brand DNA con scraping multi-source + Gemini (API v165). Brand Assets Library con 5 endpoints CRUD + thumbnails + Bucket Policy S3 (API v167). Wizard Backend 9 endpoints: check-quota + generate-strategy (10 Andromeda prompts) + generate-images-preview (10×512px paralelo) + generate-images-final (3×1K) + generate-copies (5 variantes social proof legal) + launch multi-canal + billing packs wizards (API v168-v179). Wizard Frontend 8 pasos full-screen (`246103f`). Andromeda overlay+resize via Gemini sin Pillow (API v174-v177). Cross-tenant siempre ON (network effect, API v166 + TyC sección 12). 5 tablas DDB nuevas (BrandDNA + BrandAssets + AdsCreativeLibrary + AdsHookVariants + AdsCrossTenantPool). 3 productos Wizard Packs en Lemon Squeezy. Bucket Policy S3 para brand-assets público. 27 deploys backend + 8 commits frontend.
 **v164** — Ads Pro v2 CERRADO 🎯 Regla #8 KILL_CREATIVE en motor B6.5 (API v153) + `POST /ads/generate-hook-variants` Gemini Flash Lite con cache 5min (API v155) + frontend botón ✨ Variantes en el 🏆 + modal con 3 hooks copiables y patrón emocional detectado (`92a3dcd`). JMC verificado: 0 KILL_CREATIVE (creatives sanos 2.43-4.99% CTR) + Gemini detectó patrón "escasez" del ganador.
 **v163** — deuda técnica cerrada: CAPI Schedule funnel completo + Google Calendar multi-tenant + ValidationException fix + Ads dashboard cache L1+L2 DDB (0 rate limits Meta) + fix frontend tab sobreescritura métricas)
@@ -101,7 +111,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
 - `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~8,900 líneas, **v189** — Sprint E completo: captura PII 5 campos single+multi-persona + email confirmación Resend + cron recordatorios cascada WA→template→email + botones 1h (confirmar/reprogramar/cancelar) + no-show + FLOW_STATE_GUARD_UNIVERSAL debounce + funnel_mode 6 modos + Lead Qualifier + Shipping step-machine + payment reuse + regla 24b; Calendly mode: CalendarPicker v7.3 (`min_date`/`max_date`/`unavailable_dates`) + `_get_available_dates` y `_get_available_slots` con cascada svc→tenant→default + `available_weekdays` y `booking_mode` por servicio + handler async `_internal_action=post_booking_messages` (no bloquea flow) + `post_payment_flow=send_group_link` con mensaje custom + `screen` y `selected_slot` del nivel raíz v6.0/7.3 + scheduling_flow_id desde config_pro) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
 - `SaaS_API_Handler` — incluye **`POST /scheduling-flow/setup`** auto-onboarding multi-tenant del WhatsApp Flow CalendarPicker v7.3 (crea + sube JSON + publica + guarda flow_id en config_pro, idempotente)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** + **Auto-onboarding Scheduling Flow + Templates Reminder/Follow-up multi-idioma** + **Wizard 2.0 Premium** + **Multi-tenant funnel_mode + Lead Qualifier whitelist** + **Cron poll templates Meta** (~18,500 líneas, ~131 endpoints, **v191** — `POST /templates/cron-poll-all` itera tenants PENDING + `handle_onboarding` persiste locale + auto-create templates en `handle_meta_exchange`) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** + **Auto-onboarding Scheduling Flow + Templates Reminder/Follow-up multi-idioma** + **Wizard 2.0 Premium** + **Multi-tenant funnel_mode + Lead Qualifier whitelist** + **Cron poll templates Meta** + **Templates Manager UI** (~18,600 líneas, ~134 endpoints, **v193** — `GET /templates/list` + `POST /templates/custom` UTILITY/MARKETING + `DELETE /templates/custom` + category dynamic en `_create_meta_template` — `POST /templates/cron-poll-all` itera tenants PENDING + `handle_onboarding` persiste locale + auto-create templates en `handle_meta_exchange`) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
 - `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os + SOURCE_THRESHOLDS human_agent=2 + preserva source SK)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -141,6 +151,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] CRM automático (Leads_CRM)
 - [x] Configuración dinámica (config_pro manda todo)
 - [x] **Multicanal**: Instagram DM + Facebook Messenger activos (Bot v114) — misma IA Gemini, catalog lista texto, pago, historial por canal
+- [x] **Enhanced CAPI** (Bot v191): PII completo en todos los eventos (email+name+city+doc SHA-256 + fbc click ID formato `fb.1.{ts}.{ctwa_clid}`) + value=regular_price (no anticipo) + Lead re-send con PII tras captura email. Match Rate 4/10 → 7-8/10.
+- [x] **Templates Manager** (API v193 + Frontend `6c91137`): crear/listar/borrar templates custom UTILITY+MARKETING via Meta Graph API + preview WhatsApp + banner costos + auto-refresh status
 ### ⚙️ API SaaS (~80 endpoints)
 - [x] Config, onboarding, services CRUD
 - [x] Leads CRUD + tags + score + stage + notas + recordatorios + AI insight + CSV import
@@ -154,6 +166,8 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **Admin Panel API** — `GET /admin/overview`, `GET /admin/tenants` (paginado con cursor), `GET /admin/audit` (v34-v39)
 - [x] Hardening `/onboarding` con idempotencia por email + validación
 - [x] `log_error()` automático: todo error 500 del lambda_handler queda en tabla `ErrorLog`
+- [x] **Templates Manager API** (v193): `GET /templates/list`, `POST /templates/custom` (UTILITY/MARKETING), `DELETE /templates/custom`, category dynamic
+- [x] **Enhanced CAPI API** (v192): bulk import + report-purchase enriquecidos con city+fbc+doc+regular_price desde Leads_CRM_v2
 ### 👥 Multi-agente
 - [x] Tabla Agents + CRUD
 - [x] Asignación manual + transferencias con historial + motivo
@@ -1180,7 +1194,7 @@ Transformar el wizard de Ads actual (5 pasos, 1 imagen genérica) en un **wizard
 #### **Sprint C — Wizard 2.0 Frontend (~5h)** 🎨
 - Nueva página `/dashboard/ads/wizard` full-screen con 8 pasos
 - Indicador cuota arriba: `🎨 3/5 wizards usados este mes`
-- 8 pasos: Brand DNA check → Estrategia → Canales (TikTok+Google "Próximamente") → Idioma → Producto+Beneficios → Referencias visuales → Grid 10 imágenes → Textos persuasivos
+- 8 pasos: Brand DNA check → Estrategia → Canales (TikTok+Google "FALTA") → Idioma → Producto+Beneficios → Referencias visuales → Grid 10 imágenes → Textos persuasivos
 - Pantalla final: preview Meta Ad 3 formatos + botón "🚀 Lanzar multi-canal"
 #### **Sprint D — Andromeda Overlay + 3 formatos auto (~2h)** ✨
 - Helper `_overlay_text_on_image()` con Gemini editing nativo
@@ -1559,7 +1573,9 @@ Transformar el wizard de Ads actual (5 pasos, 1 imagen genérica) en un **wizard
 > Costo: **$0** (todas las APIs son gratis)
 - [ ] **Web Chat Widget embebible** — `<script src="clientes.bot/widget/{company_id}.js">`
 - [x] **Instagram DM** — Bot v104-v114: Gemini responde, catálogo lista texto, pago, historial, IG echo filter ✅
+- [ ] **Instagram COmentarios** - responder comenatarios en los post de Instagram. con opcion de habilitar o deshabilitar en post independientes
 - [x] **Facebook Messenger** — Bot v104-v114: mismo flujo IG, subscribed_apps v22 ✅
+- [ ] **Instagram Publicaciones** (publicar contenido con IA)
 - [ ] **Telegram** — Bot API gratis
 - [ ] **Email transaccional** (Resend, gratis 3000/mes)
 - [x] **Bandeja unificada** — conversations/active incluye FB/IG, channel icon 💚💬📸 en dashboard ✅
@@ -1602,7 +1618,7 @@ Transformar el wizard de Ads actual (5 pasos, 1 imagen genérica) en un **wizard
 - [ ] **Cotizaciones + Facturas electrónicas** + Upsells automáticos (Ventas)
 - [ ] **NPS surveys + Loyalty + Gamificación** (Retención)
 - [ ] **Tour interactivo + Tutoriales en video + Centro de ayuda** (Educación)
-### 🦁 Sprint 7 — RUGIDO FINAL (cuando ya esté generando ingresos)
+### 🦁 Sprint 7 — RUGIDO FINAL
 > Costo: **$$ aceptable porque ya cobras**
 - [ ] **Voice Cloning con ElevenLabs** — solo plan Enterprise
 - [ ] **WhatsApp Pay nativo** (cuando Meta lo libere por país)
@@ -1771,15 +1787,20 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 > 💡 **En palabras simples:** el 26% de features que falta representa solo el ~13% de la dificultad técnica total. El motor del Ferrari está construido — lo que falta es la tapicería, el GPS y el aire acondicionado.
 | Categoría | % |
 |---|---|
-| ✅ Infraestructura construida | **86%** |
+| ✅ Infraestructura construida | **95%** |
 | ✅ Billing LS completo (trial+checkout+webhook+quotas) | 100% ✅ |
 | ✅ Feature Flags + Quotas enforcement | 100% ✅ |
-| 🟡 Multicanal (IG/Messenger/Telegram) | 0% — Sprint 2 |
-| 🟡 Admin Panel completo (D-J) | ~15% |
-| 🟡 Sprints 3-7 (IA superpoderes, video, etc.) | 0% |
-| 🤝 Programa Afiliados (movido a Sprint 1) | 0% — bloqueante crecimiento |
-| 🔧 Pendiente: Sprint 1 ampliado (Stripe+Wompi+Quotas+Afiliados) + E (Impersonate) + F-J + multicanal | 2% |
-**Última medición:** 9 mayo 2026 — **Sprint 1 COMPLETADO** 🍾 Trial 14d auto + cron expire + email warning + QUOTA_ENFORCE=true + billing E2E con LS (test real Growth $297) + webhook sync config_pro.plan + landing+dashboard dinámicos desde DDB (fuente única) + admin editor `/admin/plan-features` con features_ui+tooltips + propagación instantánea confirmada. 30 deploys (Bot v136-v138, API v117-v133, promote-cron v2, 8 commits frontend). Sesión anterior: memoria source-aware + 6 bugs CRM (Bug #9 reincidió 3x) + cleanup 615 entries
+| ✅ Sprint E completo (recordatorios+email+PII+botones+no-show) | 100% ✅ |
+| ✅ Enhanced CAPI (PII+fbc+regular_price) | 100% ✅ Match Rate 4→8/10 |
+| ✅ Templates Manager (crear/listar/borrar UTILITY+MARKETING) | 100% ✅ |
+| ✅ Multi-tenant funnel_mode (6 modos) + Lead Qualifier IA | 100% ✅ |
+| ✅ Multicanal WhatsApp + IG + FB Messenger | 100% ✅ (pendiente App Review IG Advanced) |
+| ✅ Programa Afiliados completo (4 tablas + cron + emails + tracker) | 100% ✅ |
+| 🟡 Bulk Send / Campañas Marketing | 0% — siguiente sprint |
+| 🟡 Multi-idioma plataforma (bot+frontend) | 0% — sprint dedicado |
+| 🟡 Admin Panel completo (F-K) | ~25% (D+E cerradas) |
+| 🟡 Web Chat Widget | 0% |
+**Última medición:** 14 mayo 2026 — **Sprint Enhanced CAPI + Templates Manager CERRADOS** 🦁 API v193 + Bot v191 + Frontend `6c91137`. 3 sesiones en 2 días (~26h total). 48 versiones del bot (v153→v191). 8 versiones API (v185→v193). 14 commits frontend. 12 sprints completados + 10 bugs producción cerrados. Meta Match Rate 4/10 → 7-8/10. Templates APPROVED (appointment_reminder_v1 + follow_up_v1). Cron recordatorios + no-show ENABLED. Captura PII 5 campos single+multi-persona. Email confirmación Resend multi-idioma. CRM muestra anuncio+click ID. Próximo: Bulk Send / Campañas Marketing.
 
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
@@ -1807,8 +1828,10 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **94% → 95%** — Calendly Mode CERRADO 📅 CalendarPicker v7.3 + auto-onboarding multi-tenant del flow (1 POST = flow creado en Meta) + UI completa `/dashboard/services` con `time_slots` / `available_weekdays` / `booking_mode` solapable+exclusive / `max_days_ahead` / `post_payment_flow=send_group_link` / recordatorios async post-agendamiento — Bot v154-v162, API v148, 4 commits frontend (4b0d78c, 8f8775b, a4c3172, fc069b1). Bug #56 falsa alarma (testing pipeline borraba scheduled_*). 5 lecciones nuevas (48-53). 🦁
 - [x] **95% → 96%** — Ads Pro v2 CERRADO 🎯 Regla #8 KILL_CREATIVE + Hook Generation + frontend ✨ Variantes. API v153-v155, frontend `92a3dcd`. 🦁
 - [x] **96% → 97%** — AI Creative Loop CERRADO 🦁 5 motores E2E (Content Ingestion + Winner Analysis + Hook Gen multi_pattern + Creative Production Meta Graph + Publish+Learn cross-tenant). API v156-v164, frontend `e96fd2a` + `2e38b21`. 🦁
-- [x] **97% → 98%** — Sprint Brand DNA + Wizard 2.0 CERRADO 🦁 Brand DNA scraping multi-source + Brand Assets Library + Wizard Backend 9 endpoints (strategy + images paralelo Gemini + copies social proof + launch multi-canal) + Wizard Frontend 8 pasos full-screen + Andromeda overlay via Gemini + cross-tenant siempre ON + TyC sección 12 + Wizard Packs LS + Bucket Policy S3. API v165-v179, frontend `246103f` + settings `c4f053e`/`7427627`/`ea84b49` + TyC `7d021b7`. 27 deploys + 8 commits en 1 sesión. ⭐ ESTÁS AQUÍ
-- [ ] **98% → 100%** — Sprints 3-7 + Admin D-K completo + Ads Pro v3 (Andromeda text-on-image + auto 3 formatos) + Web Chat Widget + RUGIDO 🦁
+- [x] **97% → 98%** — Sprint Brand DNA + Wizard 2.0 CERRADO 🦁 Brand DNA scraping multi-source + Brand Assets Library + Wizard Backend 9 endpoints + Wizard Frontend 8 pasos + Andromeda overlay + cross-tenant + Wizard Packs LS. API v165-v179, frontend `246103f`. 27 deploys + 8 commits en 1 sesión.
+- [x] **98% → 99%** — Sprint multi-tenant MASTER 🦁 (13-14 mayo, 2 sesiones ~20h). 12 sprints: funnel_mode 6 modos + Lead Qualifier IA + Shipping step-machine + Sprint E completo (captura PII 5 campos single+multi-persona + email confirmación Resend + cron recordatorios cascada WA→template→email + botones confirmar/reprogramar/cancelar + no-show) + auto-create templates 4 idiomas + payment link reuse + welcome menu fix debounce + anti-hallucination prompt. Bot v153→v189 (36 versiones), API v185→v191, Frontend 7 commits. 10 bugs producción cerrados.
+- [x] **99% → 99.5%** — Sprint Enhanced CAPI + Templates Manager 🦁 (14 mayo sesión 3, ~6h). PII completo en TODOS los eventos CAPI (email+name+city+doc SHA-256 + fbc click ID) + value=regular_price (no anticipo) + Lead re-send con PII. Templates Manager UI: crear/listar/borrar UTILITY+MARKETING + preview WhatsApp + banner costos Meta. CRM: tarjeta lead muestra anuncio+click ID+email+ciudad+documento. Bot v191, API v192-v193, Frontend `6c91137`. **Meta Match Rate: 4/10 → 7-8/10.** ⭐ ESTÁS AQUÍ
+- [ ] **99.5% → 100%** — Bulk Send / Campañas Marketing + Multi-idioma plataforma + Fase F Soporte/Ticketing + Admin D-K restante + Web Chat Widget + RUGIDO 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
 ## 📞 CONTACTO
