@@ -1357,6 +1357,30 @@ export default function CRMPage() {
                     <span className="font-medium text-xs">{selectedLead.lead.import_source === 'csv_import' ? '📤 Importado' : selectedLead.lead.import_source}</span>
                   </div>
                 )}
+                {(selectedLead.lead?.customer_email || selectedLead.payment?.customer_email) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">📧 Email</span>
+                    <span className="font-medium text-xs text-indigo-400">{selectedLead.lead?.customer_email || selectedLead.payment?.customer_email}</span>
+                  </div>
+                )}
+                {(selectedLead.lead?.customer_full_name || selectedLead.payment?.customer_full_name) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">👤 Nombre completo</span>
+                    <span className="font-medium text-xs">{selectedLead.lead?.customer_full_name || selectedLead.payment?.customer_full_name}</span>
+                  </div>
+                )}
+                {(selectedLead.lead?.customer_dni || selectedLead.payment?.customer_dni) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">🆔 Documento</span>
+                    <span className="font-medium text-xs">{selectedLead.lead?.customer_dni || selectedLead.payment?.customer_dni}</span>
+                  </div>
+                )}
+                {(selectedLead.lead?.customer_city || selectedLead.payment?.customer_city) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">🏙️ Ciudad</span>
+                    <span className="font-medium text-xs">{selectedLead.lead?.customer_city || selectedLead.payment?.customer_city}</span>
+                  </div>
+                )}
                 {selectedLead.lead?.source_first_campaign_id && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">📢 Anuncio</span>
