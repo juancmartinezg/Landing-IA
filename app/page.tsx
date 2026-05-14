@@ -4,7 +4,9 @@ import Link from 'next/link';
 import ChatWidget from './components/ChatWidget';
 import InstallPWAPrompt from './components/InstallPWAPrompt';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-// === Plan card data type (de /billing/plans-public) ===
+// ============================================================
+// TIPOS — Catálogo de planes desde /billing/plans-public
+// ============================================================
 interface PlanCard {
   key: string;
   name: string;
@@ -24,7 +26,6 @@ interface PlanCard {
     tooltip_desc: string;
   }>;
 }
-// Tema de colores derivado del color_theme del backend
 const COLOR_THEMES: Record<string, { color: string; btnClass: string }> = {
   indigo: {
     color: 'border-white/10 hover:border-indigo-500/30',
@@ -33,6 +34,10 @@ const COLOR_THEMES: Record<string, { color: string; btnClass: string }> = {
   indigo_popular: {
     color: 'border-indigo-500/50 bg-indigo-600',
     btnClass: 'bg-white text-indigo-600 hover:bg-gray-100 font-black shadow-lg',
+  },
+  gold: {
+    color: 'border-amber-500/40 hover:border-amber-500/60 bg-gradient-to-br from-amber-500/5 to-yellow-500/5',
+    btnClass: 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-amber-950 font-black shadow-lg shadow-amber-500/20',
   },
   amber: {
     color: 'border-amber-500/30 hover:border-amber-500/50',
@@ -43,8 +48,7 @@ const COLOR_THEMES: Record<string, { color: string; btnClass: string }> = {
     btnClass: 'bg-slate-600 hover:bg-slate-500 text-white',
   },
 };
-
-// Tooltip component para el botón "?"
+// Tooltip de features
 function FeatureTooltip({ title, desc }: { title: string; desc: string }) {
   const [open, setOpen] = useState(false);
   return (
@@ -82,667 +86,1046 @@ export default function LandingPage() {
       })
       .catch(() => setPlansLoading(false));
   }, []);
-  // Fallback estático mientras carga (para SEO + 1er render)
-  const plansFallback: PlanCard[] = [
-    {
-      key: 'starter',
-      name: 'Starter',
-      subtitle: 'Para empezar a automatizar',
-      price_monthly: 97,
-      price_annual: 930,
-      color: 'border-white/10 hover:border-indigo-500/30',
-      btnClass: 'bg-white/5 hover:bg-indigo-600 border border-white/10 hover:border-indigo-500',
-      btnLabel: 'Comenzar gratis',
-      popular: false,
-      features: [
-        { label: 'Bot IA conversacional 24/7', included: true, tooltip: { title: 'Bot con Inteligencia Artificial', desc: 'Tu bot responde preguntas, presenta productos, agenda citas y cierra ventas automáticamente — sin que intervenga nadie de tu equipo.' } },
-        { label: '1 línea de WhatsApp Business', included: true, tooltip: { title: '1 número de WhatsApp', desc: 'Conectas un número de teléfono de WhatsApp Business API. El bot atiende todos los mensajes que lleguen a ese número.' } },
-        { label: '2,000 conversaciones/mes', included: true, tooltip: { title: 'Conversaciones mensuales', desc: 'Cada vez que un cliente te escribe y el bot responde, cuenta como 1 conversación. 2,000 es suficiente para negocios que están empezando.' } },
-        { label: 'Entiende audios de voz 🎤', included: true, tooltip: { title: 'Transcripción de voz', desc: 'Si el cliente te manda un audio de voz en lugar de texto, el bot lo transcribe y lo entiende automáticamente. No pierde ningún mensaje.' } },
-        { label: 'Catálogo visual con carrusel', included: true, tooltip: { title: 'Carrusel de productos en WhatsApp', desc: 'El bot muestra tus productos o servicios en formato carrusel visual dentro del chat de WhatsApp. El cliente desliza y ve fotos, precios y descripción.' } },
-        { label: 'CRM básico (500 leads)', included: true, tooltip: { title: 'CRM: gestión de clientes', desc: 'Lista de todos los clientes que te han escrito, con su nombre, teléfono, estado (nuevo, interesado, vendido) y notas. Límite de 500 contactos.' } },
-        { label: '1 pasarela de pago en el chat', included: true, tooltip: { title: 'Cobros por WhatsApp', desc: 'El bot genera un link de pago y lo envía directamente en el chat. El cliente paga sin salir de WhatsApp. Elige 1 pasarela: Bold, Wompi, PayPal, etc.' } },
-        { label: 'Agendamiento inteligente', included: true, tooltip: { title: 'Citas automáticas por WhatsApp', desc: 'El bot muestra las fechas disponibles en tu calendario, el cliente elige y la cita se crea sola. Sin llamadas, sin mensajes manuales.' } },
-        { label: '2 agentes humanos', included: true, tooltip: { title: 'Agentes humanos', desc: 'Personas de tu equipo que pueden ver las conversaciones del bot, tomar control cuando el cliente lo necesite y responder directamente desde el dashboard.' } },
-        { label: 'Dashboard + App móvil (PWA)', included: true, tooltip: { title: 'Panel de control + App', desc: 'Accede a todas las métricas, conversaciones y herramientas desde el navegador o instala la app en tu celular como si fuera nativa.' } },
-        { label: 'Notificaciones push', included: true, tooltip: { title: 'Alertas en tiempo real', desc: 'Recibes una notificación en tu celular cuando un cliente quiere hablar con un humano, paga o agenda una cita.' } },
-        { label: 'Entrenamiento personalizado del bot', included: true, tooltip: { title: 'Entrena tu bot', desc: 'Agrega preguntas frecuentes y sus respuestas para que el bot aprenda exactamente cómo hablar de tu negocio.' } },
-        { label: 'Facebook Ads con IA', included: false, tooltip: { title: 'Facebook & Instagram Ads', desc: 'Solo disponible en Growth y Agency.' } },
-        { label: 'Atribución CAPI (Lead → Venta)', included: false, tooltip: { title: 'Meta CAPI', desc: 'Solo disponible en Growth y Agency.' } },
-        { label: 'Voz IA (llamadas automáticas)', included: false, tooltip: { title: 'Llamadas con IA', desc: 'Solo disponible en Growth y Agency.' } },
-        { label: 'Remarketing automático', included: false, tooltip: { title: 'Seguimiento a leads fríos', desc: 'Solo disponible en Growth y Agency.' } },
-        { label: 'Multicanal (Instagram, Facebook)', included: false, tooltip: { title: 'Más canales', desc: 'Solo disponible en Growth y Agency.' } },
-      ],
-    },
-    {
-      key: 'growth',
-      name: 'Growth',
-      subtitle: 'Ventas en piloto automático',
-      price_monthly: 297,
-      price_annual: 2851,
-      color: 'border-indigo-500/50 bg-indigo-600',
-      btnClass: 'bg-white text-indigo-600 hover:bg-gray-100 font-black shadow-lg',
-      btnLabel: 'Activar Growth',
-      popular: true,
-      features: [
-        { label: 'Todo lo de Starter, más:', included: true, tooltip: null },
-        { label: '10,000 conversaciones/mes', included: true, tooltip: { title: 'Conversaciones mensuales', desc: '10,000 conversaciones es suficiente para negocios en pleno crecimiento con campañas activas de publicidad.' } },
-        { label: 'CRM completo + Kanban + IA (leads ilimitados)', included: true, tooltip: { title: 'CRM completo', desc: 'Tablero Kanban drag & drop (Nuevo → Interesado → Negociación → Ganado), puntuación IA de cada lead, tags, etapas, notas privadas entre agentes, importación CSV masiva. Sin límite de contactos.' } },
-        { label: '6 pasarelas de pago', included: true, tooltip: { title: 'Múltiples pasarelas', desc: 'Conecta hasta 6 pasarelas de pago: Stripe, Bold, Wompi, PayPal, MercadoPago, OpenPay, PayU. El cliente elige cómo pagar.' } },
-        { label: 'Facebook & Instagram Ads con IA', included: true, tooltip: { title: 'Publicidad con IA', desc: 'La IA crea anuncios Click-to-WhatsApp en 5 pasos. Targeting avanzado por ciudad, edad, intereses. Monitoreo diario y alertas si un anuncio falla.' } },
-        { label: 'Atribución CAPI completa (Lead → Checkout → Venta)', included: true, tooltip: { title: 'Conversions API de Meta', desc: 'Envía eventos de conversión directamente al servidor de Meta. El algoritmo de Facebook aprende qué anuncios generan ventas reales — no solo clics. Diferenciador masivo vs competidores.' } },
-        { label: 'Memoria IA proactiva', included: true, tooltip: { title: 'Memoria inteligente', desc: 'El bot recuerda conversaciones anteriores con cada cliente. Si alguien preguntó por un producto hace 2 semanas y vuelve a escribir, el bot lo recuerda y retoma desde donde quedó.' } },
-        { label: 'Voz IA — 100 min/mes', included: true, tooltip: { title: 'Llamadas con IA', desc: 'Tu bot puede hacer o recibir llamadas de voz automatizadas. Ideal para calificar leads o confirmar citas por teléfono. 100 minutos incluidos al mes.' } },
-        { label: '5 agentes humanos', included: true, tooltip: { title: 'Equipo de 5 personas', desc: '5 miembros de tu equipo con acceso al dashboard, asignación de leads y chat en vivo. Con ranking de rendimiento por agente.' } },
-        { label: 'Remarketing automático', included: true, tooltip: { title: 'Seguimiento automático', desc: 'El bot hace seguimiento automático a leads que no respondieron o no completaron una compra. Envía mensajes personalizados en el momento correcto.' } },
-        { label: 'WhatsApp Flows (formularios nativos)', included: true, tooltip: { title: 'WhatsApp Flows', desc: 'Formularios interactivos nativos dentro de WhatsApp. El cliente completa datos, selecciona fechas o elige opciones sin salir del chat.' } },
-        { label: 'Control de inventario', included: true, tooltip: { title: 'Inventario integrado', desc: 'Cuando el bot vende un producto, descuenta automáticamente el stock del inventario. Evita vender lo que no tienes.' } },
-        { label: 'Multicanal — Instagram DM', included: true, tooltip: { title: 'Instagram Direct Messages', desc: 'El mismo bot de WhatsApp también atiende los mensajes directos de Instagram de tu negocio, desde el mismo dashboard.' } },
-        { label: '5 sub-cuentas (sucursales o marcas)', included: true, tooltip: { title: 'Múltiples sucursales', desc: 'Conecta hasta 5 negocios, sucursales o marcas diferentes desde el mismo dashboard.' } },
-        { label: 'Soporte por email — 24h', included: true, tooltip: null },
-      ],
-    },
-    {
-      key: 'agency',
-      name: 'Agency',
-      subtitle: 'Para agencias y equipos grandes',
-      price_monthly: 497,
-      price_annual: 4771,
-      color: 'border-amber-500/30 hover:border-amber-500/50',
-      btnClass: 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20',
-      btnLabel: 'Contactar ventas',
-      popular: false,
-      features: [
-        { label: 'Todo lo de Growth, más:', included: true, tooltip: null },
-        { label: 'Conversaciones ilimitadas', included: true, tooltip: { title: 'Sin límite de mensajes', desc: 'Sin tope de conversaciones al mes. Ideal para agencias con múltiples clientes activos o negocios con alto volumen de mensajes.' } },
-        { label: 'Clientes ilimitados desde 1 dashboard', included: true, tooltip: { title: 'Multi-cliente para agencias', desc: 'Gestiona negocios ilimitados desde un solo panel. Cada cliente tiene su propio bot, CRM, campañas y dashboard independiente. Tú lo ves todo.' } },
-        { label: 'White-label total (tu marca, no la nuestra)', included: true, tooltip: { title: 'Marca blanca', desc: 'El dashboard y el bot aparecen con el nombre y logo de tu agencia o empresa. El cliente final nunca sabe que usa clientes.bot.' } },
-        { label: 'Voz IA — 500 min/mes', included: true, tooltip: { title: 'Llamadas con IA', desc: '500 minutos de llamadas automatizadas con IA al mes. Suficiente para calificar decenas de leads diariamente.' } },
-        { label: 'Agentes ilimitados', included: true, tooltip: { title: 'Equipo sin límite', desc: 'Agrega todos los miembros de equipo que necesites. Sin costo adicional por agente.' } },
-        { label: 'API pública documentada', included: true, tooltip: { title: 'API para desarrolladores', desc: 'Integra clientes.bot con tus propios sistemas, CRMs externos o herramientas internas usando nuestra API REST documentada.' } },
-        { label: 'Multicanal completo (IG + Facebook Messenger)', included: true, tooltip: { title: 'Todos los canales de Meta', desc: 'El bot atiende simultáneamente WhatsApp, Instagram DM y Facebook Messenger desde una sola bandeja unificada.' } },
-        { label: 'Soporte prioritario por WhatsApp', included: true, tooltip: { title: 'Soporte directo', desc: 'Acceso a un canal de WhatsApp dedicado con el equipo de clientes.bot. Respuesta en menos de 1 hora en días hábiles.' } },
-        { label: 'Onboarding personalizado', included: true, tooltip: { title: 'Configuración asistida', desc: 'Un especialista de nuestro equipo te ayuda a configurar el bot, CRM y campañas en la primera semana. Incluido sin costo adicional.' } },
-      ],
-    },
-  ] as any;
-  // Si la API trae planes, usar esos; si no, fallback
-  const displayPlans: PlanCard[] = plans.length > 0
-    ? plans
-    : (plansFallback as any).map((p: any) => ({
-        key: p.key,
-        name: p.name,
-        subtitle: p.subtitle,
-        price_usd: p.price_monthly,
-        price_cop: 0,
-        price_annual: p.price_annual,
-        popular: p.popular,
-        btn_label: p.btnLabel,
-        btn_href_type: p.key === 'agency' ? 'whatsapp' : 'checkout',
-        btn_href_whatsapp: 'https://wa.me/573022205845',
-        color_theme: p.popular ? 'indigo_popular' : (p.key === 'agency' ? 'amber' : 'indigo'),
-        features_ui: (p.features || []).map((f: any) => ({
-          label: f.label,
-          included: f.included,
-          tooltip_title: f.tooltip?.title || '',
-          tooltip_desc: f.tooltip?.desc || '',
-        })),
-      }));
-
   return (
     <div className="min-h-screen bg-[#0B0F1A] text-white selection:bg-indigo-500/30 scroll-smooth">
+      {/* ============================================================ */}
       {/* NAVBAR */}
-      <nav className="fixed top-0 w-full z-50 bg-[#0B0F1A]/80 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-20 flex justify-between items-center gap-2">
-          <div className="flex flex-col md:flex-row items-center gap-0 md:gap-2 shrink-0">
-            <img src="/cb-logo.webp" alt="Logo" className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
-            <span className="text-[9px] md:text-xl font-bold tracking-tighter">clientes.bot</span>
+      {/* ============================================================ */}
+      <nav className="fixed top-0 w-full z-50 bg-[#0B0F1A]/85 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex justify-between items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <img src="/cb-logo.webp" alt="clientes.bot" className="w-8 h-8 md:w-9 md:h-9 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+            <span className="text-base md:text-xl font-black tracking-tighter">clientes.bot</span>
           </div>
-          <div className="hidden md:flex gap-8 text-sm text-gray-400">
-            <a href="#features" className="hover:text-white transition-colors">Funciones</a>
-            <a href="#como-funciona" className="hover:text-white transition-colors">Cómo funciona</a>
-            <a href="#para-quien" className="hover:text-white transition-colors">Para quién</a>
-            <a href="#planes" className="hover:text-white transition-colors">Planes</a>
+          <div className="hidden md:flex gap-7 text-sm text-gray-400">
+            <a href="#producto" className="hover:text-white transition-colors font-medium">Producto</a>
+            <Link href="/demo" target="_blank" className="hover:text-white transition-colors font-medium flex items-center gap-1">
+              Demo en vivo
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            </Link>
+            <a href="#comparativa" className="hover:text-white transition-colors font-medium">¿Por qué nosotros?</a>
+            <a href="#planes" className="hover:text-white transition-colors font-medium">Planes</a>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
-            <Link href="/auth/login" className="border border-white/10 hover:border-indigo-500/50 hover:bg-white/5 px-2.5 py-2 md:px-6 md:py-2.5 rounded-xl text-[10px] md:text-sm font-bold transition-all whitespace-nowrap">
+            <Link href="/auth/login" className="hidden sm:inline-block border border-white/10 hover:border-indigo-500/50 hover:bg-white/5 px-3 py-2 md:px-5 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap">
               Iniciar sesión
             </Link>
-            <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 px-2.5 py-2 md:px-6 md:py-2.5 rounded-xl text-[10px] md:text-sm font-bold transition-all shadow-lg shadow-indigo-600/20 whitespace-nowrap">
-              Prueba gratis
+            <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 md:px-5 md:py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all shadow-lg shadow-indigo-600/20 whitespace-nowrap">
+              Probar 14 días gratis
             </Link>
             <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-gray-400 text-xl ml-1" aria-label="Menu">☰</button>
           </div>
         </div>
         {mobileMenu && (
           <div className="md:hidden bg-[#0B0F1A] border-t border-white/5 px-6 py-4 space-y-3">
-            <a href="#features" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">Funciones</a>
-            <a href="#como-funciona" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">Cómo funciona</a>
-            <a href="#para-quien" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">Para quién</a>
+            <a href="#producto" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">Producto</a>
+            <Link href="/demo" target="_blank" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">
+              Demo en vivo →
+            </Link>
+            <a href="#comparativa" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">¿Por qué nosotros?</a>
             <a href="#planes" onClick={() => setMobileMenu(false)} className="block text-sm text-gray-400 hover:text-white">Planes</a>
           </div>
         )}
       </nav>
-
-      {/* HERO */}
-      <section className="pt-28 pb-16 px-6 relative overflow-hidden">
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-indigo-600/10 blur-[200px] -z-10" />
+      {/* ============================================================ */}
+      {/* HERO — Reposicionamiento total */}
+      {/* ============================================================ */}
+      <section className="pt-32 md:pt-40 pb-20 px-6 relative overflow-hidden">
+        {/* Background glow sutil, enterprise */}
+        <div className="absolute top-32 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-indigo-600/8 blur-[200px] -z-10" />
+        <div className="absolute top-60 left-1/4 w-[400px] h-[400px] bg-purple-600/6 blur-[180px] -z-10" />
+        <div className="absolute top-60 right-1/4 w-[400px] h-[400px] bg-emerald-600/6 blur-[180px] -z-10" />
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-indigo-600/10 border border-indigo-500/20 rounded-full px-4 py-1.5 mb-8">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[11px] text-indigo-300 font-bold">Más de 50 negocios ya automatizan sus ventas</span>
+            {/* Pill enterprise */}
+            <div className="inline-flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-full px-4 py-1.5 mb-8">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[11px] text-gray-300 font-bold tracking-wide">Infraestructura SaaS · Multi-tenant · LATAM + USA + Europa</span>
             </div>
+            {/* H1 reposicionado */}
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-6">
-              Tu negocio en
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-emerald-400"> piloto automático</span>
+              Todo tu negocio<br />
+              conectado a<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-indigo-400 to-purple-400"> WhatsApp.</span>
             </h1>
+            {/* Subheadline específico */}
             <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-3xl mx-auto mb-10 leading-relaxed">
-              Bot de WhatsApp con IA + CRM + Pagos + Publicidad en Facebook.<br className="hidden sm:block" />
-              Todo en una sola plataforma. Sin código. Sin complicaciones.
+              CRM, IA, Atribución de anuncios, Pagos y Citas en <span className="text-white font-bold">una sola plataforma</span>.
+              <br className="hidden sm:block" />
+              Captura desde anuncios, vende por WhatsApp y mide ventas reales — no clics.
             </p>
+            {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
-              <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 hover:scale-105 px-8 py-4 rounded-2xl font-bold text-base transition-all shadow-xl shadow-indigo-600/25 inline-flex items-center justify-center gap-2">
-                🚀 Comenzar gratis — 14 días
+              <Link
+                href="/demo"
+                target="_blank"
+                className="bg-indigo-600 hover:bg-indigo-500 hover:scale-[1.02] px-8 py-4 rounded-2xl font-black text-base transition-all shadow-xl shadow-indigo-600/30 inline-flex items-center justify-center gap-2"
+              >
+                🚀 Probar el dashboard en vivo
+                <span className="opacity-70">↗</span>
               </Link>
-              <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('open-chat-widget'))} className="bg-white/5 hover:bg-white/10 border border-white/10 px-8 py-4 rounded-2xl font-bold text-base transition-all inline-flex items-center justify-center gap-2">
-                💬 Ver demo en vivo
-              </button>
+              <Link
+                href="/auth/login"
+                className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 px-8 py-4 rounded-2xl font-bold text-base transition-all inline-flex items-center justify-center gap-2"
+              >
+                Empezar 14 días gratis
+              </Link>
             </div>
-            <p className="text-[11px] text-gray-600">Sin tarjeta de crédito • Configuración en 2 minutos • Cancela cuando quieras</p>
+            <p className="text-[11px] text-gray-600">
+              Sin tarjeta de crédito · Sin código · Cancela cuando quieras
+            </p>
           </div>
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto mb-12">
+          {/* Trust bar — métricas serias enterprise */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto mb-16">
             {[
-              { v: '24/7', l: 'Bot IA activo', c: 'text-indigo-400' },
-              { v: '6+', l: 'Pasarelas de pago', c: 'text-emerald-400' },
-              { v: '+40%', l: 'Más conversiones', c: 'text-purple-400' },
-              { v: '20h', l: 'Ahorradas por semana', c: 'text-yellow-400' },
+              { v: '7-8/10', l: 'Match rate atribución', desc: 'vs 4/10 de la competencia' },
+              { v: '30-50%', l: 'Menos costo por venta', desc: 'con CAPI + IA optimización' },
+              { v: '24/7', l: 'Vendedor IA activo', desc: 'sin descansos ni feriados' },
+              { v: '+6', l: 'Canales unificados', desc: 'WhatsApp, IG, FB y más' },
             ].map((s, i) => (
-              <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-center">
-                <p className={`text-2xl font-black ${s.c}`}>{s.v}</p>
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{s.l}</p>
+              <div key={i} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-center hover:border-white/10 transition-all">
+                <p className="text-2xl md:text-3xl font-black text-white">{s.v}</p>
+                <p className="text-[10px] text-indigo-400 uppercase tracking-widest mt-1 font-bold">{s.l}</p>
+                <p className="text-[10px] text-gray-600 mt-1">{s.desc}</p>
               </div>
             ))}
           </div>
-          {/* Dashboard Preview */}
+          {/* ============================================================ */}
+          {/* DEMO EMBEBIDO — La pieza más impactante */}
+          {/* ============================================================ */}
           <div className="relative max-w-5xl mx-auto">
-            <div className="bg-[#0B0F1A] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-[#080B14] border-b border-white/5">
+            {/* Marco ventana de navegador */}
+            <div className="bg-[#080B14] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+              {/* Barra del navegador */}
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-[#050810] border-b border-white/5">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
                 </div>
                 <div className="flex-1 flex justify-center">
-                  <div className="bg-white/5 rounded-lg px-4 py-1 text-[10px] text-gray-500">clientes.bot/dashboard</div>
-                </div>
-              </div>
-              <div className="flex">
-                <div className="hidden md:flex w-44 bg-[#080B14] border-r border-white/5 flex-col p-3 gap-1">
-                  {[
-                    { icon: '📊', label: 'Métricas', active: true },
-                    { icon: '👥', label: 'CRM / Leads' },
-                    { icon: '🧑‍💼', label: 'Mi equipo' },
-                    { icon: '💬', label: 'Conversaciones' },
-                    { icon: '🛍️', label: 'Catálogo' },
-                    { icon: '📅', label: 'Citas' },
-                    { icon: '💳', label: 'Pagos' },
-                    { icon: '📢', label: 'Facebook Ads' },
-                    { icon: '🧠', label: 'Memoria IA' },
-                    { icon: '⚙️', label: 'Configuración' },
-                  ].map((item, i) => (
-                    <div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] ${item.active ? 'bg-indigo-600/20 text-indigo-400' : 'text-gray-500'}`}>
-                      <span className="text-xs">{item.icon}</span><span>{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex-1 p-4 md:p-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <p className="text-sm font-bold">Bienvenido, Inmobiliaria Aurora 👋</p>
-                      <p className="text-[9px] text-gray-500">Últimos 30 días</p>
-                    </div>
-                    <div className="flex gap-1">
-                      {['Hoy', '7d', '30d'].map((p, i) => (
-                        <span key={i} className={`text-[8px] px-2 py-0.5 rounded ${i === 2 ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-500'}`}>{p}</span>
-                      ))}
-                    </div>
+                  <div className="bg-white/5 rounded-lg px-4 py-1 text-[10px] text-gray-500 flex items-center gap-1">
+                    🔒 clientes.bot/demo
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+                </div>
+                <Link
+                  href="/demo"
+                  target="_blank"
+                  className="text-[9px] px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg whitespace-nowrap"
+                >
+                  ↗ Abrir
+                </Link>
+              </div>
+              {/* Preview del dashboard real (espejo visual de /demo) */}
+              <Link href="/demo" target="_blank" className="block relative group">
+                <div className="flex h-[500px] md:h-[600px]">
+                  {/* Sidebar mini */}
+                  <div className="hidden md:flex w-44 bg-[#050810] border-r border-white/5 flex-col p-2 gap-1">
                     {[
-                      { label: 'Leads', value: '284', color: 'text-indigo-400' },
-                      { label: 'Ventas', value: '$2.1M', color: 'text-emerald-400' },
-                      { label: 'Conversión', value: '24%', color: 'text-purple-400' },
-                      { label: 'Te escribieron', value: '1,847', color: 'text-sky-400' },
-                      { label: 'CPL Ads', value: '$58', color: 'text-yellow-400' },
-                    ].map((m, i) => (
-                      <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5 text-center">
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">{m.label}</p>
-                        <p className={`text-sm md:text-base font-black ${m.color}`}>{m.value}</p>
+                      { icon: '📊', label: 'Métricas', active: true },
+                      { icon: '👥', label: 'CRM / Leads' },
+                      { icon: '🧑‍💼', label: 'Mi equipo' },
+                      { icon: '🏆', label: 'Ranking' },
+                      { icon: '💬', label: 'Conversaciones', badge: 3 },
+                      { icon: '🛍️', label: 'Catálogo' },
+                      { icon: '📅', label: 'Citas' },
+                      { icon: '💳', label: 'Pagos' },
+                      { icon: '📈', label: 'Reportes IA' },
+                      { icon: '🧠', label: 'Memoria IA' },
+                      { icon: '🎓', label: 'Entrenar Bot' },
+                      { icon: '📢', label: 'Campañas' },
+                      { icon: '🚀', label: 'Anuncios IA' },
+                      { icon: '💎', label: 'Suscripción' },
+                      { icon: '🤝', label: 'Afiliados' },
+                    ].map((item, i) => (
+                      <div key={i} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[9px] ${
+                        item.active ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30' : 'text-gray-500'
+                      }`}>
+                        <span className="text-xs">{item.icon}</span>
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {item.badge && (
+                          <span className="bg-red-500 text-white text-[7px] font-bold px-1 rounded-full">{item.badge}</span>
+                        )}
                       </div>
                     ))}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Leads recientes</p>
-                      <div className="space-y-1.5">
-                        {[
-                          { name: 'Carlos M.', status: '🔥 Interesado', time: '2m', agent: 'María' },
-                          { name: 'Ana López', status: '💳 Pagó', time: '15m', agent: 'Juan' },
-                          { name: 'Pedro R.', status: '🆕 Nuevo', time: '1h', agent: 'Bot IA' },
-                          { name: 'Laura T.', status: '📅 Agendó', time: '3h', agent: 'María' },
-                        ].map((l, i) => (
-                          <div key={i} className="flex items-center gap-2 py-1">
-                            <div className="w-5 h-5 bg-indigo-600/20 rounded-full flex items-center justify-center text-[8px] font-bold text-indigo-400">{l.name.charAt(0)}</div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[10px] font-bold truncate">{l.name}</p>
-                              <p className="text-[8px] text-gray-500">{l.status} • 🧑‍💼 {l.agent}</p>
-                            </div>
-                            <span className="text-[8px] text-gray-600">{l.time}</span>
-                          </div>
+                  {/* Contenido del dashboard */}
+                  <div className="flex-1 p-4 md:p-5 overflow-hidden">
+                    <div className="flex justify-between items-center mb-3">
+                      <div>
+                        <p className="text-sm font-black">Bienvenido, Inmobiliaria Aurora 👋</p>
+                        <p className="text-[9px] text-gray-500">Tu centro de comando · Últimos 30 días</p>
+                      </div>
+                      <div className="flex gap-1">
+                        {['Hoy', '7d', '30d', '90d'].map((p, i) => (
+                          <span key={i} className={`text-[8px] px-2 py-0.5 rounded font-bold ${
+                            i === 2 ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-500'
+                          }`}>{p}</span>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-[9px] text-gray-500 uppercase tracking-widest">Chat en vivo</p>
-                        <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />3 activos
-                        </span>
+                    {/* KPIs */}
+                    <div className="grid grid-cols-4 gap-2 mb-3">
+                      <div className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5">
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Leads</p>
+                        <p className="text-sm font-black text-indigo-400">40</p>
+                        <p className="text-[8px] text-emerald-400">↑ +28%</p>
                       </div>
-                      <div className="space-y-1.5">
-                        <div className="bg-[#005c4b]/30 rounded-lg p-2"><p className="text-[9px]">👤 ¿Info del apto de 2 habitaciones?</p></div>
-                        <div className="bg-[#1a1f2e] rounded-lg p-2"><p className="text-[8px] text-emerald-400 mb-0.5">🤖 Bot</p><p className="text-[9px]">¡Hola! El de 2 habitaciones (62 m²) desde $145.000 USD. ¿Te envío el link de pago?</p></div>
-                        <div className="bg-[#005c4b]/30 rounded-lg p-2"><p className="text-[9px]">👤 ¡Sí, por favor!</p></div>
-                        <div className="bg-[#1a1f2e] rounded-lg p-2"><p className="text-[8px] text-emerald-400 mb-0.5">🤖 Bot</p><p className="text-[9px]">Aquí tienes tu link de pago seguro: 💳 $14.500 USD reserva 🔒</p></div>
+                      <div className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5">
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Ventas</p>
+                        <p className="text-sm font-black text-emerald-400">12</p>
+                        <p className="text-[8px] text-emerald-400">↑ +40%</p>
+                      </div>
+                      <div className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5">
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Conversión</p>
+                        <p className="text-sm font-black text-sky-400">30%</p>
+                        <p className="text-[8px] text-emerald-400">↑ +8%</p>
+                      </div>
+                      <div className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5">
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Revenue</p>
+                        <p className="text-sm font-black text-purple-400">$2.1M</p>
+                        <p className="text-[8px] text-emerald-400">↑ +52%</p>
                       </div>
                     </div>
-                  </div>
-                  <div className="mt-3 bg-white/[0.02] border border-white/5 rounded-xl p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                        <p className="text-[10px] font-bold">📢 Campaña activa: Aurora Park — Fase 2</p>
+                    {/* 3 cards inferiores */}
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/0 border border-purple-500/20 rounded-xl p-2.5">
+                        <p className="text-[8px] text-purple-400 uppercase tracking-widest font-bold">📢 Inversión Ads</p>
+                        <p className="text-sm font-black text-purple-400">$5.2k</p>
+                        <p className="text-[8px] text-emerald-400 mt-0.5">ROAS 514%</p>
                       </div>
-                      <div className="flex gap-3 text-[9px] text-gray-400">
-                        <span>$2.800 invertido</span>
-                        <span className="text-emerald-400">48 leads</span>
-                        <span className="text-purple-400">CPL $58</span>
+                      <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/0 border border-emerald-500/20 rounded-xl p-2.5">
+                        <p className="text-[8px] text-emerald-400 uppercase tracking-widest font-bold">⚡ Activas</p>
+                        <p className="text-sm font-black text-emerald-400">8</p>
+                        <p className="text-[8px] text-gray-500 mt-0.5">5 bot · 3 humano</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/0 border border-yellow-500/20 rounded-xl p-2.5">
+                        <p className="text-[8px] text-yellow-400 uppercase tracking-widest font-bold">🎯 CPL</p>
+                        <p className="text-sm font-black text-yellow-400">$58</p>
+                        <p className="text-[8px] text-gray-500 mt-0.5">Promedio</p>
+                      </div>
+                    </div>
+                    {/* Tabla de leads + Chat preview */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5">
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest font-bold mb-2">Leads más recientes</p>
+                        <div className="space-y-1">
+                          {[
+                            { name: 'Mateo Jiménez', stage: '🆕 Nuevo', score: 62 },
+                            { name: 'Mariana Quintero', stage: '🤝 Negociación', score: 75 },
+                            { name: 'Carlos Méndez', stage: '✅ Ganado', score: 95 },
+                            { name: 'Sara Bedoya', stage: '🔥 Interesado', score: 65 },
+                          ].map((l, i) => (
+                            <div key={i} className="flex items-center gap-1.5 py-0.5">
+                              <div className="w-4 h-4 rounded-full bg-indigo-600/20 flex items-center justify-center text-[8px] font-bold text-indigo-400">{l.name.charAt(0)}</div>
+                              <p className="text-[9px] font-bold flex-1 truncate">{l.name}</p>
+                              <span className="text-[7px] text-gray-500">{l.stage}</span>
+                              <span className="text-[7px] text-emerald-400 font-bold">{l.score}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5">
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest font-bold mb-2">💬 Conversaciones</p>
+                        <div className="space-y-1">
+                          <div className="bg-[#005c4b]/30 rounded-lg p-1.5">
+                            <p className="text-[8px]">👤 ¿Apto 2H disponible?</p>
+                          </div>
+                          <div className="bg-[#1a1f2e] rounded-lg p-1.5">
+                            <p className="text-[7px] text-emerald-400 font-bold mb-0.5">🤖 Bot IA</p>
+                            <p className="text-[8px]">62m², vista al lago, $145k. ¿Te genero el link?</p>
+                          </div>
+                          <div className="bg-[#005c4b]/30 rounded-lg p-1.5">
+                            <p className="text-[8px]">👤 ¡Sí!</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+                {/* Overlay hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/40 to-transparent opacity-0 group-hover:opacity-100 transition-all flex items-end justify-center pb-12">
+                  <div className="bg-white text-indigo-700 px-6 py-3 rounded-2xl font-black shadow-2xl text-sm flex items-center gap-2 transform group-hover:scale-105 transition-all">
+                    👁 Navegar el dashboard en pantalla completa →
+                  </div>
+                </div>
+              </Link>
+            </div>
+            {/* Botones flotantes con accesos directos al demo */}
+            <div className="mt-6 flex flex-wrap gap-2 justify-center">
+              {[
+                { label: '👥 Ver CRM Kanban', href: '/demo/crm' },
+                { label: '🚀 Ver Anuncios IA', href: '/demo/ads' },
+                { label: '💬 Ver Conversaciones', href: '/demo/chat' },
+                { label: '📈 Ver Reportes', href: '/demo/analytics' },
+              ].map((b) => (
+                <Link
+                  key={b.href}
+                  href={b.href}
+                  target="_blank"
+                  className="text-[11px] px-4 py-2 bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-indigo-500/40 text-gray-300 hover:text-white font-bold rounded-xl transition-all"
+                >
+                  {b.label} ↗
+                </Link>
+              ))}
+            </div>
+            {/* Pie del demo */}
+            <p className="text-center text-[11px] text-gray-500 mt-4 max-w-xl mx-auto">
+              🎬 Esto NO es un mockup. Es el producto real navegable con datos de un negocio ficticio (Inmobiliaria Aurora).
+              <span className="text-indigo-400"> Explora todo libremente.</span>
+            </p>
+          </div>
+        </div>
+      </section>
+      {/* ============================================================ */}
+      {/* NO MÁS STACKS ROTOS — Sección de dolor */}
+      {/* ============================================================ */}
+      <section className="py-20 px-6 border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-[11px] text-red-400 uppercase tracking-[0.3em] font-black mb-4">El problema</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              Tu negocio está pagando por <span className="text-red-400">8 herramientas</span><br />
+              que no se hablan entre ellas.
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
+              CRM por un lado, WhatsApp por otro, Ads en otra ventana, pasarela aparte, calendario aparte, automatizaciones aparte. <span className="text-white font-bold">Cada peso que pagas por unirlos es un peso que pierdes.</span>
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            {/* Antes — Stack roto */}
+            <div className="md:col-span-1 bg-red-500/[0.03] border border-red-500/20 rounded-3xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">😩</span>
+                <p className="text-xs font-black text-red-400 uppercase tracking-widest">Antes · Stack roto</p>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { tool: 'CRM externo', cost: '$50-300/mes' },
+                  { tool: 'Bot WhatsApp básico', cost: '$30-80/mes' },
+                  { tool: 'Plataforma de Ads', cost: '$50-200/mes' },
+                  { tool: 'Calendario online', cost: '$15-30/mes' },
+                  { tool: 'Pasarela 1', cost: '% transacción' },
+                  { tool: 'Email marketing', cost: '$20-100/mes' },
+                  { tool: 'Atribución / analytics', cost: '$200-890/mes' },
+                  { tool: 'Automatización (Zapier)', cost: '$30-100/mes' },
+                ].map((t, i) => (
+                  <div key={i} className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2">
+                    <p className="text-xs text-gray-300 truncate">❌ {t.tool}</p>
+                    <p className="text-[10px] text-red-400 font-bold whitespace-nowrap ml-2">{t.cost}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-4 border-t border-red-500/20 text-center">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Total</p>
+                <p className="text-2xl font-black text-red-400">$400-1,700+ /mes</p>
+                <p className="text-[10px] text-gray-500 mt-1">Sin contar el caos operativo</p>
               </div>
             </div>
-            <div className="absolute -top-4 -right-4 bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-2xl shadow-2xl hidden md:block z-20 animate-bounce-slow">
-              <p className="text-[8px] text-gray-400 uppercase tracking-widest mb-0.5">Leads hoy</p>
-              <p className="text-lg font-black text-emerald-400">+12</p>
-            </div>
-            <div className="absolute -bottom-4 -left-4 bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-2xl shadow-2xl hidden md:block z-20">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <p className="text-[10px] font-bold">Bot respondiendo 24/7</p>
+            {/* Flecha */}
+            <div className="md:col-span-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-2 opacity-40">↓</div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Reemplaza todo con</p>
               </div>
+            </div>
+            {/* Después — clientes.bot */}
+            <div className="md:col-span-1 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-emerald-500/10 border border-indigo-500/30 rounded-3xl p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/20 blur-3xl" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-2xl">🦁</span>
+                  <p className="text-xs font-black text-indigo-400 uppercase tracking-widest">Después · Una plataforma</p>
+                </div>
+                <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-2xl p-5 mb-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <img src="/cb-logo.webp" alt="" className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                    <div>
+                      <p className="text-base font-black">clientes.bot</p>
+                      <p className="text-[10px] text-gray-500">Todo en uno · Multi-tenant · IA real</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      'CRM Pro + IA',
+                      'Bot IA 24/7',
+                      'Anuncios IA',
+                      'Multi-pasarela',
+                      'Agenda inteligente',
+                      'Atribución completa',
+                      'Multicanal',
+                      'Voz IA',
+                    ].map((f, i) => (
+                      <div key={i} className="flex items-center gap-1 text-[10px] text-gray-300">
+                        <span className="text-emerald-400">✓</span>
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Desde</p>
+                  <p className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400">$97 /mes</p>
+                  <p className="text-[10px] text-emerald-400 font-bold mt-1">Una sola factura · 0 integraciones manuales</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="text-center mt-10">
+            <Link
+              href="/demo"
+              target="_blank"
+              className="inline-block text-sm px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl shadow-lg shadow-indigo-600/30 transition-all"
+            >
+              🚀 Ver el dashboard en vivo →
+            </Link>
+          </div>
+        </div>
+      </section>
+      {/* ============================================================ */}
+      {/* CÓMO FUNCIONA — 5 pasos del flujo de ventas */}
+      {/* ============================================================ */}
+      <section id="producto" className="py-20 px-6 bg-white/[0.02] border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-[11px] text-emerald-400 uppercase tracking-[0.3em] font-black mb-4">Cómo funciona</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              5 pasos. <span className="text-emerald-400">1 flujo completo.</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
+              Del anuncio al cierre de venta, todo dentro de la misma plataforma. La IA aprende de cada conversión real.
+            </p>
+          </div>
+          <div className="space-y-6">
+            {[
+              {
+                n: '01',
+                icon: '🎯',
+                color: 'text-purple-400',
+                bg: 'from-purple-500/10 to-purple-500/0',
+                border: 'border-purple-500/30',
+                title: 'Captura desde anuncios',
+                desc: 'La IA crea campañas Click-to-WhatsApp optimizadas con copy persuasivo, 3 formatos de imagen y targeting profesional. Cada clic dispara una conversación con tu bot.',
+                metrics: [
+                  { label: 'Wizard guiado', value: '8 pasos' },
+                  { label: 'Variantes IA', value: '5+ por anuncio' },
+                  { label: 'Canales', value: 'WA · IG · FB' },
+                ],
+              },
+              {
+                n: '02',
+                icon: '🤖',
+                color: 'text-emerald-400',
+                bg: 'from-emerald-500/10 to-emerald-500/0',
+                border: 'border-emerald-500/30',
+                title: 'IA responde automáticamente',
+                desc: 'Tu vendedor IA atiende 24/7 con tono y conocimiento de tu negocio. Entiende audios, recuerda clientes anteriores y califica leads con preguntas inteligentes.',
+                metrics: [
+                  { label: 'Disponibilidad', value: '24/7' },
+                  { label: 'Memoria', value: 'Permanente' },
+                  { label: 'Idiomas', value: 'Multi-idioma' },
+                ],
+              },
+              {
+                n: '03',
+                icon: '💳',
+                color: 'text-yellow-400',
+                bg: 'from-yellow-500/10 to-yellow-500/0',
+                border: 'border-yellow-500/30',
+                title: 'Agenda o cobra en el chat',
+                desc: 'El bot envía links de pago seguros o muestra disponibilidad real de tu agenda. El cliente paga o reserva sin salir de WhatsApp. Conversión 3x más alta que un carrito web.',
+                metrics: [
+                  { label: 'Pasarelas', value: '7+ integradas' },
+                  { label: 'Citas', value: 'Auto-confirmadas' },
+                  { label: 'Recordatorios', value: '24h + 1h antes' },
+                ],
+              },
+              {
+                n: '04',
+                icon: '👥',
+                color: 'text-indigo-400',
+                bg: 'from-indigo-500/10 to-indigo-500/0',
+                border: 'border-indigo-500/30',
+                title: 'CRM organiza solo',
+                desc: 'Cada lead se mueve por el embudo automáticamente. La IA puntúa probabilidad de cierre, asigna agente, captura email/ciudad/documento. Tu equipo solo habla con los listos para comprar.',
+                metrics: [
+                  { label: 'Etapas Kanban', value: 'Automáticas' },
+                  { label: 'Lead scoring', value: 'IA 0-100%' },
+                  { label: 'Asignación', value: 'Round-robin' },
+                ],
+              },
+              {
+                n: '05',
+                icon: '📈',
+                color: 'text-sky-400',
+                bg: 'from-sky-500/10 to-sky-500/0',
+                border: 'border-sky-500/30',
+                title: 'IA optimiza tus anuncios con ventas reales',
+                desc: 'Los datos completos de cada venta vuelven a Meta. El algoritmo de Facebook aprende de COMPRAS, no de clics, y reduce tu costo por adquisición 30-50% en 60 días. Esto es lo que cambia todo.',
+                metrics: [
+                  { label: 'Match rate', value: '7-8/10' },
+                  { label: 'CPL reducido', value: '30-50%' },
+                  { label: 'Cron diario', value: 'IA recomienda' },
+                ],
+              },
+            ].map((step, i) => (
+              <div
+                key={i}
+                className={`grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-gradient-to-br ${step.bg} border ${step.border} rounded-3xl p-6 md:p-8 transition-all hover:scale-[1.01]`}
+              >
+                <div className="md:col-span-1 flex md:flex-col items-center gap-4 md:gap-2">
+                  <p className={`text-6xl md:text-7xl font-black ${step.color} opacity-30 leading-none`}>{step.n}</p>
+                  <p className="text-4xl md:text-5xl">{step.icon}</p>
+                </div>
+                <div className="md:col-span-7">
+                  <h3 className="text-xl md:text-2xl font-black mb-2">{step.title}</h3>
+                  <p className="text-sm text-gray-400 leading-relaxed">{step.desc}</p>
+                </div>
+                <div className="md:col-span-4 grid grid-cols-3 gap-2">
+                  {step.metrics.map((m, j) => (
+                    <div key={j} className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5 text-center">
+                      <p className="text-[8px] text-gray-500 uppercase tracking-widest">{m.label}</p>
+                      <p className={`text-xs font-black ${step.color} mt-1`}>{m.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-12">
+            <p className="text-sm text-gray-400 mb-4 max-w-xl mx-auto">
+              Un solo flujo. Una sola plataforma. <span className="text-white font-bold">Resultado:</span> 2-5x más ROI publicitario sin trabajo extra.
+            </p>
+            <Link
+              href="/demo"
+              target="_blank"
+              className="inline-block text-sm px-6 py-3 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white font-black rounded-xl shadow-lg shadow-indigo-600/30 transition-all"
+            >
+              🎬 Ver el flujo completo en vivo →
+            </Link>
+          </div>
+        </div>
+      </section>
+      {/* ============================================================ */}
+      {/* COMPARATIVA — Por qué nosotros */}
+      {/* ============================================================ */}
+      <section id="comparativa" className="py-20 px-6 border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-[11px] text-yellow-400 uppercase tracking-[0.3em] font-black mb-4">¿Por qué nosotros?</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              Lo que <span className="text-yellow-400">GoHighLevel</span><br />
+              debería haber sido.
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
+              Mismo precio. Triple producto. Atribución que ninguno tiene. IA que aprende de ventas reales, no de clics.
+            </p>
+          </div>
+          <div className="bg-white/[0.02] border border-white/5 rounded-3xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs md:text-sm min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-white/10 bg-white/[0.02]">
+                    <th className="p-4 text-left text-[10px] uppercase tracking-widest text-gray-400 font-bold">Característica</th>
+                    <th className="p-4 text-center bg-gradient-to-b from-indigo-500/10 to-transparent">
+                      <div className="flex items-center justify-center gap-2">
+                        <img src="/cb-logo.webp" alt="" className="w-5 h-5" />
+                        <span className="font-black text-indigo-400">clientes.bot</span>
+                      </div>
+                    </th>
+                    <th className="p-4 text-center text-gray-400 font-bold">GoHighLevel</th>
+                    <th className="p-4 text-center text-gray-400 font-bold">Manychat</th>
+                    <th className="p-4 text-center text-gray-400 font-bold">HubSpot</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-300">
+                  {[
+                    { f: 'WhatsApp Business nativo', us: '✅', ghl: '⚠️ Parcial', mc: '✅', hs: '❌' },
+                    { f: 'Atribución completa Lead → Venta', us: '✅ Match 7-8/10', ghl: '❌', mc: '❌', hs: '✅ $890/mes' },
+                    { f: 'IA real que aprende (no scripts)', us: '✅', ghl: '⚠️ Básica', mc: '❌', hs: '⚠️ Add-on' },
+                    { f: 'Voz IA con llamadas reales', us: '✅', ghl: '❌', mc: '❌', hs: '❌' },
+                    { f: 'IA optimiza tus anuncios sola', us: '✅ 5 motores', ghl: '❌', mc: '❌', hs: '❌' },
+                    { f: '7+ pasarelas LATAM + globales', us: '✅', ghl: '❌ Solo Stripe', mc: '❌', hs: '⚠️ Stripe' },
+                    { f: 'CRM Kanban + scoring IA', us: '✅', ghl: '⚠️ Básico', mc: '❌', hs: '✅ Caro' },
+                    { f: 'Multicanal (WA + IG + FB)', us: '✅', ghl: '❌', mc: '⚠️ FB only', hs: '❌' },
+                    { f: 'Generador IA de anuncios premium', us: '✅', ghl: '❌', mc: '❌', hs: '❌' },
+                    { f: 'White-label total', us: '✅ Agency', ghl: '✅ $497+', mc: '❌', hs: '❌' },
+                    { f: 'Multi-tenant arquitectura nativa', us: '✅', ghl: '⚠️ Lenta', mc: '❌', hs: '✅' },
+                    { f: 'Precio base mensual', us: '$97', ghl: '$97', mc: '$15', hs: '$890+' },
+                  ].map((r, i) => (
+                    <tr key={i} className="border-b border-white/5 hover:bg-white/[0.01]">
+                      <td className="p-4 font-bold text-gray-200">{r.f}</td>
+                      <td className="p-4 text-center bg-indigo-500/[0.03]">
+                        <span className="font-black text-emerald-400 text-xs md:text-sm">{r.us}</span>
+                      </td>
+                      <td className="p-4 text-center text-gray-400 text-xs md:text-sm">{r.ghl}</td>
+                      <td className="p-4 text-center text-gray-400 text-xs md:text-sm">{r.mc}</td>
+                      <td className="p-4 text-center text-gray-400 text-xs md:text-sm">{r.hs}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-4 bg-indigo-500/5 border-t border-indigo-500/20 text-center">
+              <p className="text-[11px] text-indigo-300">
+                💡 <span className="font-black">Resultado:</span> mismo precio que GoHighLevel, con la atribución de HubSpot ($890/mes) incluida + IA que ninguno tiene.
+              </p>
             </div>
           </div>
         </div>
       </section>
-
-      {/* FEATURES PRINCIPALES */}
-      <section id="features" className="py-20 px-6">
+      {/* ============================================================ */}
+      {/* MÓDULOS PRINCIPALES — 4 cards grandes con screenshots */}
+      {/* ============================================================ */}
+      <section className="py-20 px-6 bg-white/[0.02] border-t border-white/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <p className="text-[11px] text-indigo-400 uppercase tracking-[0.3em] font-bold mb-4">Todo incluido</p>
-            <h2 className="text-3xl md:text-5xl font-black mb-4">6 herramientas poderosas.<br /><span className="text-indigo-400">1 sola plataforma.</span></h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">Deja de pagar por 6 apps diferentes. clientes.bot integra todo lo que necesitas para vender más y atender mejor.</p>
+            <p className="text-[11px] text-indigo-400 uppercase tracking-[0.3em] font-black mb-4">Producto</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              4 módulos. <span className="text-indigo-400">Conectados de fábrica.</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
+              Cada módulo es enterprise por sí solo. Juntos son imparables. Haz clic en cualquiera para verlo funcionando en vivo.
+            </p>
           </div>
-          {/* Feature 1: Bot WhatsApp */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1 mb-4">
-                <span className="text-sm">🤖</span>
-                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Bot de WhatsApp con IA</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Módulo CRM */}
+            <Link href="/demo/crm" target="_blank" className="group bg-gradient-to-br from-indigo-500/10 to-indigo-500/0 border border-indigo-500/30 rounded-3xl p-6 hover:border-indigo-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-indigo-500/20 text-indigo-300 font-bold rounded-full">
+                Ver en vivo ↗
               </div>
-              <h3 className="text-2xl md:text-3xl font-black mb-4">Tu mejor vendedor.<br />Nunca duerme. Nunca falla.</h3>
-              <p className="text-gray-400 mb-6 leading-relaxed">Responde preguntas, muestra el catálogo, agenda citas, cobra pagos y cierra ventas — todo automáticamente por WhatsApp. Con memoria inteligente que recuerda cada cliente.</p>
-              <ul className="space-y-3">
-                {['IA conversacional (no suena a robot)', 'Memoria proactiva: recuerda clientes anteriores', 'Catálogo visual con carrusel de productos', 'Neuroventas: detecta intención de compra', 'Handoff inteligente a agente humano cuando se necesita', 'Funciona 24/7 en cualquier idioma'].map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300"><span className="text-emerald-400 mt-0.5">✓</span>{f}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/0 border border-emerald-500/10 rounded-3xl p-8 relative">
-              <div className="space-y-3">
-                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">Hola, vi su anuncio de los apartamentos nuevos 🏢</p></div></div>
-                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">¡Hola! 😊 Tenemos disponibles unidades de 2 y 3 habitaciones. ¿Cuál te interesa más?</p></div></div>
-                <div className="flex justify-end"><div className="bg-[#005c4b] rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]"><p className="text-sm">El de 3 habitaciones, ¿precio y entrega?</p></div></div>
-                <div className="flex justify-start"><div className="bg-[#1a1f2e] rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%]"><p className="text-[10px] text-emerald-400 font-bold mb-1">🤖 Bot IA</p><p className="text-sm">Desde $185.000 USD. Entrega marzo 2027. 🏗️ ¿Te agendo una visita virtual?</p></div></div>
-              </div>
-            </div>
-          </div>
-          {/* Feature 2: CRM */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
-            <div className="order-2 md:order-1 bg-gradient-to-br from-indigo-500/5 to-indigo-500/0 border border-indigo-500/10 rounded-3xl p-6">
-              <div className="space-y-2">
-                {[
-                  { name: 'Carlos Pérez', status: '🔥 Interesado', score: 85, agent: 'María G.' },
-                  { name: 'Ana López', status: '🤝 Negociación', score: 72, agent: 'Juan M.' },
-                  { name: 'Pedro Ruiz', status: '✅ Ganado', score: 95, agent: 'María G.' },
-                  { name: 'Laura Torres', status: '🆕 Nuevo', score: 30, agent: 'Sin asignar' },
-                ].map((l, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-white/[0.03] rounded-xl p-3">
-                    <div className="w-8 h-8 bg-indigo-600/20 rounded-full flex items-center justify-center text-xs font-bold text-indigo-400">{l.name.charAt(0)}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold truncate">{l.name}</p>
-                      <p className="text-[9px] text-gray-500">{l.status} • 🧑‍💼 {l.agent}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="w-10 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${l.score >= 70 ? 'bg-emerald-500' : l.score >= 40 ? 'bg-yellow-500' : 'bg-gray-500'}`} style={{width: `${l.score}%`}} />
-                      </div>
-                      <p className="text-[8px] text-gray-500 mt-0.5">{l.score}%</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="order-1 md:order-2">
               <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1 mb-4">
                 <span className="text-sm">👥</span>
-                <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">CRM + Multi-agente</span>
+                <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">CRM + Multi-agente</span>
               </div>
-              <h3 className="text-2xl md:text-3xl font-black mb-4">Cada lead en su lugar.<br />Cada agente con su trabajo.</h3>
-              <p className="text-gray-400 mb-6 leading-relaxed">CRM visual tipo Kanban con arrastrar y soltar. Asigna leads a tu equipo automáticamente. Notas privadas, historial completo y análisis IA de cada contacto.</p>
-              <ul className="space-y-3">
-                {['Kanban drag & drop (Nuevo → Interesado → Negociación → Ganado)', 'Multi-agente: asignación automática round-robin', 'Notas privadas entre agentes (el cliente no las ve)', 'Lead scoring con IA (probabilidad de cierre)', 'Ranking de performance por agente', 'Permisos por rol: owner, admin, agente, viewer'].map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300"><span className="text-indigo-400 mt-0.5">✓</span>{f}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          {/* Feature 3: Ads */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-3 py-1 mb-4">
-                <span className="text-sm">📢</span>
-                <span className="text-[10px] text-purple-400 font-bold uppercase tracking-widest">Facebook & Instagram Ads</span>
-              </div>
-              <h3 className="text-2xl md:text-3xl font-black mb-4">Publicidad que vende.<br />Sin tocar Ads Manager.</h3>
-              <p className="text-gray-400 mb-6 leading-relaxed">La IA crea anuncios Click-to-WhatsApp optimizados. Elige servicio, público y presupuesto — nosotros hacemos el resto. Monitoreo 24/7 y optimización automática.</p>
-              <ul className="space-y-3">
-                {['Wizard de 5 pasos (cualquiera puede crear campañas)', 'IA genera 4+ variantes de copy automáticamente', 'Click-to-WhatsApp: el cliente te escribe directo al bot', 'Targeting pro: ciudades con radio, intereses, edad, género', 'Monitoreo diario: pausa automática si no hay resultados', 'Notificación push si Meta rechaza un anuncio'].map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300"><span className="text-purple-400 mt-0.5">✓</span>{f}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="bg-gradient-to-br from-purple-500/5 to-purple-500/0 border border-purple-500/10 rounded-3xl p-6">
-              <div className="space-y-3">
-                <div className="flex gap-1 mb-4">{[1,2,3,4,5].map(s => <div key={s} className="flex-1 h-1.5 rounded-full bg-purple-500" />)}</div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Vista previa del anuncio</p>
-                <div className="bg-white/[0.03] rounded-xl p-4 border border-white/5">
-                  <p className="text-xs font-bold mb-2">🏢 ¿Buscas el hogar de tus sueños?</p>
-                  <p className="text-[10px] text-gray-400 mb-3">Descubre Aurora Park — apartamentos con vista panorámica. Unidades limitadas. ¡Escríbenos!</p>
-                  <div className="flex gap-2 flex-wrap">
-                    <span className="text-[8px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">Radio 25 km</span>
-                    <span className="text-[8px] px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">28-55 años</span>
-                    <span className="text-[8px] px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">CTW WhatsApp</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  <div className="bg-white/[0.02] rounded-lg p-2 text-center"><p className="text-[8px] text-gray-500">Alcance</p><p className="text-xs font-bold text-purple-400">12,400</p></div>
-                  <div className="bg-white/[0.02] rounded-lg p-2 text-center"><p className="text-[8px] text-gray-500">Te escribieron</p><p className="text-xs font-bold text-emerald-400">48</p></div>
-                  <div className="bg-white/[0.02] rounded-lg p-2 text-center"><p className="text-[8px] text-gray-500">Costo/lead</p><p className="text-xs font-bold text-yellow-400">$58</p></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Feature 4: Pagos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
-            <div className="order-2 md:order-1 bg-gradient-to-br from-yellow-500/5 to-yellow-500/0 border border-yellow-500/10 rounded-3xl p-8 text-center">
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">Pasarelas disponibles</p>
-              <div className="grid grid-cols-3 gap-4">
-                {['Stripe', 'PayPal', 'Bold', 'Wompi', 'MercadoPago', 'OpenPay'].map((g, i) => (
-                  <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-3 text-center hover:border-yellow-500/30 transition-all">
-                    <p className="text-xs font-bold">{g}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-                <p className="text-[10px] text-emerald-400 font-bold">💳 Link de pago enviado por WhatsApp</p>
-                <p className="text-xs text-gray-400 mt-1">El cliente paga sin salir del chat</p>
-              </div>
-            </div>
-            <div className="order-1 md:order-2">
-              <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-3 py-1 mb-4">
-                <span className="text-sm">💳</span>
-                <span className="text-[10px] text-yellow-400 font-bold uppercase tracking-widest">Pagos integrados</span>
-              </div>
-              <h3 className="text-2xl md:text-3xl font-black mb-4">Cobra en el chat.<br />Sin fricciones.</h3>
-              <p className="text-gray-400 mb-6 leading-relaxed">Genera links de pago desde el dashboard o deja que el bot los envíe automáticamente.</p>
-              <ul className="space-y-3">
-                {['Stripe, Bold, Wompi, PayPal, MercadoPago, OpenPay, PayU y más', 'Link de pago directo en la conversación de WhatsApp', 'El bot confirma el pago al cliente automáticamente', 'Dashboard de pagos con estado en tiempo real', 'Multi-moneda: USD, EUR, GBP, CAD y +30 más', 'Genera links desde el CRM con 1 clic', '¿Tu pasarela no está? Te la integramos sin costo'].map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300"><span className="text-yellow-400 mt-0.5">✓</span>{f}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          {/* Feature 5: Agendamiento */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-24">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-sky-500/10 border border-sky-500/20 rounded-full px-3 py-1 mb-4">
-                <span className="text-sm">📅</span>
-                <span className="text-[10px] text-sky-400 font-bold uppercase tracking-widest">Agendamiento inteligente</span>
-              </div>
-              <h3 className="text-2xl md:text-3xl font-black mb-4">Citas que se agendan solas.<br />Directo en el Calendario.</h3>
-              <p className="text-gray-400 mb-6 leading-relaxed">El bot muestra fechas disponibles, el cliente elige y la cita se crea automáticamente. Sin llamadas, sin WhatsApp manual.</p>
-              <ul className="space-y-3">
-                {['Calendario integrado inteligente', 'El cliente elige fecha y hora directo en el chat', 'Detección de festivos y días cerrados', 'Recordatorios automáticos antes de la cita', 'Gestión de citas desde el dashboard', 'Citas manuales desde el panel del agente'].map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300"><span className="text-sky-400 mt-0.5">✓</span>{f}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="bg-gradient-to-br from-sky-500/5 to-sky-500/0 border border-sky-500/10 rounded-3xl p-6">
-              <div className="space-y-2">
-                {['Lun 28 Abr — 10:00 AM', 'Mar 29 Abr — 2:00 PM', 'Mié 30 Abr — 10:00 AM', 'Jue 1 May — 4:00 PM'].map((d, i) => (
-                  <div key={i} className={`flex items-center justify-between p-3 rounded-xl transition-all ${i === 1 ? 'bg-sky-500/10 border border-sky-500/30' : 'bg-white/[0.02] border border-white/5'}`}>
-                    <div className="flex items-center gap-3"><span className="text-lg">📅</span><p className="text-xs font-bold">{d}</p></div>
-                    {i === 1 ? <span className="text-[9px] px-2 py-1 rounded-full bg-sky-500 text-white font-bold">Seleccionado</span> : <span className="text-[9px] px-2 py-1 rounded-full bg-white/5 text-gray-400">Disponible</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          {/* Feature 6: Dashboard */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div className="order-2 md:order-1 bg-gradient-to-br from-rose-500/5 to-rose-500/0 border border-rose-500/10 rounded-3xl p-6">
-              <div className="grid grid-cols-2 gap-3">
+              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-indigo-400 transition-colors">
+                Cada lead en su lugar.<br />Cada agente con su trabajo.
+              </h3>
+              <p className="text-sm text-gray-400 mb-5 leading-relaxed">
+                Kanban drag & drop, scoring IA de probabilidad de cierre, asignación automática, notas privadas, ranking de performance. Tu equipo cierra más en menos tiempo.
+              </p>
+              {/* Mini mockup CRM */}
+              <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-xl p-3 space-y-1.5">
                 {[
-                  { icon: '📊', label: 'Métricas', desc: 'Revenue, leads, conversión' },
-                  { icon: '💬', label: 'Chat en vivo', desc: 'Responde desde el dashboard' },
-                  { icon: '🔔', label: 'Push notifications', desc: 'Alertas en tu celular' },
-                  { icon: '🧠', label: 'Memoria IA', desc: 'El bot aprende solo' },
-                  { icon: '🎓', label: 'Entrenar bot', desc: 'Preguntas y respuestas' },
-                  { icon: '📱', label: 'PWA instalable', desc: 'Como app nativa' },
-                ].map((d, i) => (
-                  <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-3 hover:border-rose-500/20 transition-all">
-                    <p className="text-lg mb-1">{d.icon}</p>
-                    <p className="text-[10px] font-bold">{d.label}</p>
-                    <p className="text-[8px] text-gray-500">{d.desc}</p>
+                  { name: 'Carlos Méndez', stage: '✅ Ganado', score: 95, color: 'bg-emerald-500' },
+                  { name: 'Mariana Quintero', stage: '🤝 Negociación', score: 75, color: 'bg-amber-500' },
+                  { name: 'Mateo Jiménez', stage: '🔥 Interesado', score: 62, color: 'bg-sky-500' },
+                ].map((l, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-white/[0.02] rounded-lg p-2">
+                    <div className="w-5 h-5 rounded-full bg-indigo-600/20 flex items-center justify-center text-[8px] font-bold text-indigo-400">{l.name.charAt(0)}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold truncate">{l.name}</p>
+                      <p className="text-[8px] text-gray-500">{l.stage}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-10 h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className={`h-full ${l.color}`} style={{ width: `${l.score}%` }} />
+                      </div>
+                      <p className="text-[9px] text-gray-400 font-bold w-7 text-right">{l.score}%</p>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-            <div className="order-1 md:order-2">
-              <div className="inline-flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 rounded-full px-3 py-1 mb-4">
-                <span className="text-sm">📱</span>
-                <span className="text-[10px] text-rose-400 font-bold uppercase tracking-widest">Dashboard + App móvil</span>
+            </Link>
+            {/* Módulo Ads IA */}
+            <Link href="/demo/ads" target="_blank" className="group bg-gradient-to-br from-purple-500/10 to-purple-500/0 border border-purple-500/30 rounded-3xl p-6 hover:border-purple-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-purple-500/20 text-purple-300 font-bold rounded-full">
+                Ver en vivo ↗
               </div>
-              <h3 className="text-2xl md:text-3xl font-black mb-4">Tu negocio completo<br />en tu bolsillo.</h3>
-              <p className="text-gray-400 mb-6 leading-relaxed">Dashboard web + app instalable. Métricas en tiempo real, chat en vivo, notificaciones push cuando un lead pide hablar con un humano.</p>
-              <ul className="space-y-3">
-                {['19+ módulos: CRM, chat, citas, pagos, ads, inventario...', 'Push notifications cuando hay handoff a humano', 'Email automático al agente cuando se le asigna un lead', 'Sonido + vibración cuando llega mensaje nuevo', 'Instala como app desde Chrome', 'Funciona en PC, tablet y celular'].map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300"><span className="text-rose-400 mt-0.5">✓</span>{f}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CÓMO FUNCIONA */}
-      <section id="como-funciona" className="py-20 px-6 bg-white/[0.02]">
-        <div className="max-w-5xl mx-auto text-center">
-          <p className="text-[11px] text-emerald-400 uppercase tracking-[0.3em] font-bold mb-4">Simple y rápido</p>
-          <h2 className="text-3xl md:text-5xl font-black mb-16">Activo en <span className="text-emerald-400">3 pasos</span></h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { n: '01', icon: '📱', t: 'Conecta tu WhatsApp', d: 'Haz clic en "Conectar con Facebook", selecciona tu número y listo. Sin QR, sin configuraciones técnicas. 30 segundos.' },
-              { n: '02', icon: '🎨', t: 'Personaliza tu bot', d: 'Sube tu catálogo, ajusta el tono de la IA, configura horarios y pasarela de pago. El wizard te guía paso a paso.' },
-              { n: '03', icon: '🚀', t: 'Empieza a vender', d: 'Tu bot responde 24/7, agenda citas, cobra pagos y tú ves todo desde el dashboard. Crea campañas de Ads con IA.' },
-            ].map((step, i) => (
-              <div key={i} className="relative group">
-                <div className="text-7xl font-black text-white/[0.03] absolute -top-8 left-1/2 -translate-x-1/2 group-hover:text-indigo-500/10 transition-colors">{step.n}</div>
-                <div className="relative z-10 bg-white/[0.03] border border-white/5 rounded-3xl p-8 hover:border-indigo-500/30 transition-all h-full">
-                  <p className="text-3xl mb-4">{step.icon}</p>
-                  <h3 className="text-lg font-bold mb-3">{step.t}</h3>
-                  <p className="text-sm text-gray-400 leading-relaxed">{step.d}</p>
+              <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-3 py-1 mb-4">
+                <span className="text-sm">🚀</span>
+                <span className="text-[10px] text-purple-400 font-black uppercase tracking-widest">Anuncios IA + Atribución</span>
+              </div>
+              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-purple-400 transition-colors">
+                La IA crea, prueba y mejora<br />tus anuncios sola.
+              </h3>
+              <p className="text-sm text-gray-400 mb-5 leading-relaxed">
+                5 motores IA optimizando todos los días: detecta ganadores, mata perdedores, genera variantes, publica las mejores y aprende de los resultados. Tu inversión rinde 2-5x más.
+              </p>
+              {/* Mini mockup Ads */}
+              <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-xl p-3 space-y-2">
+                <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2">
+                  <span className="text-base">🏆</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold truncate">Hook escasez · Ganador</p>
+                    <p className="text-[8px] text-gray-500">CTR 4.99% · CPL $38</p>
+                  </div>
+                  <span className="text-[8px] px-1.5 py-0.5 bg-purple-500/20 text-purple-400 font-bold rounded">✨ Variantes</span>
+                </div>
+                <div className="flex items-center gap-2 bg-red-500/5 border border-red-500/20 rounded-lg p-2">
+                  <span className="text-base">⚠️</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold truncate">Hook genérico · Perdedor</p>
+                    <p className="text-[8px] text-gray-500">CTR 0.8% · CPL $145</p>
+                  </div>
+                  <span className="text-[8px] px-1.5 py-0.5 bg-red-500/20 text-red-400 font-bold rounded">AUTO-PAUSAR</span>
+                </div>
+                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2 text-center">
+                  <p className="text-[9px] text-emerald-300">🎯 La IA detecta esto cada día a las 6 AM</p>
                 </div>
               </div>
-            ))}
+            </Link>
+            {/* Módulo Chat / WhatsApp */}
+            <Link href="/demo/chat" target="_blank" className="group bg-gradient-to-br from-emerald-500/10 to-emerald-500/0 border border-emerald-500/30 rounded-3xl p-6 hover:border-emerald-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-emerald-500/20 text-emerald-300 font-bold rounded-full">
+                Ver en vivo ↗
+              </div>
+              <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1 mb-4">
+                <span className="text-sm">💬</span>
+                <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Bot IA + Multicanal</span>
+              </div>
+              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-emerald-400 transition-colors">
+                Tu vendedor IA.<br />Nunca duerme. Nunca falla.
+              </h3>
+              <p className="text-sm text-gray-400 mb-5 leading-relaxed">
+                Atiende WhatsApp + Instagram + Facebook desde una sola bandeja. Memoria que recuerda a cada cliente, transcribe audios, agenda, cobra. Tu equipo solo entra cuando hace falta.
+              </p>
+              {/* Mini mockup Chat */}
+              <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-xl p-3 space-y-2">
+                <div className="flex justify-end">
+                  <div className="bg-[#005c4b]/40 rounded-lg rounded-tr-sm px-2.5 py-1.5 max-w-[80%]">
+                    <p className="text-[10px]">¿Apto 2H con vista al lago?</p>
+                  </div>
+                </div>
+                <div className="flex justify-start">
+                  <div className="bg-[#1a1f2e] rounded-lg rounded-tl-sm px-2.5 py-1.5 max-w-[80%]">
+                    <p className="text-[8px] text-emerald-400 font-bold mb-0.5">🤖 Bot IA</p>
+                    <p className="text-[10px]">62m², vista al lago, $145k USD. Quedan 8 unidades 🏢 ¿Te envío el link de reserva?</p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <div className="bg-[#005c4b]/40 rounded-lg rounded-tr-sm px-2.5 py-1.5 max-w-[80%]">
+                    <p className="text-[10px]">¡Sí!</p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+            {/* Módulo Pagos + Citas */}
+            {/* Módulo Pagos + Citas */}
+            <Link href="/demo/analytics" target="_blank" className="group bg-gradient-to-br from-yellow-500/10 to-yellow-500/0 border border-yellow-500/30 rounded-3xl p-6 hover:border-yellow-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-yellow-500/20 text-yellow-300 font-bold rounded-full">
+                Ver en vivo ↗
+              </div>
+              <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-3 py-1 mb-4">
+                <span className="text-sm">📈</span>
+                <span className="text-[10px] text-yellow-400 font-black uppercase tracking-widest">Pagos + Agenda + Reportes</span>
+              </div>
+              <h3 className="text-xl md:text-2xl font-black mb-3 group-hover:text-yellow-400 transition-colors">
+                Cobra, agenda y mide<br />sin moverte del chat.
+              </h3>
+              <p className="text-sm text-gray-400 mb-5 leading-relaxed">
+                7+ pasarelas de pago integradas, agenda inteligente con disponibilidad real, reportes con atribución completa Lead → Venta. Sabes qué te dio cada peso.
+              </p>
+              {/* Mini mockup Analytics */}
+              <div className="bg-[#0B0F1A]/50 border border-white/10 rounded-xl p-3 space-y-2">
+                <div className="grid grid-cols-3 gap-1.5">
+                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-2 text-center">
+                    <p className="text-[7px] text-gray-500 uppercase">Revenue</p>
+                    <p className="text-xs font-black text-purple-400">$2.1M</p>
+                  </div>
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2 text-center">
+                    <p className="text-[7px] text-gray-500 uppercase">ROAS</p>
+                    <p className="text-xs font-black text-yellow-400">514%</p>
+                  </div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 text-center">
+                    <p className="text-[7px] text-gray-500 uppercase">CPL</p>
+                    <p className="text-xs font-black text-emerald-400">$58</p>
+                  </div>
+                </div>
+                <div className="flex items-end gap-1 h-12 mt-2">
+                  {[40, 25, 60, 35, 80, 50, 95, 70, 85, 65, 100, 75].map((h, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 bg-gradient-to-t from-yellow-500 to-purple-500 rounded-t"
+                      style={{ height: `${h}%`, opacity: 0.4 + (i / 24) }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </Link>
           </div>
         </div>
       </section>
-
-      {/* PARA QUIÉN */}
-      <section id="para-quien" className="py-20 px-6">
+      {/* ============================================================ */}
+      {/* PRUEBA TÉCNICA — Badges enterprise sin AI hype */}
+      {/* ============================================================ */}
+      <section className="py-20 px-6 border-t border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <p className="text-[11px] text-purple-400 uppercase tracking-[0.3em] font-bold mb-4">Para todo tipo de negocio</p>
-            <h2 className="text-3xl md:text-5xl font-black mb-4">¿Es para mí?</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">Si vendes productos o servicios y atiendes clientes por WhatsApp, clientes.bot es para ti.</p>
+            <p className="text-[11px] text-sky-400 uppercase tracking-[0.3em] font-black mb-4">Infraestructura</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              Esto NO es un MVP.<br />
+              <span className="text-sky-400">Es producto enterprise.</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
+              Construido sobre la misma arquitectura que usan Stripe, Linear y Vercel. Diseñado para escalar a millones de tenants sin tocar una línea de código.
+            </p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {[
-              { icon: '🏥', name: 'Clínicas y consultorios', desc: 'Agendar citas + recordatorios' },
-              { icon: '🍽️', name: 'Restaurantes', desc: 'Pedidos + reservas + delivery' },
-              { icon: '🎯', name: 'Escuelas y academias', desc: 'Inscripciones + pagos + info' },
-              { icon: '🛍️', name: 'Tiendas online', desc: 'Catálogo + pagos + envíos' },
-              { icon: '💇', name: 'Salones de belleza', desc: 'Citas + productos + fidelización' },
-              { icon: '🏋️', name: 'Gimnasios', desc: 'Membresías + clases + pagos' },
-              { icon: '🏢', name: 'Agencias', desc: 'Multi-cliente + white label' },
-              { icon: '🔧', name: 'Servicios profesionales', desc: 'Cotizaciones + seguimiento' },
-            ].map((b, i) => (
-              <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 hover:border-purple-500/30 transition-all group text-center">
-                <p className="text-2xl mb-2 group-hover:scale-110 transition-transform">{b.icon}</p>
-                <p className="text-xs font-bold mb-1">{b.name}</p>
-                <p className="text-[9px] text-gray-500">{b.desc}</p>
+              { icon: '🏢', title: 'Multi-tenant nativo', desc: 'Aislamiento estricto de datos por cliente · Multi-marca · Multi-sucursal' },
+              { icon: '⚡', title: 'Serverless en AWS', desc: 'Lambda + DynamoDB con PITR · Auto-scaling · 99.9% uptime' },
+              { icon: '🔒', title: 'Seguridad enterprise', desc: '2FA triple (Passkey/TOTP/Email) · Audit log · Backups continuos' },
+              { icon: '🌐', title: 'Multi-canal oficial', desc: 'WhatsApp Business API · Instagram DM · Facebook Messenger · 100% nativo' },
+              { icon: '🎯', title: 'Atribución profesional', desc: 'Conversions API completa · Match rate 7-8/10 · PII hasheado SHA-256' },
+              { icon: '🧠', title: 'IA multi-modelo', desc: 'Cascada con failover automático · Memoria persistente · Aprendizaje continuo' },
+              { icon: '🔄', title: 'Event-driven', desc: 'Crons distribuidos · Cola de eventos · Retry automático · Cero datos perdidos' },
+              { icon: '📡', title: 'API REST + Webhooks', desc: 'Documentación pública · Rate limiting · Webhooks firmados HMAC' },
+              { icon: '🏦', title: 'Multi-pasarela', desc: '7+ procesadores de pago globales y locales LATAM con conciliación automática' },
+              { icon: '🌍', title: 'Multi-idioma', desc: 'Plantillas auto-traducidas · Detección de locale · Soporte ES/EN/PT/FR' },
+              { icon: '📊', title: 'Cost-aware', desc: 'Free tier escalable · Pago por uso · Sin compromisos mensuales fijos' },
+              { icon: '🚀', title: 'Deploy continuo', desc: 'Rollback en 1 clic · Versiones publicadas · Cero downtime en actualizaciones' },
+            ].map((t, i) => (
+              <div key={i} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 hover:border-sky-500/30 transition-all">
+                <p className="text-2xl mb-2">{t.icon}</p>
+                <p className="text-xs font-black text-white mb-1">{t.title}</p>
+                <p className="text-[10px] text-gray-500 leading-relaxed">{t.desc}</p>
+              </div>
+            ))}
+          </div>
+          {/* Stats infraestructura */}
+          <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
+            {[
+              { v: '19', l: 'Tablas con PITR' },
+              { v: '5', l: 'Motores IA en producción' },
+              { v: '< 200ms', l: 'Latencia respuesta bot' },
+              { v: '99.9%', l: 'Uptime garantizado' },
+            ].map((s, i) => (
+              <div key={i} className="bg-gradient-to-br from-sky-500/5 to-sky-500/0 border border-sky-500/20 rounded-2xl p-4 text-center">
+                <p className="text-2xl md:text-3xl font-black text-sky-400">{s.v}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1 font-bold">{s.l}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
-
-      {/* PLANES */}
-      <section id="planes" className="py-20 px-6 bg-white/[0.02]">
+      {/* ============================================================ */}
+      {/* PARA QUIÉN — Casos de uso */}
+      {/* ============================================================ */}
+      <section className="py-20 px-6 bg-white/[0.02] border-t border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <p className="text-[11px] text-indigo-400 uppercase tracking-[0.3em] font-bold mb-4">Precios transparentes</p>
-            <h2 className="text-3xl md:text-5xl font-black mb-4">Elige tu plan</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto mb-8">14 días gratis. Sin tarjeta de crédito. Cancela cuando quieras.</p>
-            {/* Toggle mensual/anual */}
-            <div className="inline-flex items-center gap-2 bg-white/5 rounded-xl p-1 mb-4">
-              <button onClick={() => setBillingAnnual(false)} className={`text-sm px-5 py-2 rounded-lg font-medium transition-all ${!billingAnnual ? 'bg-white/10 text-white' : 'text-gray-500'}`}>Mensual</button>
-              <button onClick={() => setBillingAnnual(true)} className={`text-sm px-5 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${billingAnnual ? 'bg-white/10 text-white' : 'text-gray-500'}`}>
-                Anual <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-bold">-20%</span>
+            <p className="text-[11px] text-purple-400 uppercase tracking-[0.3em] font-black mb-4">Para quién</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              Diseñado para negocios<br />que <span className="text-purple-400">venden por WhatsApp.</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
+              Si tu negocio tiene un número de WhatsApp y atiende clientes ahí, vas a triplicar lo que vendes.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { icon: '🏥', name: 'Clínicas y consultorios', desc: 'Citas + recordatorios + cobros' },
+              { icon: '🏢', name: 'Inmobiliarias', desc: 'Catálogo + visitas + separaciones' },
+              { icon: '🎓', name: 'Escuelas y academias', desc: 'Inscripciones + pagos + cohortes' },
+              { icon: '🛍️', name: 'E-commerce', desc: 'Catálogo + checkout + envío' },
+              { icon: '💇', name: 'Salones de belleza', desc: 'Citas + paquetes + fidelización' },
+              { icon: '🏋️', name: 'Gimnasios y fitness', desc: 'Membresías + clases + planes' },
+              { icon: '🍽️', name: 'Restaurantes', desc: 'Pedidos + reservas + delivery' },
+              { icon: '🔧', name: 'Servicios profesionales', desc: 'Cotizaciones + agenda + cobros' },
+              { icon: '🚗', name: 'Concesionarios', desc: 'Test drives + financiación + leads' },
+              { icon: '✈️', name: 'Agencias de viajes', desc: 'Paquetes + reservas + pagos' },
+              { icon: '🎯', name: 'Coaches y mentores', desc: 'Inscripciones + sesiones + pagos' },
+              { icon: '🏢', name: 'Agencias de marketing', desc: 'Multi-cliente + white-label' },
+            ].map((b, i) => (
+              <div key={i} className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 hover:border-purple-500/30 transition-all group text-center">
+                <p className="text-2xl mb-2 group-hover:scale-110 transition-transform">{b.icon}</p>
+                <p className="text-xs font-black mb-1">{b.name}</p>
+                <p className="text-[9px] text-gray-500 leading-relaxed">{b.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* ============================================================ */}
+      {/* PLANES — Conectados al backend /billing/plans-public */}
+      {/* ============================================================ */}
+      <section id="planes" className="py-20 px-6 border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-[11px] text-indigo-400 uppercase tracking-[0.3em] font-black mb-4">Planes</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              Pricing transparente.<br />
+              <span className="text-indigo-400">Sin sorpresas.</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base mb-8">
+              14 días gratis. Sin tarjeta de crédito. Cancela cuando quieras. Cambia de plan en cualquier momento.
+            </p>
+            <div className="inline-flex items-center gap-2 bg-white/5 rounded-xl p-1">
+              <button
+                onClick={() => setBillingAnnual(false)}
+                className={`text-sm px-5 py-2 rounded-lg font-bold transition-all ${
+                  !billingAnnual ? 'bg-white/10 text-white' : 'text-gray-500'
+                }`}
+              >
+                Mensual
+              </button>
+              <button
+                onClick={() => setBillingAnnual(true)}
+                className={`text-sm px-5 py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${
+                  billingAnnual ? 'bg-white/10 text-white' : 'text-gray-500'
+                }`}
+              >
+                Anual
+                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-bold">-20%</span>
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {displayPlans.map((plan) => {
-              const theme = COLOR_THEMES[plan.color_theme] || COLOR_THEMES.indigo;
-              const priceMonthly = plan.price_usd;
-              const href = plan.btn_href_type === 'whatsapp'
-                ? (plan.btn_href_whatsapp || 'https://wa.me/573022205845')
-                : '/auth/login';
-              return (
-              <div key={plan.key} className={`rounded-3xl border p-8 flex flex-col text-left transition-all relative ${plan.popular ? 'bg-indigo-600 shadow-2xl shadow-indigo-600/30 scale-[1.03] z-10' : 'bg-white/[0.03]'} ${theme.color}`}>
-                {plan.popular && (
-                  <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">⭐ Más popular</div>
-                )}
-                <h3 className="text-lg font-bold mb-1">{plan.name}</h3>
-                <p className={`text-[10px] uppercase tracking-widest mb-6 ${plan.popular ? 'text-indigo-200' : 'text-gray-500'}`}>{plan.subtitle}</p>
-                <div className="mb-1">
-                  <span className="text-4xl font-black">${billingAnnual ? Math.round(plan.price_annual / 12) : priceMonthly}</span>
-                  <span className={`text-sm font-medium ml-1 ${plan.popular ? 'opacity-70' : 'text-gray-600'}`}>/mes</span>
-                </div>
-                {billingAnnual && (
-                  <p className="text-[10px] text-emerald-400 mb-1">Facturado anualmente — ${plan.price_annual}/año</p>
-                )}
-                <p className={`text-[10px] mb-6 ${plan.popular ? 'text-indigo-200' : 'text-gray-600'}`}>USD • {billingAnnual ? 'facturación anual' : 'facturación mensual'}</p>
-                <ul className="space-y-2.5 mb-8 flex-1 text-sm">
-                  {plan.features_ui.map((f, i) => (
-                    <li key={i} className={`flex items-start gap-2 ${!f.included ? (plan.popular ? 'opacity-40' : 'text-gray-600') : plan.popular ? 'text-white' : 'text-gray-300'}`}>
-                      <span className={`mt-0.5 shrink-0 ${f.included ? (plan.popular ? 'text-white' : 'text-emerald-400') : 'text-gray-600'}`}>
-                        {f.included ? '✓' : '—'}
-                      </span>
-                      <span className="flex-1">{f.label}</span>
-                      {f.tooltip_title && (
-                        <FeatureTooltip title={f.tooltip_title} desc={f.tooltip_desc} />
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={href}
-                  className={`w-full py-3.5 rounded-2xl text-center text-sm font-bold transition-all ${theme.btnClass}`}
-                >
-                  {plan.btn_label}
-                </Link>
-              </div>
-              );
-            })}
-          </div>
-          {/* En camino */}
-          <div className="mt-16 max-w-3xl mx-auto text-center">
-            <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-8">
-              <p className="text-[11px] text-amber-400 uppercase tracking-[0.3em] font-bold mb-3">🚀 En camino — disponible pronto</p>
-              <p className="text-gray-500 text-xs mb-6">Incluido sin costo adicional cuando esté disponible para todos los planes activos.</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { icon: '🎭', label: 'Avatar IA con video', desc: 'Tu bot envía videos personalizados a cada lead' },
-                  { icon: '📞', label: 'Llamadas IA salientes', desc: 'El bot llama a tus leads y califica automáticamente' },
-                  { icon: '🔴', label: 'Live Shopping', desc: 'Vende en vivo en Instagram y Facebook con IA' },
-                  { icon: '🌐', label: 'Web Chat embebible', desc: 'El mismo bot en tu sitio web con 1 línea de código' },
-                ].map((f, i) => (
-                  <div key={i} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-center hover:border-amber-500/20 transition-all">
-                    <p className="text-2xl mb-2">{f.icon}</p>
-                    <p className="text-[10px] font-bold mb-1">{f.label}</p>
-                    <p className="text-[9px] text-gray-600">{f.desc}</p>
-                  </div>
-                ))}
-              </div>
+          {plansLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white/[0.03] border border-white/5 rounded-3xl p-8 animate-pulse h-[600px]" />
+              ))}
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {plans.map((plan) => {
+                const theme = COLOR_THEMES[plan.color_theme] || COLOR_THEMES.indigo;
+                const priceMonthly = billingAnnual ? Math.round(plan.price_annual / 12) : plan.price_usd;
+                const href = plan.btn_href_type === 'whatsapp'
+                  ? (plan.btn_href_whatsapp || 'https://wa.me/573022205845')
+                  : '/auth/login';
+                return (
+                  <div
+                    key={plan.key}
+                    className={`rounded-3xl border p-6 md:p-8 flex flex-col text-left transition-all relative ${
+                      plan.popular ? 'bg-indigo-600 shadow-2xl shadow-indigo-600/30 scale-[1.03] z-10' : 'bg-white/[0.03]'
+                    } ${theme.color}`}
+                  >
+                    {plan.popular && (
+                      <div className="absolute top-4 right-4 bg-white/20 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
+                        ⭐ Más popular
+                      </div>
+                    )}
+                    <h3 className="text-lg font-black mb-1">{plan.name}</h3>
+                    <p className={`text-[10px] uppercase tracking-widest mb-6 ${plan.popular ? 'text-indigo-200' : 'text-gray-500'}`}>
+                      {plan.subtitle}
+                    </p>
+                    <div className="mb-1">
+                      <span className="text-4xl font-black">${priceMonthly}</span>
+                      <span className={`text-sm font-medium ml-1 ${plan.popular ? 'opacity-70' : 'text-gray-600'}`}>/mes</span>
+                    </div>
+                    {billingAnnual && (
+                      <p className={`text-[10px] mb-1 ${plan.popular ? 'text-emerald-200' : 'text-emerald-400'}`}>
+                        Facturado anualmente — ${plan.price_annual}/año
+                      </p>
+                    )}
+                    <p className={`text-[10px] mb-6 ${plan.popular ? 'text-indigo-200' : 'text-gray-600'}`}>
+                      USD · {billingAnnual ? 'facturación anual' : 'facturación mensual'}
+                    </p>
+                    <ul className="space-y-2.5 mb-8 flex-1 text-sm">
+                      {plan.features_ui.map((f, i) => (
+                        <li
+                          key={i}
+                          className={`flex items-start gap-2 ${
+                            !f.included
+                              ? plan.popular
+                                ? 'opacity-40'
+                                : 'text-gray-600'
+                              : plan.popular
+                              ? 'text-white'
+                              : 'text-gray-300'
+                          }`}
+                        >
+                          <span className={`mt-0.5 shrink-0 ${f.included ? (plan.popular ? 'text-white' : 'text-emerald-400') : 'text-gray-600'}`}>
+                            {f.included ? '✓' : '—'}
+                          </span>
+                          <span className="flex-1">{f.label}</span>
+                          {f.tooltip_title && (
+                            <FeatureTooltip title={f.tooltip_title} desc={f.tooltip_desc} />
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      href={href}
+                      className={`w-full py-3.5 rounded-2xl text-center text-sm font-bold transition-all ${theme.btnClass}`}
+                    >
+                      {plan.btn_label}
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {/* Affiliate teaser */}
+          <div className="mt-12 max-w-4xl mx-auto bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 border border-amber-500/30 rounded-3xl p-6 md:p-8 text-center">
+            <p className="text-[10px] text-amber-400 uppercase tracking-[0.3em] font-black mb-3">💰 Programa de afiliados</p>
+            <h3 className="text-xl md:text-2xl font-black mb-2">
+              Gana 40% el primer año + <span className="text-amber-400">30% lifetime</span>
+            </h3>
+            <p className="text-sm text-gray-400 max-w-2xl mx-auto mb-4">
+              La mejor comisión de la industria. Sin sub-tiers complicados. Cookie de 90 días. Pagos mensuales.
+            </p>
+            <Link
+              href="/affiliates"
+              className="inline-block text-xs px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-amber-950 font-black rounded-xl transition-all shadow-lg shadow-amber-500/20"
+            >
+              Ver programa de afiliados →
+            </Link>
           </div>
         </div>
       </section>
-
+      {/* ============================================================ */}
       {/* FAQ */}
-      <section className="py-20 px-6">
+      {/* ============================================================ */}
+      <section className="py-20 px-6 bg-white/[0.02] border-t border-white/5">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-black text-center mb-12">Preguntas frecuentes</h2>
+          <div className="text-center mb-12">
+            <p className="text-[11px] text-gray-400 uppercase tracking-[0.3em] font-black mb-4">FAQ</p>
+            <h2 className="text-3xl md:text-4xl font-black">Preguntas frecuentes</h2>
+          </div>
           <div className="space-y-3">
             {[
-              { q: '¿Necesito un número de WhatsApp nuevo?', a: 'Puedes usar tu número actual o crear uno nuevo. Al conectar, tu número se convierte en WhatsApp Business API y el bot empieza a responder automáticamente.' },
-              { q: '¿Pierdo acceso a mi WhatsApp personal?', a: 'Si usas tu número personal, se convertirá en Business API y ya no podrás usar la app normal de WhatsApp con ese número. Recomendamos usar una línea dedicada.' },
-              { q: '¿Qué pasa si el bot no sabe responder?', a: 'El bot transfiere automáticamente la conversación a un agente humano de tu equipo, quien recibe notificación por email y push en su celular.' },
-              { q: '¿Funciona en mi país?', a: 'Sí. Funcionamos a nivel global. Integramos pasarelas internacionales (Stripe, PayPal) y locales según tu mercado (Bold, Wompi, MercadoPago, OpenPay, PayU y más).' },
-              { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, sin penalidad. Los 14 días de prueba son completamente gratis y no pedimos tarjeta de crédito para empezar.' },
-              { q: '¿Necesito conocimientos técnicos?', a: 'No. Todo se configura con clicks. El wizard te guía paso a paso. Si necesitas ayuda, nuestro equipo te asiste por WhatsApp.' },
-              { q: '¿Puedo gestionar varios negocios?', a: 'Sí, con el plan Agency puedes gestionar negocios ilimitados desde un solo dashboard con tu propia marca.' },
-              { q: '¿Qué pasa si mi pasarela de pagos no está en la lista?', a: 'Sin problema. Escríbenos a soporte@clientes.bot y la integramos sin costo adicional. Solo necesitamos las credenciales de su API.' },
+              {
+                q: '¿Tengo que cambiar mi número de WhatsApp?',
+                a: 'Puedes usar tu número actual o uno nuevo. Si usas el actual, se transforma en WhatsApp Business API en 2 minutos y el bot empieza a responder automáticamente. Recomendamos una línea dedicada para mantener tu personal aparte.'
+              },
+              {
+                q: '¿Qué tan rápido se configura?',
+                a: 'En menos de 10 minutos tienes el bot respondiendo en tu WhatsApp. Conectas con 1 clic vía Facebook (sin QR), subes tu catálogo, ajustas el tono y listo. El wizard te guía paso a paso. Si tienes plan Agency, un especialista te configura todo sin costo extra.'
+              },
+              {
+                q: '¿Qué pasa si el bot no sabe responder algo?',
+                a: 'El bot transfiere automáticamente la conversación a un agente humano de tu equipo. Tu agente recibe notificación instantánea por email, push y sonido. Mientras escribe, el bot se pausa solo para evitar duplicados — tecnología patrón "auto-takeover".'
+              },
+              {
+                q: '¿Funciona en mi país?',
+                a: 'Sí, funcionamos a nivel global. Integramos pasarelas internacionales (Stripe, PayPal) y locales según tu mercado (Bold, Wompi, MercadoPago, OpenPay, PayU y más). Si tu pasarela favorita no está, la integramos sin costo en menos de 48h.'
+              },
+              {
+                q: '¿Cómo es la atribución completa Lead → Venta?',
+                a: 'Cuando un cliente paga, enviamos a Meta los datos del comprador hasheados con SHA-256: email, ciudad, documento, click ID. El algoritmo de Facebook aprende de COMPRAS REALES, no de clics. Resultado: tu costo por venta baja 30-50% en 60 días. Esto es lo que HubSpot cobra $890/mes — aquí va incluido.'
+              },
+              {
+                q: '¿Qué tan real es la IA?',
+                a: 'No son scripts pre-armados. Es IA conversacional con memoria persistente que recuerda a cada cliente como persona, entiende audios, detecta intención de compra, califica leads automáticamente y se adapta a tu tono de marca. Cascada con failover automático en 3 modelos para 99.9% de disponibilidad.'
+              },
+              {
+                q: '¿Puedo cancelar en cualquier momento?',
+                a: 'Sí, sin penalidad. Los 14 días de prueba son gratis y no pedimos tarjeta de crédito para empezar. Después puedes cancelar con 1 clic desde el dashboard. Sin contratos largos, sin letras pequeñas.'
+              },
+              {
+                q: '¿Necesito conocimientos técnicos?',
+                a: 'No. Todo se configura con clicks. El wizard te guía paso a paso. Si en algún momento necesitas ayuda, nuestro equipo te asiste por WhatsApp en menos de 4h hábiles (1h en plan Agency).'
+              },
+              {
+                q: '¿Puedo gestionar varios negocios desde una cuenta?',
+                a: 'Sí, con el plan Growth manejas hasta 5 sub-cuentas (sucursales o marcas). Con el plan Agency manejas clientes ilimitados con white-label total — tu logo, tu dominio, tu marca. Tus clientes finales nunca saben que existimos.'
+              },
+              {
+                q: '¿Mis datos están seguros?',
+                a: 'Sí. Arquitectura multi-tenant con aislamiento estricto (los datos de un cliente jamás se cruzan con otro), backups continuos PITR (point-in-time recovery), 2FA obligatorio para admins (Passkey/TOTP/Email), audit log de toda acción administrativa, y SSL en todos los endpoints. Construido sobre AWS con SLA 99.9%.'
+              },
+              {
+                q: '¿Qué pasa si supero mi quota de mensajes?',
+                a: 'Te avisamos cuando llegues al 80% de tu cuota mensual. Puedes comprar packs adicionales (1k/$19, 5k/$79, 20k/$249) que NO expiran nunca y se suman a tu plan. O subir de plan en cualquier momento sin perder configuración.'
+              },
+              {
+                q: '¿Qué incluye el demo público?',
+                a: 'El dashboard completo con datos de un negocio ficticio (Inmobiliaria Aurora). Puedes navegar por CRM, conversaciones, anuncios IA, reportes, suscripción — exactamente lo mismo que verás al activar tu cuenta. Cero registro, cero compromiso.'
+              },
             ].map((faq, i) => (
-              <details key={i} className="group bg-white/[0.03] border border-white/5 rounded-2xl overflow-hidden">
+              <details key={i} className="group bg-white/[0.03] border border-white/5 rounded-2xl overflow-hidden hover:border-white/10 transition-all">
                 <summary className="flex items-center justify-between p-5 cursor-pointer list-none hover:bg-white/[0.02] transition-all">
                   <p className="text-sm font-bold pr-4">{faq.q}</p>
                   <span className="text-gray-500 text-xs group-open:rotate-180 transition-transform shrink-0">▼</span>
@@ -755,60 +1138,89 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
+      {/* ============================================================ */}
       {/* CTA FINAL */}
-      <section className="py-20 px-6">
-        <div className="max-w-3xl mx-auto relative">
-          <div className="absolute inset-0 bg-indigo-600/10 blur-[100px] -z-10" />
-          <div className="bg-gradient-to-br from-indigo-900/40 to-indigo-600/10 border border-white/10 p-10 md:p-14 rounded-3xl text-center relative overflow-hidden">
-            <h2 className="text-3xl md:text-4xl font-black mb-4">¿Listo para vender más?</h2>
-            <p className="text-gray-400 mb-8 max-w-lg mx-auto">Únete a los negocios que ya automatizan sus ventas con IA. Configura en 2 minutos, sin código, sin complicaciones.</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
-              <Link href="/auth/login" className="bg-indigo-600 hover:bg-indigo-500 hover:scale-105 px-8 py-4 rounded-2xl font-bold transition-all shadow-xl shadow-indigo-600/25 inline-flex items-center justify-center gap-2">
-                🚀 Comenzar gratis — 14 días
-              </Link>
-              <a href="https://wa.me/573022205845?text=Hola%2C%20quiero%20info%20de%20clientes.bot" target="_blank" rel="noopener noreferrer" className="bg-[#25D366] hover:bg-[#1da851] px-8 py-4 rounded-2xl font-bold transition-all inline-flex items-center justify-center gap-2">
-                💬 Hablar por WhatsApp
-              </a>
+      {/* ============================================================ */}
+      <section className="py-20 px-6 border-t border-white/5">
+        <div className="max-w-4xl mx-auto relative">
+          <div className="absolute inset-0 bg-indigo-600/10 blur-[120px] -z-10" />
+          <div className="absolute top-1/2 left-1/4 w-[300px] h-[300px] bg-emerald-600/8 blur-[150px] -z-10" />
+          <div className="absolute top-1/2 right-1/4 w-[300px] h-[300px] bg-purple-600/8 blur-[150px] -z-10" />
+          <div className="bg-gradient-to-br from-indigo-900/30 via-purple-900/20 to-emerald-900/20 border border-white/10 p-10 md:p-16 rounded-3xl text-center relative overflow-hidden">
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-6">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[11px] text-gray-300 font-bold tracking-wide">14 días gratis · Sin tarjeta · Setup en 10 min</span>
             </div>
-            <p className="text-[10px] text-gray-600">Sin tarjeta • 14 días gratis • Soporte incluido</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4 leading-tight">
+              Cada día sin esto<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-emerald-400">es un día perdiendo plata.</span>
+            </h2>
+            <p className="text-gray-400 mb-8 max-w-xl mx-auto text-sm md:text-base leading-relaxed">
+              Cada mensaje sin responder es un cliente que se va a tu competencia. Cada anuncio sin atribución es plata mal invertida. Cambia eso hoy.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
+              <Link
+                href="/demo"
+                target="_blank"
+                className="bg-white text-indigo-700 hover:bg-gray-100 hover:scale-[1.02] px-8 py-4 rounded-2xl font-black text-base transition-all shadow-2xl inline-flex items-center justify-center gap-2"
+              >
+                🚀 Probar el dashboard en vivo
+                <span className="opacity-60">↗</span>
+              </Link>
+              <Link
+                href="/auth/login"
+                className="bg-indigo-600 hover:bg-indigo-500 hover:scale-[1.02] px-8 py-4 rounded-2xl font-black text-base transition-all shadow-xl shadow-indigo-600/30 inline-flex items-center justify-center gap-2"
+              >
+                Empezar 14 días gratis
+              </Link>
+            </div>
+            <p className="text-[11px] text-gray-500">
+              Sin tarjeta · Sin código · Cancela cuando quieras
+            </p>
           </div>
         </div>
       </section>
-
+      {/* ============================================================ */}
       {/* FOOTER */}
+      {/* ============================================================ */}
       <footer className="py-12 border-t border-white/5 bg-[#080B14]">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-8">
+            <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
-                <img src="/cb-logo.webp" alt="Logo" className="w-8 h-8 object-contain" />
-                <span className="text-lg font-bold tracking-tighter">clientes.bot</span>
+                <img src="/cb-logo.webp" alt="clientes.bot" className="w-9 h-9 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                <span className="text-lg font-black tracking-tighter">clientes.bot</span>
               </div>
-              <p className="text-xs text-gray-500 leading-relaxed">La plataforma todo-en-uno para negocios que quieren vender más por WhatsApp con inteligencia artificial.</p>
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Producto</p>
-              <div className="space-y-2">
-                <a href="#features" className="block text-xs text-gray-500 hover:text-white transition-colors">Bot WhatsApp IA</a>
-                <a href="#features" className="block text-xs text-gray-500 hover:text-white transition-colors">CRM + Multi-agente</a>
-                <a href="#features" className="block text-xs text-gray-500 hover:text-white transition-colors">Facebook Ads IA</a>
-                <a href="#features" className="block text-xs text-gray-500 hover:text-white transition-colors">Pagos integrados</a>
-                <a href="#features" className="block text-xs text-gray-500 hover:text-white transition-colors">Agendamiento</a>
+              <p className="text-xs text-gray-500 leading-relaxed mb-4 max-w-sm">
+                La infraestructura SaaS que conecta WhatsApp, CRM, Anuncios y Pagos en una sola plataforma. Construida para negocios que rugen.
+              </p>
+              <div className="flex gap-3">
+                <a href="https://wa.me/573022205845" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-gray-500 hover:text-emerald-400 flex items-center justify-center transition-all">💬</a>
+                <a href="https://instagram.com/clientes.bot" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-xl bg-white/5 hover:bg-pink-500/20 text-gray-500 hover:text-pink-400 flex items-center justify-center transition-all">📸</a>
+                <a href="https://facebook.com/clientesbot" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-xl bg-white/5 hover:bg-blue-500/20 text-gray-500 hover:text-blue-400 flex items-center justify-center transition-all">👤</a>
               </div>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Empresa</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Producto</p>
               <div className="space-y-2">
-                <a href="#planes" className="block text-xs text-gray-500 hover:text-white transition-colors">Precios</a>
-                <a href="#para-quien" className="block text-xs text-gray-500 hover:text-white transition-colors">Casos de uso</a>
-                <a href="#como-funciona" className="block text-xs text-gray-500 hover:text-white transition-colors">Cómo funciona</a>
+                <a href="#producto" className="block text-xs text-gray-500 hover:text-white transition-colors">Cómo funciona</a>
+                <Link href="/demo" target="_blank" className="block text-xs text-gray-500 hover:text-white transition-colors">Demo en vivo ↗</Link>
+                <a href="#comparativa" className="block text-xs text-gray-500 hover:text-white transition-colors">¿Por qué nosotros?</a>
+                <a href="#planes" className="block text-xs text-gray-500 hover:text-white transition-colors">Planes</a>
                 <Link href="/affiliates" className="block text-xs text-gray-500 hover:text-white transition-colors">Programa de afiliados</Link>
-                <a href="https://wa.me/573022205845" className="block text-xs text-gray-500 hover:text-white transition-colors">Contacto</a>
               </div>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Legal</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Empresa</p>
+              <div className="space-y-2">
+                <a href="https://wa.me/573022205845" target="_blank" rel="noopener noreferrer" className="block text-xs text-gray-500 hover:text-white transition-colors">Contacto</a>
+                <a href="mailto:soporte@clientes.bot" className="block text-xs text-gray-500 hover:text-white transition-colors">soporte@clientes.bot</a>
+                <Link href="/auth/login" className="block text-xs text-gray-500 hover:text-white transition-colors">Iniciar sesión</Link>
+                <Link href="/auth/login" className="block text-xs text-gray-500 hover:text-white transition-colors">Crear cuenta</Link>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Legal</p>
               <div className="space-y-2">
                 <Link href="/terminos" className="block text-xs text-gray-500 hover:text-white transition-colors">Términos de servicio</Link>
                 <Link href="/politica-de-privacidad" className="block text-xs text-gray-500 hover:text-white transition-colors">Política de privacidad</Link>
@@ -817,25 +1229,13 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-[10px] text-gray-600">© 2026 SGC Technology S.A.S. Todos los derechos reservados.</p>
-            <div className="flex gap-4">
-              <a href="https://wa.me/573022205845" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-emerald-400 transition-colors text-lg">💬</a>
-              <a href="https://instagram.com/clientes.bot" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-pink-400 transition-colors text-lg">📸</a>
-              <a href="https://facebook.com/clientesbot" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-blue-400 transition-colors text-lg">👤</a>
-            </div>
+            <p className="text-[10px] text-gray-600">© 2026 SGC Technology S.A.S. · Todos los derechos reservados.</p>
+            <p className="text-[10px] text-gray-600">Hecho con 🦁 para negocios que rugen.</p>
           </div>
         </div>
       </footer>
-
       <ChatWidget />
       <InstallPWAPrompt variant="landing" />
-      <style jsx>{`
-        @keyframes bounce-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-bounce-slow { animation: bounce-slow 4s ease-in-out infinite; }
-      `}</style>
     </div>
   );
 }
