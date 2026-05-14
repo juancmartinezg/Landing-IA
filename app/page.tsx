@@ -905,14 +905,14 @@ export default function LandingPage() {
         </div>
       </section>
       {/* ============================================================ */}
-      {/* MÓDULOS PRINCIPALES — 4 cards grandes */}
+      {/* MÓDULOS — Jerarquía 3 niveles */}
       {/* ============================================================ */}
       <section className="py-20 px-6 bg-white/[0.02] border-t border-white/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <p className="text-[11px] text-indigo-400 uppercase tracking-[0.3em] font-black mb-4">Producto</p>
+            <p className="text-[11px] text-indigo-400 uppercase tracking-[0.3em] font-black mb-4">El sistema completo</p>
             <h2 className="text-3xl md:text-5xl font-black mb-4">
-              4 módulos. <span className="text-indigo-400">Conectados de fábrica.</span>
+              Todo conectado. <span className="text-indigo-400">Nada separado.</span>
             </h2>
             <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
               Cada módulo es enterprise por sí solo. Juntos son imparables. Haz clic en cualquiera para verlo funcionando en vivo.
@@ -1064,7 +1064,7 @@ export default function LandingPage() {
           </div>
           <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
             {[
-              { v: '19', l: 'Tablas con PITR' },
+              { v: '20', l: 'Tablas con PITR' },
               { v: '5', l: 'Motores IA en producción' },
               { v: '< 200ms', l: 'Latencia respuesta bot' },
               { v: '99.9%', l: 'Uptime garantizado' },
@@ -1073,6 +1073,23 @@ export default function LandingPage() {
                 <p className="text-2xl md:text-3xl font-black text-sky-400">{s.v}</p>
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1 font-bold">{s.l}</p>
               </div>
+            ))}
+          </div>
+          {/* Enterprise signals bar */}
+          <div className="mt-12 flex flex-wrap justify-center gap-3 max-w-5xl mx-auto">
+            {[
+              'WhatsApp Business API Oficial',
+              'Multi-tenant strict',
+              'Role-based permissions',
+              'Audit log completo',
+              'Revenue attribution engine',
+              'AI optimization loop',
+              'PITR backups continuos',
+              'Escalable a 1M+ tenants',
+            ].map((s, i) => (
+              <span key={i} className="text-[10px] px-3 py-1.5 bg-white/[0.03] border border-white/5 rounded-full text-gray-400 font-bold hover:border-sky-500/30 hover:text-sky-300 transition-all">
+                {s}
+              </span>
             ))}
           </div>
         </div>
