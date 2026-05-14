@@ -2,8 +2,8 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**API v193 + Bot v191 + Frontend `6c91137`**
- — Sprint Enhanced CAPI + Templates Manager + Sprint E COMPLETO 🦁 (14 mayo sesión 3, ~6h). Enhanced CAPI: PII completo en TODOS los eventos (email+name+city+document SHA-256 + fbc click ID) + value=regular_price + Lead re-send con PII. **Templates Manager UI**: `/dashboard/templates/manage` crear/listar/borrar templates UTILITY+MARKETING + preview WhatsApp + banner costos Meta + auto-refresh status. CRM: tarjeta lead muestra anuncio+click ID+email+ciudad+documento. **Meta Match Rate: 4/10 → 7-8/10.**
+**API v194 + Bot v191 + Frontend `8d7d698`** — Sprint Enhanced CAPI + Templates Manager + Bulk Send COMPLETO 🦁 (14 mayo sesión 3 final). Bulk Send: `/dashboard/marketing` envío masivo templates a leads filtrados por etapa/tags/servicio/inactividad + quotas por plan (Solo 100/Growth 1000/Agency ∞) + estimador costo USD + historial campañas + audit log + banner transparencia Meta. API v194 `POST /marketing/send-bulk` + `GET /marketing/campaigns`.
+**API v193 + Bot v191 + Frontend `6c91137`** — Sprint Enhanced CAPI + Templates Manager + Sprint E COMPLETO 🦁 (14 mayo sesión 3, ~6h). Enhanced CAPI: PII completo en TODOS los eventos (email+name+city+document SHA-256 + fbc click ID) + value=regular_price + Lead re-send con PII. **Templates Manager UI**: `/dashboard/templates/manage` crear/listar/borrar templates UTILITY+MARKETING + preview WhatsApp + banner costos Meta + auto-refresh status. CRM: tarjeta lead muestra anuncio+click ID+email+ciudad+documento. **Meta Match Rate: 4/10 → 7-8/10.**
 **API v192 + Bot v191 + Frontend `4c51579`** 
 — Sprint Enhanced CAPI + Sprint E COMPLETO 🦁 (14 mayo sesión 3, ~6h). Enhanced CAPI: PII completo en TODOS los eventos (email+name+city+document hash SHA-256 + fbc click ID formato `fb.1.{ts}.{ctwa_clid}`) + value=regular_price (no anticipo) en Purchase. Bot wrapper `send_meta_capi_event` auto-enriquece desde Leads_CRM_v2. API bulk import + report-purchase enriquecidos con city+fbc+doc+regular_price. Lead re-send con PII tras captura email. CRM: tarjeta del lead muestra anuncio (campaign_id) + click ID + email + ciudad + documento. 
 **Meta Match Rate esperado: 4/10 → 7-8/10.** Falta IP+UserAgent para 9-10 (requiere pixel en landing, sprint separado).
@@ -168,6 +168,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] `log_error()` automático: todo error 500 del lambda_handler queda en tabla `ErrorLog`
 - [x] **Templates Manager API** (v193): `GET /templates/list`, `POST /templates/custom` (UTILITY/MARKETING), `DELETE /templates/custom`, category dynamic
 - [x] **Enhanced CAPI API** (v192): bulk import + report-purchase enriquecidos con city+fbc+doc+regular_price desde Leads_CRM_v2
+- [x] **Bulk Send API** (v194): `POST /marketing/send-bulk` envío masivo templates + `GET /marketing/campaigns` historial + quotas por plan + audit log
 ### 👥 Multi-agente
 - [x] Tabla Agents + CRUD
 - [x] Asignación manual + transferencias con historial + motivo
@@ -1796,11 +1797,12 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | ✅ Multi-tenant funnel_mode (6 modos) + Lead Qualifier IA | 100% ✅ |
 | ✅ Multicanal WhatsApp + IG + FB Messenger | 100% ✅ (pendiente App Review IG Advanced) |
 | ✅ Programa Afiliados completo (4 tablas + cron + emails + tracker) | 100% ✅ |
-| 🟡 Bulk Send / Campañas Marketing | 0% — siguiente sprint |
+| ✅ Bulk Send / Campañas Marketing (API v194 + Frontend `8d7d698`) | 100% ✅ |
 | 🟡 Multi-idioma plataforma (bot+frontend) | 0% — sprint dedicado |
 | 🟡 Admin Panel completo (F-K) | ~25% (D+E cerradas) |
 | 🟡 Web Chat Widget | 0% |
-**Última medición:** 14 mayo 2026 — **Sprint Enhanced CAPI + Templates Manager CERRADOS** 🦁 API v193 + Bot v191 + Frontend `6c91137`. 3 sesiones en 2 días (~26h total). 48 versiones del bot (v153→v191). 8 versiones API (v185→v193). 14 commits frontend. 12 sprints completados + 10 bugs producción cerrados. Meta Match Rate 4/10 → 7-8/10. Templates APPROVED (appointment_reminder_v1 + follow_up_v1). Cron recordatorios + no-show ENABLED. Captura PII 5 campos single+multi-persona. Email confirmación Resend multi-idioma. CRM muestra anuncio+click ID. Próximo: Bulk Send / Campañas Marketing.
+**Última medición:** 14 mayo 2026 — **Sprint Enhanced CAPI + Templates Manager + Bulk Send CERRADOS**
+ 🦁 API v193 + Bot v191 + Frontend `6c91137`. 3 sesiones en 2 días (~26h total). 48 versiones del bot (v153→v191). 8 versiones API (v185→v193). 14 commits frontend. 12 sprints completados + 10 bugs producción cerrados. Meta Match Rate 4/10 → 7-8/10. Templates APPROVED (appointment_reminder_v1 + follow_up_v1). Cron recordatorios + no-show ENABLED. Captura PII 5 campos single+multi-persona. Email confirmación Resend multi-idioma. CRM muestra anuncio+click ID. Próximo: Bulk Send / Campañas Marketing.
 
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
@@ -1830,8 +1832,9 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **96% → 97%** — AI Creative Loop CERRADO 🦁 5 motores E2E (Content Ingestion + Winner Analysis + Hook Gen multi_pattern + Creative Production Meta Graph + Publish+Learn cross-tenant). API v156-v164, frontend `e96fd2a` + `2e38b21`. 🦁
 - [x] **97% → 98%** — Sprint Brand DNA + Wizard 2.0 CERRADO 🦁 Brand DNA scraping multi-source + Brand Assets Library + Wizard Backend 9 endpoints + Wizard Frontend 8 pasos + Andromeda overlay + cross-tenant + Wizard Packs LS. API v165-v179, frontend `246103f`. 27 deploys + 8 commits en 1 sesión.
 - [x] **98% → 99%** — Sprint multi-tenant MASTER 🦁 (13-14 mayo, 2 sesiones ~20h). 12 sprints: funnel_mode 6 modos + Lead Qualifier IA + Shipping step-machine + Sprint E completo (captura PII 5 campos single+multi-persona + email confirmación Resend + cron recordatorios cascada WA→template→email + botones confirmar/reprogramar/cancelar + no-show) + auto-create templates 4 idiomas + payment link reuse + welcome menu fix debounce + anti-hallucination prompt. Bot v153→v189 (36 versiones), API v185→v191, Frontend 7 commits. 10 bugs producción cerrados.
-- [x] **99% → 99.5%** — Sprint Enhanced CAPI + Templates Manager 🦁 (14 mayo sesión 3, ~6h). PII completo en TODOS los eventos CAPI (email+name+city+doc SHA-256 + fbc click ID) + value=regular_price (no anticipo) + Lead re-send con PII. Templates Manager UI: crear/listar/borrar UTILITY+MARKETING + preview WhatsApp + banner costos Meta. CRM: tarjeta lead muestra anuncio+click ID+email+ciudad+documento. Bot v191, API v192-v193, Frontend `6c91137`. **Meta Match Rate: 4/10 → 7-8/10.** ⭐ ESTÁS AQUÍ
-- [ ] **99.5% → 100%** — Bulk Send / Campañas Marketing + Multi-idioma plataforma + Fase F Soporte/Ticketing + Admin D-K restante + Web Chat Widget + RUGIDO 🦁
+- [x] **99% → 99.5%** — Sprint Enhanced CAPI + Templates Manager 🦁 (14 mayo sesión 3). PII completo CAPI + fbc click ID + value=regular_price + Templates Manager UI UTILITY+MARKETING. Bot v191, API v192-v193, Frontend `6c91137`. **Meta Match Rate: 4/10 → 7-8/10.**
+- [x] **99.5% → 99.7%** — Sprint Bulk Send / Campañas Marketing 🦁 (14 mayo sesión 3 final). `/dashboard/marketing` envío masivo templates + filtros leads (etapa/tags/servicio/inactividad) + mapeo variables→campos lead + estimador costo USD + checkbox "Entiendo el cargo Meta" + quotas por plan + historial campañas + audit log. API v194 + Frontend `8d7d698`. ⭐ ESTÁS AQUÍ
+- [ ] **99.7% → 100%** — Multi-idioma plataforma + Fase F Soporte/Ticketing + Admin F-K restante + Web Chat Widget + RUGIDO 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
 ## 📞 CONTACTO
