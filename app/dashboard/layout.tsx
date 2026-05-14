@@ -21,6 +21,7 @@ const menuItems = [
   { href: '/dashboard/memory', label: 'Memoria IA', icon: '🧠', roles: ['owner', 'admin'] },
   { href: '/dashboard/training', label: 'Entrenar Bot', icon: '🎓', roles: ['owner', 'admin'] },
   { href: '/dashboard/templates', label: 'Plantillas', icon: '📋', roles: ['owner', 'admin'] },
+  { href: '/dashboard/templates/manage', label: 'Plantillas WA', icon: '📝', roles: ['owner', 'admin'] },
   { href: '/dashboard/gateway', label: 'Pasarela', icon: '🏦', roles: ['owner'] },
   { href: '/dashboard/inventory', label: 'Inventario', icon: '📦', roles: ['owner', 'admin'] },
   { href: '/dashboard/ads', label: 'Facebook Ads', icon: '📢', roles: ['owner', 'admin'] },
