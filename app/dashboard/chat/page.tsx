@@ -106,16 +106,24 @@ export default function ChatPage() {
        .then(res => res.json())
        .then(data => {
          const msgs = data.messages || [];
-         setBotMessages(prev => {
-           // Solo actualiza si hay cambio real (evita re-renders innecesarios en polling)
-           if (prev.length !== msgs.length) return msgs;
-           const prevLast = prev[prev.length - 1];
-           const newLast = msgs[msgs.length - 1];
-           if (prevLast?.text !== newLast?.text || prevLast?.msg_ts !== newLast?.msg_ts) return msgs;
-           return prev;
-         });
-         setHasMoreOlder(!!data.has_more);
-         setOldestTs(data.oldest_ts || null);
+         if (isPolling) {
+           // POLLING: solo agregar mensajes NUEVOS al final, sin tocar los prepended viejos
+           setBotMessages(prev => {
+             if (prev.length === 0) return msgs;
+             // Identificar el último ts del state actual
+             const prevLastTs = prev[prev.length - 1]?.msg_ts;
+             // Filtrar del polling solo los más nuevos que el último del state
+             const newer = msgs.filter((m: any) => m.msg_ts > prevLastTs);
+             if (newer.length === 0) return prev;
+             return [...prev, ...newer];
+           });
+           // NO tocar oldestTs/hasMoreOlder en polling (preservar paginación)
+         } else {
+           // CARGA INICIAL: reemplazar todo + setear cursores
+           setBotMessages(msgs);
+           setHasMoreOlder(!!data.has_more);
+           setOldestTs(data.oldest_ts || null);
+         }
          setLoadingBotMsgs(false);
        })
        .catch(() => setLoadingBotMsgs(false));
@@ -129,13 +137,14 @@ export default function ChatPage() {
          { headers: { 'client-id': user?.companyId || '' } });
        const data = await res.json();
        const older = data.messages || [];
-       if (older.length > 0) {
-         setBotMessages(prev => [...older, ...prev]);
-         setOldestTs(data.oldest_ts || null);
-         setHasMoreOlder(!!data.has_more);
-       } else {
-         setHasMoreOlder(false);
-       }
+      if (older.length > 0) {
+          setBotMessages(prev => [...older, ...prev]);
+          // Usar el msg_ts del más viejo cargado como nuevo cursor (más confiable que el campo del API)
+          setOldestTs(older[0]?.msg_ts || data.oldest_ts || null);
+          setHasMoreOlder(!!data.has_more);
+        } else {
+          setHasMoreOlder(false);
+        }
      } catch (e) {
        console.error('Error cargando mensajes viejos:', e);
      }
