@@ -94,9 +94,12 @@ export default function LandingPage() {
       {/* ============================================================ */}
       <nav className="fixed top-0 w-full z-50 bg-[#0B0F1A]/85 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex justify-between items-center gap-2">
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0">
             <img src="/cb-logo.webp" alt="clientes.bot" className="w-8 h-8 md:w-9 md:h-9 object-contain drop-shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
             <span className="text-base md:text-xl font-black tracking-tighter">clientes.bot</span>
+            <span className="hidden sm:inline-flex items-center text-[9px] md:text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500/15 to-emerald-500/15 border border-indigo-500/30 text-indigo-300">
+              Revenue OS
+            </span>
           </div>
           <div className="hidden md:flex gap-7 text-sm text-gray-400">
             <a href="#producto" className="hover:text-white transition-colors font-medium">Producto</a>
@@ -138,21 +141,23 @@ export default function LandingPage() {
         <div className="absolute top-60 right-1/4 w-[400px] h-[400px] bg-emerald-600/6 blur-[180px] -z-10" />
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            {/* Pill enterprise */}
+            {/* Eyebrow categoría */}
             <div className="inline-flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-full px-4 py-1.5 mb-8">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[11px] text-gray-300 font-bold tracking-wide">Infraestructura SaaS · Multi-tenant · LATAM + USA + Europa</span>
+              <span className="text-[10px] md:text-[11px] text-gray-300 font-black tracking-[0.2em] uppercase">
+                WhatsApp Revenue OS · Multi-tenant
+              </span>
             </div>
-            {/* H1 reposicionado */}
+            {/* H1 — categoría + nicho */}
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-6">
-              Todo tu negocio<br />
-              conectado a<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-indigo-400 to-purple-400"> WhatsApp.</span>
+              El Revenue OS para<br />
+              negocios que venden por
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-indigo-400 to-purple-400"> WhatsApp.</span>
             </h1>
-            {/* Subheadline específico */}
+            {/* Subheadline operativa */}
             <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-3xl mx-auto mb-10 leading-relaxed">
-              CRM, IA, Atribución de anuncios, Pagos y Citas en <span className="text-white font-bold">una sola plataforma</span>.
-              <br className="hidden sm:block" />
-              Captura desde anuncios, vende por WhatsApp y mide ventas reales — no clics.
+              Captura, organiza, automatiza y mide cada peso que entra por WhatsApp —
+              <span className="text-white font-bold"> desde el anuncio hasta el cobro</span>.
             </p>
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
@@ -161,7 +166,7 @@ export default function LandingPage() {
                 target="_blank"
                 className="bg-indigo-600 hover:bg-indigo-500 hover:scale-[1.02] px-8 py-4 rounded-2xl font-black text-base transition-all shadow-xl shadow-indigo-600/30 inline-flex items-center justify-center gap-2"
               >
-                🚀 Probar el dashboard en vivo
+                Probar el dashboard en vivo
                 <span className="opacity-70">↗</span>
               </Link>
               <Link
@@ -175,27 +180,29 @@ export default function LandingPage() {
               Sin tarjeta de crédito · Sin código · Cancela cuando quieras
             </p>
           </div>
-          {/* Trust bar — métricas serias enterprise */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto mb-16">
+          {/* Trust bar — métricas Revenue OS */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-5xl mx-auto mb-14">
             {[
-              { v: '7-8/10', l: 'Match rate atribución', desc: 'vs 4/10 de la competencia' },
-              { v: '30-50%', l: 'Menos costo por venta', desc: 'con CAPI + IA optimización' },
-              { v: '24/7', l: 'Vendedor IA activo', desc: 'sin descansos ni feriados' },
-              { v: '+6', l: 'Canales unificados', desc: 'WhatsApp, IG, FB y más' },
+              { v: '$2.4M', l: 'Revenue trazado', desc: 'COP en 30 días JMC' },
+              { v: '7.8/10', l: 'Match rate atribución', desc: 'vs 4/10 del estándar' },
+              { v: '47%', l: 'Menos CPA', desc: 'con CAPI + IA loop' },
+              { v: '6+', l: 'Canales nativos', desc: 'WA · IG · FB · Web · Voz' },
             ].map((s, i) => (
               <div key={i} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-center hover:border-white/10 transition-all">
-                <p className="text-2xl md:text-3xl font-black text-white">{s.v}</p>
+                <p className="text-2xl md:text-3xl font-black text-white tabular-nums">{s.v}</p>
                 <p className="text-[10px] text-indigo-400 uppercase tracking-widest mt-1 font-bold">{s.l}</p>
                 <p className="text-[10px] text-gray-600 mt-1">{s.desc}</p>
               </div>
             ))}
           </div>
           {/* ============================================================ */}
-          {/* DEMO EMBEBIDO — La pieza más impactante */}
+          {/* HERO VISUAL — Revenue/Attribution Dashboard (estilo Bloomberg) */}
           {/* ============================================================ */}
           <FadeInOnScroll delay={150}>
-          <div className="relative max-w-5xl mx-auto">
-            {/* Marco ventana de navegador */}
+          <div className="relative max-w-6xl mx-auto">
+            {/* Glow sutil detrás */}
+            <div className="absolute -inset-6 bg-gradient-to-r from-indigo-600/20 via-purple-600/15 to-emerald-600/20 blur-3xl -z-10" />
+            {/* Marco ventana navegador */}
             <div className="bg-[#080B14] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
               {/* Barra del navegador */}
               <div className="flex items-center gap-2 px-4 py-2.5 bg-[#050810] border-b border-white/5">
@@ -206,159 +213,201 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1 flex justify-center">
                   <div className="bg-white/5 rounded-lg px-4 py-1 text-[10px] text-gray-500 flex items-center gap-1">
-                    🔒 clientes.bot/demo
+                    🔒 clientes.bot/dashboard/analytics
                   </div>
                 </div>
                 <Link
-                  href="/demo"
+                  href="/demo/analytics"
                   target="_blank"
                   className="text-[9px] px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg whitespace-nowrap"
                 >
-                  ↗ Abrir
+                  Abrir demo ↗
                 </Link>
               </div>
-              {/* Preview del dashboard real (espejo visual de /demo) */}
-              <Link href="/demo" target="_blank" className="block relative group">
-                <div className="flex h-[500px] md:h-[600px]">
-                  {/* Sidebar mini */}
-                  <div className="hidden md:flex w-44 bg-[#050810] border-r border-white/5 flex-col p-2 gap-1">
-                    {[
-                      { icon: '📊', label: 'Métricas', active: true },
-                      { icon: '👥', label: 'CRM / Leads' },
-                      { icon: '🧑‍💼', label: 'Mi equipo' },
-                      { icon: '🏆', label: 'Ranking' },
-                      { icon: '💬', label: 'Conversaciones', badge: 3 },
-                      { icon: '🛍️', label: 'Catálogo' },
-                      { icon: '📅', label: 'Citas' },
-                      { icon: '💳', label: 'Pagos' },
-                      { icon: '📈', label: 'Reportes IA' },
-                      { icon: '🧠', label: 'Memoria IA' },
-                      { icon: '🎓', label: 'Entrenar Bot' },
-                      { icon: '📢', label: 'Campañas' },
-                      { icon: '🚀', label: 'Anuncios IA' },
-                      { icon: '💎', label: 'Suscripción' },
-                      { icon: '🤝', label: 'Afiliados' },
-                    ].map((item, i) => (
-                      <div key={i} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[9px] ${
-                        item.active ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30' : 'text-gray-500'
-                      }`}>
-                        <span className="text-xs">{item.icon}</span>
-                        <span className="flex-1 truncate">{item.label}</span>
-                        {item.badge && (
-                          <span className="bg-red-500 text-white text-[7px] font-bold px-1 rounded-full">{item.badge}</span>
-                        )}
-                      </div>
-                    ))}
+              {/* Dashboard de Revenue/Attribution */}
+              <Link href="/demo/analytics" target="_blank" className="block relative group">
+                <div className="p-4 md:p-6">
+                  {/* Top bar */}
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-0.5">Revenue Dashboard</p>
+                      <p className="text-sm md:text-base font-black text-white">Últimos 30 días · Atribución completa</p>
+                    </div>
+                    <div className="flex gap-1">
+                      {['7d', '30d', '90d', 'Año'].map((p, i) => (
+                        <span key={p} className={`text-[9px] md:text-[10px] px-2.5 py-1 rounded-md font-bold ${
+                          i === 1 ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-500'
+                        }`}>{p}</span>
+                      ))}
+                    </div>
                   </div>
-                  {/* Contenido del dashboard */}
-                  <div className="flex-1 p-4 md:p-5 overflow-hidden">
-                    <div className="flex justify-between items-center mb-3">
-                      <div>
-                        <p className="text-sm font-black">Bienvenido, Inmobiliaria Aurora 👋</p>
-                        <p className="text-[9px] text-gray-500">Tu centro de comando · Últimos 30 días</p>
+                  {/* 4 KPIs principales — Revenue, ROAS, CPA, Leads */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                    <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/0 border border-emerald-500/20 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[9px] text-emerald-400 uppercase tracking-wider font-bold">Revenue</p>
+                        <span className="text-[9px] text-emerald-400 font-bold">↑ 47%</span>
                       </div>
-                      <div className="flex gap-1">
-                        {['Hoy', '7d', '30d', '90d'].map((p, i) => (
-                          <span key={i} className={`text-[8px] px-2 py-0.5 rounded font-bold ${
-                            i === 2 ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-500'
-                          }`}>{p}</span>
+                      <p className="text-xl md:text-2xl font-black text-white tabular-nums">$2,418,500</p>
+                      <p className="text-[9px] text-gray-500 mt-1">trazado desde WhatsApp</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-indigo-500/10 to-indigo-500/0 border border-indigo-500/20 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[9px] text-indigo-400 uppercase tracking-wider font-bold">ROAS</p>
+                        <span className="text-[9px] text-emerald-400 font-bold">↑ 12%</span>
+                      </div>
+                      <p className="text-xl md:text-2xl font-black text-white tabular-nums">4.82×</p>
+                      <p className="text-[9px] text-gray-500 mt-1">retorno por anuncio</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/0 border border-purple-500/20 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[9px] text-purple-400 uppercase tracking-wider font-bold">CPA</p>
+                        <span className="text-[9px] text-emerald-400 font-bold">↓ 47%</span>
+                      </div>
+                      <p className="text-xl md:text-2xl font-black text-white tabular-nums">$18,420</p>
+                      <p className="text-[9px] text-gray-500 mt-1">costo por venta cerrada</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/0 border border-yellow-500/20 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[9px] text-yellow-400 uppercase tracking-wider font-bold">Match rate</p>
+                        <span className="text-[9px] text-emerald-400 font-bold">↑ 7.8/10</span>
+                      </div>
+                      <p className="text-xl md:text-2xl font-black text-white tabular-nums">7.8/10</p>
+                      <p className="text-[9px] text-gray-500 mt-1">vs 4.0 estándar Meta</p>
+                    </div>
+                  </div>
+                  {/* Grid principal: revenue chart + funnel + canales */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3">
+                    {/* Revenue chart — 7 col */}
+                    <div className="md:col-span-7 bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Revenue por día</p>
+                        <div className="flex items-center gap-3 text-[9px]">
+                          <span className="flex items-center gap-1 text-emerald-400">
+                            <span className="w-2 h-2 rounded-sm bg-emerald-500" />Pagado
+                          </span>
+                          <span className="flex items-center gap-1 text-indigo-400">
+                            <span className="w-2 h-2 rounded-sm bg-indigo-500" />Pendiente
+                          </span>
+                        </div>
+                      </div>
+                      {/* Bar chart */}
+                      <div className="flex items-end justify-between gap-1 h-32 mb-2">
+                        {[
+                          { paid: 45, pend: 12 },
+                          { paid: 62, pend: 18 },
+                          { paid: 38, pend: 8 },
+                          { paid: 78, pend: 24 },
+                          { paid: 55, pend: 15 },
+                          { paid: 84, pend: 22 },
+                          { paid: 71, pend: 19 },
+                          { paid: 92, pend: 26 },
+                          { paid: 68, pend: 14 },
+                          { paid: 88, pend: 31 },
+                          { paid: 75, pend: 18 },
+                          { paid: 96, pend: 28 },
+                          { paid: 82, pend: 22 },
+                          { paid: 100, pend: 35 },
+                        ].map((d, i) => (
+                          <div key={i} className="flex-1 flex flex-col-reverse items-stretch gap-0.5 group">
+                            <div className="bg-emerald-500/70 rounded-sm group-hover:bg-emerald-400 transition-colors" style={{height: `${d.paid * 0.8}%`}} />
+                            <div className="bg-indigo-500/40 rounded-sm group-hover:bg-indigo-400/70 transition-colors" style={{height: `${d.pend * 0.6}%`}} />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-between text-[8px] text-gray-600">
+                        <span>1 abr</span><span>8 abr</span><span>15 abr</span><span>22 abr</span><span>30 abr</span>
+                      </div>
+                    </div>
+                    {/* Funnel — 5 col */}
+                    <div className="md:col-span-5 bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-3">Embudo conversacional</p>
+                      <div className="space-y-2">
+                        {[
+                          { label: 'Anuncio visto', n: '12,847', w: 100, c: 'bg-slate-500/40' },
+                          { label: 'Click → WhatsApp', n: '1,924', w: 75, c: 'bg-indigo-500/60' },
+                          { label: 'Conversación IA', n: '1,612', w: 63, c: 'bg-purple-500/70' },
+                          { label: 'Lead calificado', n: '847', w: 33, c: 'bg-yellow-500/70' },
+                          { label: 'Venta cerrada', n: '131', w: 5, c: 'bg-emerald-500' },
+                        ].map((s, i) => (
+                          <div key={i}>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-[10px] text-gray-300 font-medium">{s.label}</span>
+                              <span className="text-[10px] font-black text-white tabular-nums">{s.n}</span>
+                            </div>
+                            <div className="h-1.5 bg-white/[0.03] rounded-sm overflow-hidden">
+                              <div className={`h-full ${s.c} rounded-sm`} style={{width: `${s.w}%`}} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between">
+                        <span className="text-[9px] text-gray-500">Conversión total</span>
+                        <span className="text-xs font-black text-emerald-400 tabular-nums">1.02%</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Bottom: top fuentes + actividad live */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2">Top fuentes de revenue</p>
+                      <div className="space-y-1.5">
+                        {[
+                          { src: '📘 Meta Ads · Campaña Q2', rev: '$1,247k', pct: 51, c: 'bg-blue-500' },
+                          { src: '🚀 Meta Ads · Retargeting', rev: '$542k', pct: 22, c: 'bg-indigo-500' },
+                          { src: '📸 Instagram Ads · Reels', rev: '$381k', pct: 16, c: 'bg-pink-500' },
+                          { src: '🌐 Orgánico WhatsApp', rev: '$248k', pct: 11, c: 'bg-emerald-500' },
+                        ].map((s, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <div className="w-12 h-1.5 bg-white/5 rounded-sm overflow-hidden shrink-0">
+                              <div className={`h-full ${s.c} rounded-sm`} style={{width: `${s.pct}%`}} />
+                            </div>
+                            <p className="text-[10px] text-gray-300 flex-1 truncate font-medium">{s.src}</p>
+                            <span className="text-[10px] font-black text-white tabular-nums shrink-0">{s.rev}</span>
+                          </div>
                         ))}
                       </div>
                     </div>
-                    {/* KPIs */}
-                    <div className="grid grid-cols-4 gap-2 mb-3">
-                      <div className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5">
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Leads</p>
-                        <p className="text-sm font-black text-indigo-400">40</p>
-                        <p className="text-[8px] text-emerald-400">↑ +28%</p>
+                    <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Actividad en tiempo real</p>
+                        <span className="flex items-center gap-1 text-[9px] text-emerald-400 font-bold">
+                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />Live
+                        </span>
                       </div>
-                      <div className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5">
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Ventas</p>
-                        <p className="text-sm font-black text-emerald-400">12</p>
-                        <p className="text-[8px] text-emerald-400">↑ +40%</p>
-                      </div>
-                      <div className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5">
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Conversión</p>
-                        <p className="text-sm font-black text-sky-400">30%</p>
-                        <p className="text-[8px] text-emerald-400">↑ +8%</p>
-                      </div>
-                      <div className="bg-white/[0.03] border border-white/5 rounded-xl p-2.5">
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Revenue</p>
-                        <p className="text-sm font-black text-purple-400">$2.1M</p>
-                        <p className="text-[8px] text-emerald-400">↑ +52%</p>
-                      </div>
-                    </div>
-                    {/* 3 cards inferiores */}
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/0 border border-purple-500/20 rounded-xl p-2.5">
-                        <p className="text-[8px] text-purple-400 uppercase tracking-widest font-bold">📢 Inversión Ads</p>
-                        <p className="text-sm font-black text-purple-400">$5.2k</p>
-                        <p className="text-[8px] text-emerald-400 mt-0.5">ROAS 514%</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/0 border border-emerald-500/20 rounded-xl p-2.5">
-                        <p className="text-[8px] text-emerald-400 uppercase tracking-widest font-bold">⚡ Activas</p>
-                        <p className="text-sm font-black text-emerald-400">8</p>
-                        <p className="text-[8px] text-gray-500 mt-0.5">5 bot · 3 humano</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/0 border border-yellow-500/20 rounded-xl p-2.5">
-                        <p className="text-[8px] text-yellow-400 uppercase tracking-widest font-bold">🎯 CPL</p>
-                        <p className="text-sm font-black text-yellow-400">$58</p>
-                        <p className="text-[8px] text-gray-500 mt-0.5">Promedio</p>
-                      </div>
-                    </div>
-                    {/* Tabla de leads + Chat preview */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5">
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest font-bold mb-2">Leads más recientes</p>
-                        <div className="space-y-1">
-                          {[
-                            { name: 'Mateo Jiménez', stage: '🆕 Nuevo', score: 62 },
-                            { name: 'Mariana Quintero', stage: '🤝 Negociación', score: 75 },
-                            { name: 'Carlos Méndez', stage: '✅ Ganado', score: 95 },
-                            { name: 'Sara Bedoya', stage: '🔥 Interesado', score: 65 },
-                          ].map((l, i) => (
-                            <div key={i} className="flex items-center gap-1.5 py-0.5">
-                              <div className="w-4 h-4 rounded-full bg-indigo-600/20 flex items-center justify-center text-[8px] font-bold text-indigo-400">{l.name.charAt(0)}</div>
-                              <p className="text-[9px] font-bold flex-1 truncate">{l.name}</p>
-                              <span className="text-[7px] text-gray-500">{l.stage}</span>
-                              <span className="text-[7px] text-emerald-400 font-bold">{l.score}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5">
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest font-bold mb-2">💬 Conversaciones</p>
-                        <div className="space-y-1">
-                          <div className="bg-[#005c4b]/30 rounded-lg p-1.5">
-                            <p className="text-[8px]">👤 ¿Apto 2H disponible?</p>
+                      <div className="space-y-1.5">
+                        {[
+                          { ts: 'hace 2s', e: '💳 Venta', t: 'María L. · $145k · Apto 2H', c: 'text-emerald-400' },
+                          { ts: 'hace 18s', e: '🎯 Lead atribuido', t: 'Carlos M. ← Meta Ads Q2', c: 'text-indigo-400' },
+                          { ts: 'hace 1m', e: '🤖 Bot calificó', t: 'Pedro R. · Score 92/100', c: 'text-purple-400' },
+                          { ts: 'hace 3m', e: '📅 Cita agendada', t: 'Ana G. · Mar 14:00', c: 'text-sky-400' },
+                          { ts: 'hace 6m', e: '✨ Variante IA', t: 'Hook escasez · CTR 4.99%', c: 'text-yellow-400' },
+                        ].map((a, i) => (
+                          <div key={i} className="flex items-start gap-2 text-[10px]">
+                            <span className={`font-bold shrink-0 ${a.c}`}>{a.e}</span>
+                            <span className="text-gray-400 flex-1 truncate">{a.t}</span>
+                            <span className="text-gray-600 shrink-0 text-[9px]">{a.ts}</span>
                           </div>
-                          <div className="bg-[#1a1f2e] rounded-lg p-1.5">
-                            <p className="text-[7px] text-emerald-400 font-bold mb-0.5">🤖 Bot IA</p>
-                            <p className="text-[8px]">62m², vista al lago, $145k. ¿Te genero el link?</p>
-                          </div>
-                          <div className="bg-[#005c4b]/30 rounded-lg p-1.5">
-                            <p className="text-[8px]">👤 ¡Sí!</p>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   </div>
                 </div>
                 {/* Overlay hover */}
-                <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/40 to-transparent opacity-0 group-hover:opacity-100 transition-all flex items-end justify-center pb-12">
+                <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/50 to-transparent opacity-0 group-hover:opacity-100 transition-all flex items-end justify-center pb-12">
                   <div className="bg-white text-indigo-700 px-6 py-3 rounded-2xl font-black shadow-2xl text-sm flex items-center gap-2 transform group-hover:scale-105 transition-all">
-                    👁 Navegar el dashboard en pantalla completa →
+                    Navegar el dashboard en pantalla completa →
                   </div>
                 </div>
               </Link>
             </div>
-            {/* Botones flotantes con accesos directos al demo */}
+            {/* Botones flotantes accesos directos */}
             <div className="mt-6 flex flex-wrap gap-2 justify-center">
               {[
-                { label: '👥 Ver CRM Kanban', href: '/demo/crm' },
-                { label: '🚀 Ver Anuncios IA', href: '/demo/ads' },
-                { label: '💬 Ver Conversaciones', href: '/demo/chat' },
-                { label: '📈 Ver Reportes', href: '/demo/analytics' },
+                { label: '📊 Atribución', href: '/demo/analytics' },
+                { label: '🚀 Anuncios IA', href: '/demo/ads' },
+                { label: '👥 CRM Kanban', href: '/demo/crm' },
+                { label: '💬 Conversaciones', href: '/demo/chat' },
               ].map((b) => (
                 <Link
                   key={b.href}
@@ -372,15 +421,13 @@ export default function LandingPage() {
             </div>
             {/* Pie del demo */}
             <p className="text-center text-[11px] text-gray-500 mt-4 max-w-xl mx-auto">
-              🎬 Esto NO es un mockup. Es el producto real navegable con datos de un negocio ficticio (Inmobiliaria Aurora).
-              <span className="text-indigo-400"> Explora todo libremente.</span>
+              Dashboard real · Datos demo de Inmobiliaria Aurora.
+              <span className="text-indigo-400"> Explora libremente, sin login.</span>
             </p>
           </div>
           </FadeInOnScroll>
         </div>
       </section>
-      {/* ============================================================ */}
-      {/* NO MÁS STACKS ROTOS — Sección de dolor */}
       {/* ============================================================ */}
       <section className="py-20 px-6 border-t border-white/5">
         <div className="max-w-6xl mx-auto">
