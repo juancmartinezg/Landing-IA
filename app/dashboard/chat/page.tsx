@@ -215,10 +215,25 @@ export default function ChatPage() {
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [selectedPhone]);
-  // Scroll al ultimo mensaje
+  // Auto-scroll al último mensaje SOLO cuando se agregan al final (no al prepender viejos)
+  const prevMsgsLenRef = useRef(0);
+  const prevLastTsRef = useRef<string | null>(null);
   useEffect(() => {
-    if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-  }, [botMessages, cwMessages]);
+    const msgs = tab === 'bot' ? botMessages : cwMessages;
+    const lastTs = msgs.length > 0 ? msgs[msgs.length - 1]?.msg_ts : null;
+    const grew = msgs.length > prevMsgsLenRef.current;
+    const newAtEnd = lastTs && lastTs !== prevLastTsRef.current;
+    // Scroll solo si: creció (entró mensaje) Y el último cambió (no es prepend)
+    if (grew && newAtEnd && chatEndRef.current) {
+      // Pequeño delay para que React pinte primero los prepended
+      const isInitialLoad = prevMsgsLenRef.current === 0;
+      chatEndRef.current.scrollIntoView({
+        behavior: isInitialLoad ? 'auto' : 'smooth',
+      });
+    }
+    prevMsgsLenRef.current = msgs.length;
+    prevLastTsRef.current = lastTs;
+  }, [botMessages, cwMessages, tab]);
   const selectBotConv = (phone: string) => {
     setSelectedPhone(phone);
     setSelectedConvId(null);
