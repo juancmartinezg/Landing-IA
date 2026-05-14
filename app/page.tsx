@@ -918,10 +918,10 @@ export default function LandingPage() {
               Cada módulo es enterprise por sí solo. Juntos son imparables. Haz clic en cualquiera para verlo funcionando en vivo.
             </p>
           </div>
+           <FadeInOnScroll>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <FadeInOnScroll delay={0}>
             <Link href="/demo/crm" target="_blank" className="group bg-gradient-to-br from-indigo-500/10 to-indigo-500/0 border border-indigo-500/30 rounded-3xl p-6 hover:border-indigo-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
-              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-indigo-500/20 text-indigo-300 font-bold rounded-full whitespace-nowrap">Ver en vivo ↗</div>
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-indigo-500/20 text-indigo-300 font-bold rounded-full whitespace-nowrap hidden sm:block">Ver en vivo ↗</div>
               <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1 mb-4">
                 <span className="text-sm">👥</span>
                 <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">CRM + Multi-agente</span>
@@ -950,10 +950,8 @@ export default function LandingPage() {
                 ))}
               </div>
             </Link>
-            </FadeInOnScroll>
-            <FadeInOnScroll delay={100}>
             <Link href="/demo/ads" target="_blank" className="group bg-gradient-to-br from-purple-500/10 to-purple-500/0 border border-purple-500/30 rounded-3xl p-6 hover:border-purple-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
-             <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-purple-500/20 text-purple-300 font-bold rounded-full whitespace-nowrap">Ver en vivo ↗</div>
+             <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-purple-500/20 text-purple-300 font-bold rounded-full whitespace-nowrap hidden sm:block">Ver en vivo ↗</div>
               <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-3 py-1 mb-4">
                 <span className="text-sm">🚀</span>
                 <span className="text-[10px] text-purple-400 font-black uppercase tracking-widest">Anuncios IA + Atribución</span>
@@ -982,10 +980,8 @@ export default function LandingPage() {
                 </div>
               </div>
             </Link>
-            </FadeInOnScroll>
-            <FadeInOnScroll delay={200}>
             <Link href="/demo/chat" target="_blank" className="group bg-gradient-to-br from-emerald-500/10 to-emerald-500/0 border border-emerald-500/30 rounded-3xl p-6 hover:border-emerald-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
-              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-emerald-500/20 text-emerald-300 font-bold rounded-full whitespace-nowrap">Ver en vivo ↗</div>
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-emerald-500/20 text-emerald-300 font-bold rounded-full whitespace-nowrap hidden sm:block">Ver en vivo ↗</div>
               <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1 mb-4">
                 <span className="text-sm">💬</span>
                 <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Bot IA + Multicanal</span>
@@ -998,10 +994,8 @@ export default function LandingPage() {
                 <div className="flex justify-end"><div className="bg-[#005c4b]/40 rounded-lg rounded-tr-sm px-2.5 py-1.5 max-w-[80%]"><p className="text-[10px]">¡Sí!</p></div></div>
               </div>
             </Link>
-            </FadeInOnScroll>
-            <FadeInOnScroll delay={300}>
-            <Link href="/demo/analytics" target="_blank" className="group bg-gradient-to-br from-yellow-500/10 to-yellow-500/0 border border-yellow-500/30 rounded-3xl p-6 hover:border-yellow-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
-              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-yellow-500/20 text-yellow-300 font-bold rounded-full whitespace-nowrap">Ver en vivo ↗</div>
+            <Link href="/demo/analytics" target="_blank"className="group bg-gradient-to-br from-yellow-500/10 to-yellow-500/0 border border-yellow-500/30 rounded-3xl p-6 hover:border-yellow-500/60 hover:scale-[1.01] transition-all relative overflow-hidden">
+              <div className="absolute top-4 right-4 text-[9px] px-2 py-1 bg-yellow-500/20 text-yellow-300 font-bold rounded-full whitespace-nowrap hidden sm:block">Ver en vivo ↗</div>
               <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-3 py-1 mb-4">
                 <span className="text-sm">📈</span>
                 <span className="text-[10px] text-yellow-400 font-black uppercase tracking-widest">Pagos + Agenda + Reportes</span>
@@ -1021,8 +1015,8 @@ export default function LandingPage() {
                 </div>
               </div>
             </Link>
-            </FadeInOnScroll>
           </div>
+          </FadeInOnScroll>
         </div>
       </section>
       {/* ============================================================ */}

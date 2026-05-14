@@ -31,6 +31,19 @@ export default function ChatPage() {
   const lastMsgCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [phonesWithNew, setPhonesWithNew] = useState<Set<string>>(new Set());
+   const [showLeadPanel, setShowLeadPanel] = useState(false);
+   const [leadDetail, setLeadDetail] = useState<any>(null);
+   const [loadingLead, setLoadingLead] = useState(false);
+   // Cargar detalle del lead desde /leads?phone=X
+   const loadLeadDetail = async (phone: string) => {
+     setLoadingLead(true);
+     try {
+       const res = await fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } });
+       const data = await res.json();
+       setLeadDetail(data);
+     } catch (e) { console.error('Error cargando lead:', e); }
+     setLoadingLead(false);
+   };
    // Sonido de nuevo mensaje (2 tonos estilo WhatsApp)
   const playNotificationSound = () => {
     try {
@@ -603,12 +616,12 @@ export default function ChatPage() {
                 }`}>
                   {(selectedName || 'U').charAt(0).toUpperCase()}
                 </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-sm truncate">
-                    {botConvs.find(c => c.phone === selectedPhone)?.channel_icon || '💚'} {selectedName || 'Sin nombre'}
-                  </p>
-                  <p className="text-[10px] md:text-[11px] text-gray-500 truncate">{selectedDetail}</p>
-                </div>
+                <div className="min-w-0 cursor-pointer" onClick={() => { setShowLeadPanel(!showLeadPanel); if (!showLeadPanel && selectedPhone) loadLeadDetail(selectedPhone); }}>
+                   <p className="font-bold text-sm truncate hover:text-indigo-400 transition-colors">
+                     {botConvs.find(c => c.phone === selectedPhone)?.channel_icon || '💚'} {selectedName || 'Sin nombre'}
+                   </p>
+                   <p className="text-[10px] md:text-[11px] text-gray-500 truncate">{selectedDetail} · <span className="text-indigo-400">Ver perfil</span></p>
+                 </div>
               </div>
               <div className="flex items-center gap-1 md:gap-2 shrink-0">
                 {tab === 'bot' && selectedPhone && (
@@ -636,12 +649,20 @@ export default function ChatPage() {
                   </button>
                 )}
                 <span className={`text-[9px] md:text-[10px] px-2 md:px-3 py-1 rounded-full hidden sm:inline-flex ${
-                  tab === 'bot' ? (takenOver ? 'bg-yellow-500/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-400') : 'bg-indigo-500/20 text-indigo-400'
-                }`}>
-                  {tab === 'bot' ? (takenOver ? '🙋 Asesor' : '🤖 Bot') : '🙋 Asesor'}
-                </span>
-              </div>
-            </div>
+                   tab === 'bot' ? (takenOver ? 'bg-yellow-500/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-400') : 'bg-indigo-500/20 text-indigo-400'
+                 }`}>
+                   {tab === 'bot' ? (takenOver ? '🙋 Asesor' : '🤖 Bot') : '🙋 Asesor'}
+                 </span>
+                 <button
+                   onClick={() => { setShowLeadPanel(!showLeadPanel); if (!showLeadPanel && selectedPhone) loadLeadDetail(selectedPhone); }}
+                   className={`hidden md:flex text-[9px] md:text-[10px] px-2 py-1 rounded-full font-bold transition-all ${
+                     showLeadPanel ? 'bg-indigo-500/20 text-indigo-400' : 'bg-white/5 text-gray-400 hover:text-white'
+                   }`}
+                 >
+                   👤
+                 </button>
+               </div>
+             </div>
             {/* Mensajes */}
              <div className="flex-1 overflow-y-auto px-6 py-4"
                   style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(99,102,241,0.03) 0%, transparent 50%)' }}>
@@ -796,6 +817,145 @@ export default function ChatPage() {
             )}
           </>
         )}
+      {/* Panel lateral — Info del lead */}
+      {showLeadPanel && selectedPhone && (
+        <div className="hidden md:flex w-80 border-l border-white/5 bg-[#080B14] flex-col overflow-y-auto">
+          {loadingLead ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : leadDetail ? (
+            <div className="p-4 space-y-4">
+              {/* Header del lead */}
+              <div className="text-center pb-4 border-b border-white/5">
+                <div className="w-16 h-16 mx-auto rounded-full bg-indigo-600/20 flex items-center justify-center text-lg font-black text-indigo-400 mb-2">
+                  {(leadDetail.lead?.customer_name || leadDetail.lead?.wa_profile_name || selectedName || 'U').charAt(0).toUpperCase()}
+                </div>
+                <p className="text-sm font-black truncate">{leadDetail.lead?.customer_name || leadDetail.lead?.wa_profile_name || selectedName}</p>
+                <p className="text-[10px] text-gray-500 truncate">{selectedPhone}</p>
+                {leadDetail.lead?.customer_email && (
+                  <p className="text-[10px] text-indigo-400 truncate">{leadDetail.lead.customer_email}</p>
+                )}
+              </div>
+              {/* Etapa + Status */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-gray-500 uppercase tracking-widest">Etapa</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 font-bold">
+                    {leadDetail.lead?.lead_status || 'Nuevo'}
+                  </span>
+                </div>
+                {leadDetail.lead?.service_of_interest && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] text-gray-500 uppercase tracking-widest">Servicio</span>
+                    <span className="text-[10px] text-white font-bold truncate max-w-[140px]">{leadDetail.lead.service_of_interest}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-gray-500 uppercase tracking-widest">Visitas</span>
+                  <span className="text-[10px] text-white font-bold">{leadDetail.lead?.visit_count || 0}</span>
+                </div>
+                {leadDetail.lead?.lead_score && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] text-gray-500 uppercase tracking-widest">Score IA</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">{leadDetail.lead.lead_score}%</span>
+                  </div>
+                )}
+              </div>
+              {/* PII */}
+              {(leadDetail.lead?.customer_full_name || leadDetail.lead?.customer_dni || leadDetail.lead?.customer_city || leadDetail.payment?.customer_email) && (
+                <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 space-y-2">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">Datos del cliente</p>
+                  {(leadDetail.lead?.customer_full_name || leadDetail.payment?.customer_full_name) && (
+                    <div className="flex justify-between">
+                      <span className="text-[10px] text-gray-500">👤 Nombre</span>
+                      <span className="text-[10px] text-white font-medium truncate max-w-[140px]">{leadDetail.lead?.customer_full_name || leadDetail.payment?.customer_full_name}</span>
+                    </div>
+                  )}
+                  {(leadDetail.lead?.customer_email || leadDetail.payment?.customer_email) && (
+                    <div className="flex justify-between">
+                      <span className="text-[10px] text-gray-500">📧 Email</span>
+                      <span className="text-[10px] text-indigo-400 font-medium truncate max-w-[140px]">{leadDetail.lead?.customer_email || leadDetail.payment?.customer_email}</span>
+                    </div>
+                  )}
+                  {(leadDetail.lead?.customer_dni || leadDetail.payment?.customer_dni) && (
+                    <div className="flex justify-between">
+                      <span className="text-[10px] text-gray-500">🆔 Documento</span>
+                      <span className="text-[10px] text-white font-medium">{leadDetail.lead?.customer_dni || leadDetail.payment?.customer_dni}</span>
+                    </div>
+                  )}
+                  {(leadDetail.lead?.customer_city || leadDetail.payment?.customer_city) && (
+                    <div className="flex justify-between">
+                      <span className="text-[10px] text-gray-500">🏙️ Ciudad</span>
+                      <span className="text-[10px] text-white font-medium">{leadDetail.lead?.customer_city || leadDetail.payment?.customer_city}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Atribución */}
+              {leadDetail.lead?.source_first_campaign_id && (
+                <div className="bg-gradient-to-br from-purple-500/5 to-purple-500/0 border border-purple-500/20 rounded-xl p-3 space-y-2">
+                  <p className="text-[9px] text-purple-400 uppercase tracking-widest font-bold">🎯 Atribución</p>
+                  <div className="flex justify-between">
+                    <span className="text-[10px] text-gray-500">Campaña</span>
+                    <span className="text-[10px] text-purple-400 font-bold truncate max-w-[140px]">{leadDetail.lead.source_first_campaign_id}</span>
+                  </div>
+                </div>
+              )}
+              {/* Agente asignado */}
+              <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                <p className="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-2">Agente</p>
+                <p className="text-xs font-bold">
+                  {leadDetail.lead?.assigned_agent_name || leadDetail.lead?.assigned_agent_id || '⚠️ Sin asignar'}
+                </p>
+              </div>
+              {/* Pago */}
+              {leadDetail.payment && (
+                <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 space-y-2">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-widest font-bold">💳 Pago</p>
+                  <div className="flex justify-between">
+                    <span className="text-[10px] text-gray-500">Estado</span>
+                    <span className={`text-[10px] font-bold ${leadDetail.payment.status === 'PAGADO' ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                      {leadDetail.payment.status}
+                    </span>
+                  </div>
+                  {leadDetail.payment.amount && (
+                    <div className="flex justify-between">
+                      <span className="text-[10px] text-gray-500">Monto</span>
+                      <span className="text-[10px] text-white font-bold">${Number(leadDetail.payment.amount).toLocaleString()} {leadDetail.payment.currency || 'COP'}</span>
+                    </div>
+                  )}
+                  {leadDetail.payment.schedule_status && (
+                    <div className="flex justify-between">
+                      <span className="text-[10px] text-gray-500">Cita</span>
+                      <span className="text-[10px] text-sky-400 font-bold">{leadDetail.payment.schedule_status} · {leadDetail.payment.scheduled_date}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Acciones rápidas */}
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={() => window.open(`/dashboard/crm?phone=${selectedPhone}`, '_blank')}
+                  className="w-full text-[10px] py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all"
+                >
+                  👥 Ver en CRM completo
+                </button>
+                <button
+                  onClick={() => { setShowLeadPanel(false); }}
+                  className="w-full text-[10px] py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold rounded-lg transition-all"
+                >
+                  ✕ Cerrar panel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center p-4">
+              <p className="text-xs text-gray-500 text-center">No se encontró información del lead</p>
+            </div>
+          )}
+        </div>
+      )}
       </div>
     </div>
   );
