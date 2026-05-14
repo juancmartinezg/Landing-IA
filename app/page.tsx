@@ -427,8 +427,7 @@ export default function LandingPage() {
           </div>
           </FadeInOnScroll>
         </div>
-      </section>
-      {/* ============================================================ */}
+      </section>      
       <section className="py-20 px-6 border-t border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
@@ -538,14 +537,107 @@ export default function LandingPage() {
         </div>
       </section>
       {/* ============================================================ */}
-      {/* CÓMO FUNCIONA — 5 pasos del flujo de ventas */}
+      {/* WHY NOW — Los 4 problemas macro del mercado */}
       {/* ============================================================ */}
-      <section id="producto" className="py-20 px-6 bg-white/[0.02] border-t border-white/5">
+      <section className="py-20 px-6 border-t border-white/5 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-red-600/5 blur-[200px] -z-10" />
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-[11px] text-emerald-400 uppercase tracking-[0.3em] font-black mb-4">Cómo funciona</p>
+          <div className="text-center mb-14">
+            <p className="text-[11px] text-red-400 uppercase tracking-[0.3em] font-black mb-4">El estado actual del mercado</p>
+            <h2 className="text-3xl md:text-5xl font-black mb-4 leading-tight">
+              Tus clientes ya viven en WhatsApp.<br />
+              <span className="text-red-400">Tu operación, no.</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
+              4 verdades incómodas que están drenando revenue de tu negocio ahora mismo.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              {
+                stat: '76%',
+                statLabel: 'de las ventas LATAM',
+                title: 'Pasan por WhatsApp.',
+                desc: 'Tu cliente ya decidió: prefiere chatear que llamar, que abrir tu web, que llenar formularios. WhatsApp es el nuevo embudo. Pero la mayoría de negocios opera ahí como si fuera 2015 — con WhatsApp Web abierto y respuestas manuales.',
+                icon: '📱',
+                color: 'from-emerald-500/15 to-emerald-500/0',
+                border: 'border-emerald-500/30',
+                accent: 'text-emerald-400',
+              },
+              {
+                stat: '< 5 min',
+                statLabel: 'es la ventana real',
+                title: 'Si tardas más, perdiste.',
+                desc: 'Estudios de Harvard Business Review demuestran que los leads contactados en menos de 5 minutos convierten 9× más. Pero tu equipo duerme, almuerza, se enferma, atiende a otros. Cada minuto que pasa sin respuesta es plata que se va al competidor.',
+                icon: '⏱️',
+                color: 'from-yellow-500/15 to-yellow-500/0',
+                border: 'border-yellow-500/30',
+                accent: 'text-yellow-400',
+              },
+              {
+                stat: '8+',
+                statLabel: 'herramientas desconectadas',
+                title: 'Tu stack es un Frankenstein.',
+                desc: 'CRM por aquí, bot por allá, Ads en otra ventana, Calendly aparte, pasarela aparte, Zapier pegando todo con cinta. Cada herramienta cuesta plata. Cada integración rota cuesta más. Y al final, nadie sabe qué está pasando con cada lead.',
+                icon: '🔌',
+                color: 'from-red-500/15 to-red-500/0',
+                border: 'border-red-500/30',
+                accent: 'text-red-400',
+              },
+              {
+                stat: '4/10',
+                statLabel: 'match rate Meta promedio',
+                title: 'Tus Ads aprenden de clics, no de ventas.',
+                desc: 'El algoritmo de Meta optimiza por lo que mides. Si solo mandas "clicks", optimiza para que más gente haga click — no para que más gente compre. Sin atribución completa Lead→Venta, estás pagando para entrenar al algoritmo equivocado.',
+                icon: '🎯',
+                color: 'from-purple-500/15 to-purple-500/0',
+                border: 'border-purple-500/30',
+                accent: 'text-purple-400',
+              },
+            ].map((p, i) => (
+              <FadeInOnScroll key={i} delay={i * 100}>
+                <div className={`bg-gradient-to-br ${p.color} border ${p.border} rounded-3xl p-6 md:p-8 h-full transition-all hover:scale-[1.01]`}>
+                  <div className="flex items-start gap-5 mb-4">
+                    <div className="text-5xl shrink-0">{p.icon}</div>
+                    <div className="flex-1">
+                      <p className={`text-4xl md:text-5xl font-black ${p.accent} leading-none tabular-nums`}>{p.stat}</p>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1 font-bold">{p.statLabel}</p>
+                    </div>
+                  </div>
+                  <h3 className="text-lg md:text-xl font-black mb-3">{p.title}</h3>
+                  <p className="text-sm text-gray-400 leading-relaxed">{p.desc}</p>
+                </div>
+              </FadeInOnScroll>
+            ))}
+          </div>
+          {/* Cierre emocional + transición */}
+          <FadeInOnScroll delay={500}>
+            <div className="mt-12 text-center max-w-3xl mx-auto">
+              <p className="text-xl md:text-2xl font-black text-white leading-tight mb-2">
+                Cada día que tu operación no está conectada con WhatsApp,
+              </p>
+              <p className="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 leading-tight">
+                es revenue que se va al competidor.
+              </p>
+              <div className="mt-8 inline-flex items-center gap-2 text-[11px] text-gray-500">
+                <span className="w-8 h-px bg-gradient-to-r from-transparent to-gray-600" />
+                <span className="uppercase tracking-[0.3em] font-bold">Hay otra forma</span>
+                <span className="w-8 h-px bg-gradient-to-l from-transparent to-gray-600" />
+              </div>
+            </div>
+          </FadeInOnScroll>
+        </div>
+      </section>
+      {/* ============================================================ */}
+      {/* STACK ROTO → UNA PLATAFORMA — La solución visual */}
+      {/* ============================================================ */}
+      <section className="py-20 px-6 border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-[11px] text-red-400 uppercase tracking-[0.3em] font-black mb-4">La solución</p>
             <h2 className="text-3xl md:text-5xl font-black mb-4">
-              5 pasos. <span className="text-emerald-400">1 flujo completo.</span>
+              Reemplaza tu stack por <span className="text-red-400">una sola plataforma</span><br />
+              que sí se habla entre sí.
             </h2>
             <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-base">
               Del anuncio al cierre de venta, todo dentro de la misma plataforma. La IA aprende de cada conversión real.
