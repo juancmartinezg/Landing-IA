@@ -116,6 +116,44 @@ export default function MarketingPage() {
   const allVarsMapped = !selectedTpl?.is_carousel && Array.from({ length: varCount }, (_, i) =>
     !!form.param_field_map[String(i + 1)]
   ).every(Boolean);
+  // Detectar leads con campos vacíos en las variables mapeadas (transparencia pre-envío)
+  // Devuelve un array de {var_num, field, missing_count, fallback}
+  const FIELD_LABELS: Record<string, { label: string; fallback: string }> = {
+    name: { label: 'Nombre', fallback: 'amigo' },
+    service: { label: 'Servicio de interés', fallback: 'nuestro negocio' },
+    email: { label: 'Email', fallback: 'tu correo' },
+    phone: { label: 'Teléfono', fallback: 'tu número' },
+    appointment_date: { label: 'Fecha de cita', fallback: 'tu cita' },
+    appointment_time: { label: 'Hora de cita', fallback: 'el horario acordado' },
+    appointment_location: { label: 'Lugar / Sede', fallback: 'nuestra ubicación' },
+  };
+  const fieldMissingReport = (() => {
+    if (!selectedTpl || selectedTpl.is_carousel || varCount === 0) return [];
+    const FIELD_MAP_TO_LEAD: Record<string, string[]> = {
+      name: ['customer_name', 'customer_full_name', 'name'],
+      service: ['service_of_interest', 'service'],
+      email: ['customer_email', 'email'],
+      phone: ['contact_id', 'phoneNumber'],
+      appointment_date: ['scheduled_date', 'appointment_date'],
+      appointment_time: ['scheduled_hour', 'appointment_time'],
+      appointment_location: ['appointment_location'],
+    };
+    const report: Array<{ varNum: number; field: string; missing: number; total: number; label: string; fallback: string }> = [];
+    for (let i = 1; i <= varCount; i++) {
+      const field = form.param_field_map[String(i)];
+      if (!field || field === 'custom_value') continue;
+      const leadFields = FIELD_MAP_TO_LEAD[field] || [field];
+      const missing = effectiveRecipients.filter(l => {
+        const val = leadFields.map(f => l[f]).find(v => v && String(v).trim());
+        return !val;
+      }).length;
+      if (missing > 0) {
+        const meta = FIELD_LABELS[field] || { label: field, fallback: '-' };
+        report.push({ varNum: i, field, missing, total: effectiveRecipients.length, label: meta.label, fallback: meta.fallback });
+      }
+    }
+    return report;
+  })();
   // Preview con valores reales: reemplaza {{N}} con body_example[N-1]
   const bodyExample: string[] = selectedTpl?.body_example || [];
   const previewBody = (selectedTpl?.body || '').replace(/\{\{(\d+)\}\}/g, (_match, n) => {
@@ -518,6 +556,31 @@ export default function MarketingPage() {
             </p>
             <p className="text-[10px] text-gray-400 mt-1">
               Esta plantilla tiene {varCount} variable{varCount > 1 ? 's' : ''}. Selecciona qué campo del lead usar para cada una arriba.
+            </p>
+          </div>
+        )}
+        {/* Warning de transparencia: leads con campos vacíos usarán fallback */}
+        {selectedTpl && allVarsMapped && fieldMissingReport.length > 0 && (
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 mb-3">
+            <p className="text-[11px] text-amber-300 font-bold mb-1.5">
+              ℹ️ Datos faltantes en algunos leads
+            </p>
+            <p className="text-[10px] text-gray-400 mb-2">
+              Estos leads recibirán el mensaje con un valor genérico en lugar de su dato real:
+            </p>
+            <ul className="space-y-1">
+              {fieldMissingReport.map(r => (
+                <li key={r.varNum} className="text-[10px] text-gray-300 flex items-start gap-2">
+                  <span className="text-amber-400 font-mono shrink-0">{`{{${r.varNum}}}`}</span>
+                  <span className="flex-1">
+                    <span className="font-bold text-amber-300">{r.missing}</span> de <span className="font-bold">{r.total}</span> leads no tienen <span className="font-bold text-gray-200">{r.label}</span>
+                    {' → '}usarán <span className="italic text-emerald-400">"{r.fallback}"</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[9px] text-amber-300/70 mt-2 italic">
+              💡 Si querés mensajes 100% personalizados, completa esos campos en el CRM antes de enviar.
             </p>
           </div>
         )}
