@@ -281,7 +281,7 @@ export default function MarketingPage() {
         language: form.language,
         param_field_map: form.param_field_map,
       };
-      / Modo external: lista no guardada en CRM (pegada o importada)
+      // Modo external: lista no guardada en CRM (pegada o importada)
       if (form.selection_mode === 'external' && form.external_parsed.length > 0) {
         payload.phone_list = form.external_parsed.map(e => ({
           phone: e.phone,
