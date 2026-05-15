@@ -249,7 +249,7 @@ export default function MarketingPage() {
   })();
   // Preview con valores reales: reemplaza {{N}} con body_example[N-1]
   const bodyExample: string[] = selectedTpl?.body_example || [];
-  const previewBody = (selectedTpl?.body || '').replace(/\{\{(\d+)\}\}/g, (_match, n) => {
+  const previewBody = (selectedTpl?.body || '').replace(/\{\{(\d+)\}\}/g, (_match: string, n: string) => {
     const idx = parseInt(n) - 1;
     return bodyExample[idx] ? `*${bodyExample[idx]}*` : `[var ${n}]`;
   });
