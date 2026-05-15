@@ -206,7 +206,7 @@ export default function MarketingPage() {
   // Prioridad: var_count del API (más confiable) → fallback a regex sobre body
   const varCount = selectedTpl?.var_count ?? ((selectedTpl?.body || '').match(/\{\{\d+\}\}/g)?.length || 0);
   // Validar que TODAS las variables estén mapeadas antes de permitir envío
-  const allVarsMapped = !selectedTpl?.is_carousel && Array.from({ length: varCount }, (_, i) =>
+  const allVarsMapped = !selectedTpl?.is_carousel && Array.from({ length: varCount }, (_: unknown, i: number) =>
     !!form.param_field_map[String(i + 1)]
   ).every(Boolean);
   // Detectar leads con campos vacíos en las variables mapeadas (transparencia pre-envío)
@@ -236,8 +236,8 @@ export default function MarketingPage() {
       const field = form.param_field_map[String(i)];
       if (!field || field === 'custom_value') continue;
       const leadFields = FIELD_MAP_TO_LEAD[field] || [field];
-      const missing = effectiveRecipients.filter(l => {
-        const val = leadFields.map(f => l[f]).find(v => v && String(v).trim());
+      const missing = effectiveRecipients.filter((l: any) => {
+        const val = leadFields.map((f: string) => l[f]).find((v: any) => v && String(v).trim());
         return !val;
       }).length;
       if (missing > 0) {
@@ -406,7 +406,7 @@ export default function MarketingPage() {
                     </p>
                     <div className="bg-[#0B3D2E] rounded-lg p-3 border-l-4 border-emerald-500/50">
                       <p className="text-[11px] text-white whitespace-pre-wrap leading-relaxed">
-                        {previewBody.split(/(\*[^*]+\*)/).map((part, idx) =>
+                        {previewBody.split(/(\*[^*]+\*)/).map((part: string, idx: number) =>
                           part.startsWith('*') && part.endsWith('*') ? (
                             <span key={idx} className="bg-emerald-500/20 text-emerald-300 px-1 rounded font-bold">
                               {part.slice(1, -1)}
@@ -429,7 +429,7 @@ export default function MarketingPage() {
                   <div>
                     <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Vista previa del carrusel</p>
                     <div className="bg-[#0B3D2E] rounded-lg p-3 flex gap-1.5 overflow-x-auto">
-                      {Array.from({ length: Math.min(selectedTpl.card_count || 0, 5) }).map((_, i) => (
+                      {Array.from({ length: Math.min(selectedTpl.card_count || 0, 5) }).map((_: unknown, i: number) => (
                         <div key={i} className="shrink-0 w-16 h-20 bg-white/10 rounded border border-white/20 flex flex-col items-center justify-center">
                           <span className="text-[8px] text-white/40">🖼️</span>
                           <span className="text-[7px] text-white/30 mt-1">Card {i+1}</span>
@@ -462,7 +462,7 @@ export default function MarketingPage() {
               <p className="text-[10px] text-gray-600">Esta plantilla no tiene variables.</p>
             ) : (
               <div className="space-y-2">
-                {Array.from({ length: varCount }, (_, i) => (
+                {Array.from({ length: varCount }, (_: unknown, i: number) => (
                   <div key={i} className="flex items-center gap-2">
                     <span className={`text-xs w-10 ${form.param_field_map[String(i+1)] ? 'text-emerald-400' : 'text-red-400'}`}>{`{{${i+1}}}`}</span>
                     <select value={form.param_field_map[String(i+1)] || ''} onChange={(e) => setForm(f => ({
