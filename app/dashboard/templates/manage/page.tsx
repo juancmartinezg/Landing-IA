@@ -7,6 +7,51 @@ const CATEGORIES = [
   { id: 'UTILITY', label: '🔧 Utilidad', desc: 'Recordatorios, confirmaciones, alertas. Más barato (~$0.008-0.04 USD/msg).', color: 'indigo' },
   { id: 'MARKETING', label: '📢 Marketing', desc: 'Promos, ofertas, reactivación. Más caro (~$0.012-0.08 USD/msg). Requiere opt-in.', color: 'purple' },
 ];
+// Diccionario de labels humanos para plantillas auto-creadas conocidas.
+// Si no está en este dict, se capitaliza el nombre técnico como fallback.
+const TEMPLATE_LABELS: Record<string, { title: string; emoji: string; desc: string }> = {
+  appointment_reminder_v1: {
+    title: 'Recordatorio de cita',
+    emoji: '📅',
+    desc: 'Recuerda al cliente la fecha y hora de su próxima cita.',
+  },
+  follow_up_v1: {
+    title: 'Seguimiento comercial',
+    emoji: '💬',
+    desc: 'Reactiva leads que mostraron interés pero no completaron la compra.',
+  },
+};
+// Devuelve {title, emoji, subtitle} humanos para mostrar la plantilla.
+const humanize = (t: any) => {
+  // Carruseles: nombre del label que dio el cliente al crearlo
+  if (t.is_carousel || t.type === 'carousel') {
+    const raw = t.label || t.template_name || '';
+    const pretty = raw
+      .replace(/_v\d+$/, '')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c: string) => c.toUpperCase());
+    return {
+      title: pretty || 'Carrusel de productos',
+      emoji: '🎠',
+      subtitle: `${t.card_count || 0} productos · Carrusel visual`,
+    };
+  }
+  // Plantillas auto conocidas
+  const meta = TEMPLATE_LABELS[t.template_name];
+  if (meta) {
+    return { title: meta.title, emoji: meta.emoji, subtitle: meta.desc };
+  }
+  // Custom del cliente: capitalizar nombre técnico
+  const pretty = (t.template_name || '')
+    .replace(/_v\d+$/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c: string) => c.toUpperCase());
+  return {
+    title: pretty || 'Plantilla',
+    emoji: t.category === 'MARKETING' ? '📢' : '🔧',
+    subtitle: t.type === 'custom' ? 'Plantilla personalizada' : 'Plantilla del sistema',
+  };
+};
 export default function TemplatesManagerPage() {
   const { user } = useAuth();
   const h = { 'client-id': user?.companyId || '' };
@@ -215,28 +260,52 @@ export default function TemplatesManagerPage() {
               <div key={i} className={`bg-white/[0.03] border rounded-xl p-4 transition-all ${
                 t.status === 'APPROVED' ? 'border-emerald-500/20' : t.status === 'REJECTED' ? 'border-red-500/20' : 'border-white/5'
               }`}>
-                                <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div>
+                    <div className="flex-1 min-w-0">
+                      {/* Título humano grande */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-bold">{t.template_name}</p>
+                        <p className="text-base font-bold">
+                          {humanize(t).emoji} {humanize(t).title}
+                        </p>
                         <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold bg-${catColor}-500/20 text-${catColor}-400`}>
-                          {t.category || 'UTILITY'}
+                          {t.category === 'MARKETING' ? 'Marketing' : 'Utilidad'}
                         </span>
                         <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold bg-${statusColor}-500/20 text-${statusColor}-400`}>
                           {statusLabel}
                         </span>
                         {t.type === 'auto' && (
-                          <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-500">Auto-creada</span>
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-500" title="Plantilla creada automáticamente al conectar WhatsApp">
+                            🤖 Sistema
+                          </span>
+                        )}
+                        {t.type === 'carousel' && (
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400" title="Carrusel visual para campañas de marketing">
+                            🎠 Carrusel
+                          </span>
+                        )}
+                        {t.type === 'custom' && (
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400" title="Plantilla creada por ti">
+                            ✨ Personalizada
+                          </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-gray-500 mt-1">
-                        {t.language} · ID: {(t.template_id || '').slice(-8) || '—'}
-                        {t.created_at ? ` · ${new Date(t.created_at * 1000).toLocaleDateString()}` : ''}
-                      </p>
-                      {t.body && (
-                        <p className="text-[10px] text-gray-400 mt-1 truncate max-w-md">{t.body.slice(0, 100)}{t.body.length > 100 ? '...' : ''}</p>
+                      {/* Subtítulo descriptivo */}
+                      <p className="text-[11px] text-gray-400 mt-1">{humanize(t).subtitle}</p>
+                      {/* Preview del body (lo que el cliente recibirá) */}
+                      {t.body && !t.is_carousel && (
+                        <div className="mt-2 bg-[#0B3D2E]/40 rounded-lg px-3 py-2 border-l-2 border-emerald-500/30">
+                          <p className="text-[10px] text-white/80 whitespace-pre-wrap leading-relaxed">
+                            {t.body.length > 180 ? `${t.body.slice(0, 180)}…` : t.body}
+                          </p>
+                        </div>
                       )}
+                      {/* Metadata técnica al final, discreta */}
+                      <p className="text-[9px] text-gray-600 mt-2 font-mono">
+                        {t.template_name} · {t.language}
+                        {t.var_count > 0 && ` · ${t.var_count} variable${t.var_count > 1 ? 's' : ''}`}
+                        {t.created_at ? ` · creada ${new Date(t.created_at * 1000).toLocaleDateString()}` : ''}
+                      </p>
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
