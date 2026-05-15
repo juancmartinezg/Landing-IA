@@ -58,6 +58,8 @@ export default function MarketingPage() {
     filters: { lead_stage: [] as string[], tags: [] as string[], days_inactive: 0, service: '' },
     param_field_map: {} as Record<string, string>,
     confirmed: false,
+    selected_phones: [] as string[],  // Selección manual de leads (vacío = usa filtros)
+    selection_mode: 'filter' as 'filter' | 'manual',
   });
   useEffect(() => {
     Promise.all([
@@ -72,7 +74,7 @@ export default function MarketingPage() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
-  // Filtrar leads según filtros seleccionados
+  // Filtrar leads según filtros seleccionados (usado como pre-filtro en ambos modos)
   const filteredLeads = leads.filter(l => {
     const phone = l.contact_id || l.phoneNumber || '';
     if (!phone || phone.startsWith('demo_')) return false;
@@ -85,8 +87,41 @@ export default function MarketingPage() {
     }
     return true;
   });
+  // Destinatarios efectivos según el modo
+  const effectiveRecipients = form.selection_mode === 'manual'
+    ? leads.filter(l => form.selected_phones.includes(l.contact_id || l.phoneNumber || ''))
+    : filteredLeads;
+  // Toggle individual de un teléfono
+  const togglePhone = (phone: string) => setForm(f => ({
+    ...f,
+    selected_phones: f.selected_phones.includes(phone)
+      ? f.selected_phones.filter(p => p !== phone)
+      : [...f.selected_phones, phone],
+  }));
+  // Seleccionar/deseleccionar todos los filtrados
+  const toggleAllFiltered = () => setForm(f => {
+    const filteredPhones = filteredLeads.map(l => l.contact_id || l.phoneNumber || '').filter(Boolean);
+    const allSelected = filteredPhones.every(p => f.selected_phones.includes(p));
+    return {
+      ...f,
+      selected_phones: allSelected
+        ? f.selected_phones.filter(p => !filteredPhones.includes(p))
+        : [...new Set([...f.selected_phones, ...filteredPhones])],
+    };
+  });
   const selectedTpl = templates.find(t => t.template_name === form.template_name);
-  const varCount = (selectedTpl?.body || '').match(/\{\{\d+\}\}/g)?.length || 0;
+  // Prioridad: var_count del API (más confiable) → fallback a regex sobre body
+  const varCount = selectedTpl?.var_count ?? ((selectedTpl?.body || '').match(/\{\{\d+\}\}/g)?.length || 0);
+  // Validar que TODAS las variables estén mapeadas antes de permitir envío
+  const allVarsMapped = !selectedTpl?.is_carousel && Array.from({ length: varCount }, (_, i) =>
+    !!form.param_field_map[String(i + 1)]
+  ).every(Boolean);
+  // Preview con valores reales: reemplaza {{N}} con body_example[N-1]
+  const bodyExample: string[] = selectedTpl?.body_example || [];
+  const previewBody = (selectedTpl?.body || '').replace(/\{\{(\d+)\}\}/g, (_match, n) => {
+    const idx = parseInt(n) - 1;
+    return bodyExample[idx] ? `*${bodyExample[idx]}*` : `[var ${n}]`;
+  });
   // Costo Meta por mensaje según tipo:
   // - UTILITY: ~$0.01 USD
   // - MARKETING texto: ~$0.025 USD
@@ -96,30 +131,40 @@ export default function MarketingPage() {
     : selectedTpl?.category === 'MARKETING'
       ? 0.025
       : 0.01;
-  const estimatedCost = filteredLeads.length * costPerMsg;
+  const estimatedCost = effectiveRecipients.length * costPerMsg;
   const allTags = [...new Set(leads.flatMap(l => l.tags || []))];
   const allStages = ['nuevo', 'contactado', 'interesado', 'negociacion', 'cerrado_ganado', 'cerrado_perdido'];
   const allServices = [...new Set(leads.map(l => l.service_of_interest).filter(Boolean))];
   const handleSend = async () => {
-    if (!form.template_name || filteredLeads.length === 0) return;
+    if (!form.template_name || effectiveRecipients.length === 0) return;
     if (!form.confirmed) { showToast('⚠️ Debes confirmar que entiendes los cargos de Meta'); return; }
+    if (varCount > 0 && !allVarsMapped) {
+      showToast('⚠️ Mapea TODAS las variables del template antes de enviar');
+      return;
+    }
     setSending(true);
     setResult(null);
     try {
+      const payload: any = {
+        template_name: form.template_name,
+        language: form.language,
+        param_field_map: form.param_field_map,
+      };
+      // Si hay selección manual, mandar phone_list; si no, filtros
+      if (form.selection_mode === 'manual' && form.selected_phones.length > 0) {
+        payload.phone_list = form.selected_phones;
+      } else {
+        payload.filters = {
+          lead_stage: form.filters.lead_stage.length > 0 ? form.filters.lead_stage : undefined,
+          tags: form.filters.tags.length > 0 ? form.filters.tags : undefined,
+          days_inactive: form.filters.days_inactive || undefined,
+          service: form.filters.service || undefined,
+        };
+      }
       const res = await fetch(`${API_URL}/marketing/send-bulk`, {
         method: 'POST',
         headers: { ...h, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          template_name: form.template_name,
-          language: form.language,
-          param_field_map: form.param_field_map,
-          filters: {
-            lead_stage: form.filters.lead_stage.length > 0 ? form.filters.lead_stage : undefined,
-            tags: form.filters.tags.length > 0 ? form.filters.tags : undefined,
-            days_inactive: form.filters.days_inactive || undefined,
-            service: form.filters.service || undefined,
-          },
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       setResult(data);
@@ -216,13 +261,30 @@ export default function MarketingPage() {
                     </p>
                   </div>
                 )}
-                {/* Preview del mensaje real que recibirá el cliente */}
+                {/* Preview WhatsApp REAL del mensaje (con valores ejemplo en negrita) */}
                 {selectedTpl?.body && !selectedTpl.is_carousel && (
                   <div>
-                    <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Vista previa del mensaje</p>
-                    <div className="bg-[#0B3D2E] rounded-lg p-3">
-                      <p className="text-[10px] text-white/80 whitespace-pre-wrap">{selectedTpl.body}</p>
+                    <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">
+                      📱 Vista previa WhatsApp {varCount > 0 && `(con datos de ejemplo)`}
+                    </p>
+                    <div className="bg-[#0B3D2E] rounded-lg p-3 border-l-4 border-emerald-500/50">
+                      <p className="text-[11px] text-white whitespace-pre-wrap leading-relaxed">
+                        {previewBody.split(/(\*[^*]+\*)/).map((part, idx) =>
+                          part.startsWith('*') && part.endsWith('*') ? (
+                            <span key={idx} className="bg-emerald-500/20 text-emerald-300 px-1 rounded font-bold">
+                              {part.slice(1, -1)}
+                            </span>
+                          ) : (
+                            <span key={idx}>{part}</span>
+                          )
+                        )}
+                      </p>
                     </div>
+                    {varCount > 0 && (
+                      <p className="text-[9px] text-gray-500 mt-1 italic">
+                        Las partes <span className="text-emerald-400 font-bold">resaltadas</span> se reemplazan automáticamente con los datos de cada lead.
+                      </p>
+                    )}
                   </div>
                 )}
                 {/* Preview especial del carrusel */}
@@ -265,26 +327,55 @@ export default function MarketingPage() {
               <div className="space-y-2">
                 {Array.from({ length: varCount }, (_, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 w-10">{`{{${i+1}}}`}</span>
+                    <span className={`text-xs w-10 ${form.param_field_map[String(i+1)] ? 'text-emerald-400' : 'text-red-400'}`}>{`{{${i+1}}}`}</span>
                     <select value={form.param_field_map[String(i+1)] || ''} onChange={(e) => setForm(f => ({
                       ...f, param_field_map: { ...f.param_field_map, [String(i+1)]: e.target.value }
                     }))}
-                      className="flex-1 bg-[#1a1f2e] border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white outline-none">
-                      <option value="">— Campo del lead —</option>
+                      className={`flex-1 bg-[#1a1f2e] border rounded-lg px-2 py-1.5 text-[11px] text-white outline-none ${
+                        form.param_field_map[String(i+1)] ? 'border-emerald-500/30' : 'border-red-500/30'
+                      }`}>
+                      <option value="">— Campo del lead (requerido) —</option>
                       <option value="name">👤 Nombre</option>
                       <option value="service">🏷️ Servicio de interés</option>
                       <option value="email">📧 Email</option>
                       <option value="phone">📞 Teléfono</option>
+                      <option value="appointment_date">📅 Fecha de cita</option>
+                      <option value="appointment_time">🕐 Hora de cita</option>
+                      <option value="appointment_location">📍 Lugar / Sede</option>
+                      <option value="custom_value">✏️ Texto fijo (mismo para todos)</option>
                     </select>
+                    {bodyExample[i] && (
+                      <span className="text-[9px] text-gray-500 italic" title={`Ejemplo Meta: ${bodyExample[i]}`}>
+                        ej: {bodyExample[i].slice(0, 15)}{bodyExample[i].length > 15 ? '…' : ''}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
-        {/* Filtros destinatarios */}
+        {/* Selección destinatarios — Tabs Filtros / Manual */}
         <div className="border-t border-white/5 pt-4 mb-4">
-          <h4 className="text-xs font-bold text-gray-300 mb-3">🎯 Filtrar destinatarios</h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-xs font-bold text-gray-300">🎯 Destinatarios</h4>
+            <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+              <button
+                onClick={() => setForm(f => ({ ...f, selection_mode: 'filter' }))}
+                className={`text-[10px] px-3 py-1 rounded-md transition-all ${
+                  form.selection_mode === 'filter' ? 'bg-purple-600 text-white font-bold' : 'text-gray-400 hover:text-white'
+                }`}>
+                🔍 Por filtros
+              </button>
+              <button
+                onClick={() => setForm(f => ({ ...f, selection_mode: 'manual' }))}
+                className={`text-[10px] px-3 py-1 rounded-md transition-all ${
+                  form.selection_mode === 'manual' ? 'bg-purple-600 text-white font-bold' : 'text-gray-400 hover:text-white'
+                }`}>
+                ✋ Elegir uno por uno
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] text-gray-500 mb-1">Etapa del lead</label>
@@ -323,12 +414,69 @@ export default function MarketingPage() {
                 placeholder="Ej: 30 (leads inactivos >30 días)" />
             </div>
           </div>
+          {/* Lista de leads — solo en modo manual O cuando hay filtros activos */}
+          {(form.selection_mode === 'manual' || form.filters.lead_stage.length > 0 || form.filters.tags.length > 0 || form.filters.service || form.filters.days_inactive > 0) && (
+            <div className="mt-4 bg-white/[0.02] border border-white/5 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-bold text-gray-300">
+                  {form.selection_mode === 'manual'
+                    ? `📋 Leads seleccionados (${form.selected_phones.length})`
+                    : `📋 Leads que cumplen los filtros (${filteredLeads.length})`}
+                </p>
+                {form.selection_mode === 'manual' && (
+                  <button onClick={toggleAllFiltered} className="text-[9px] text-indigo-400 hover:text-indigo-300 font-bold">
+                    {filteredLeads.every(l => form.selected_phones.includes(l.contact_id || l.phoneNumber || ''))
+                      ? '☐ Deseleccionar visibles'
+                      : '☑️ Seleccionar todos los visibles'}
+                  </button>
+                )}
+              </div>
+              <div className="max-h-48 overflow-y-auto space-y-1">
+                {filteredLeads.length === 0 ? (
+                  <p className="text-[10px] text-gray-500 text-center py-3">No hay leads con esos filtros</p>
+                ) : filteredLeads.slice(0, 100).map(l => {
+                  const phone = l.contact_id || l.phoneNumber || '';
+                  const checked = form.selection_mode === 'manual' ? form.selected_phones.includes(phone) : true;
+                  const isManual = form.selection_mode === 'manual';
+                  return (
+                    <label key={phone}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded text-[10px] transition-colors ${
+                        isManual ? 'cursor-pointer hover:bg-white/5' : 'opacity-70'
+                      } ${checked && isManual ? 'bg-purple-500/10' : ''}`}>
+                      {isManual && (
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePhone(phone)}
+                          className="w-3 h-3 accent-purple-500"
+                        />
+                      )}
+                      <span className="text-white font-medium flex-1 truncate">
+                        {l.customer_name || l.customer_full_name || '(sin nombre)'}
+                      </span>
+                      <span className="text-gray-500 font-mono text-[9px]">{phone}</span>
+                      {l.lead_stage && (
+                        <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-400">
+                          {l.lead_stage}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
+                {filteredLeads.length > 100 && (
+                  <p className="text-[9px] text-gray-500 text-center py-1 italic">
+                    ... y {filteredLeads.length - 100} más (aplica más filtros para reducir)
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         {/* Estimador */}
         <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-4 mb-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <p className="text-sm font-bold text-purple-400">📊 {filteredLeads.length} destinatarios</p>
+              <p className="text-sm font-bold text-purple-400">📊 {effectiveRecipients.length} destinatarios</p>
               <p className="text-[10px] text-gray-400">Costo estimado: ~${estimatedCost.toFixed(2)} USD (Meta cobra a tu tarjeta)</p>
             </div>
             <div className="flex items-center gap-2">
@@ -362,10 +510,27 @@ export default function MarketingPage() {
           </div>
         )}
         {/* Botón enviar */}
+        {/* Aviso si quedan variables sin mapear */}
+        {selectedTpl && varCount > 0 && !allVarsMapped && (
+          <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-3 mb-3">
+            <p className="text-[11px] text-red-300 font-bold">
+              ⚠️ Faltan variables por mapear
+            </p>
+            <p className="text-[10px] text-gray-400 mt-1">
+              Esta plantilla tiene {varCount} variable{varCount > 1 ? 's' : ''}. Selecciona qué campo del lead usar para cada una arriba.
+            </p>
+          </div>
+        )}
         <button onClick={handleSend}
-          disabled={sending || !form.template_name || filteredLeads.length === 0 || !form.confirmed}
-          className="w-full py-3 rounded-xl text-sm font-bold bg-purple-600 hover:bg-purple-500 disabled:opacity-50 transition-all shadow-lg shadow-purple-600/20">
-          {sending ? '⏳ Enviando campaña...' : `🚀 Enviar a ${filteredLeads.length} destinatarios`}
+          disabled={sending || !form.template_name || effectiveRecipients.length === 0 || !form.confirmed || (varCount > 0 && !allVarsMapped)}
+          className="w-full py-3 rounded-xl text-sm font-bold bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-purple-600/20">
+          {sending
+            ? '⏳ Enviando campaña...'
+            : effectiveRecipients.length === 0
+              ? '⚠️ Selecciona destinatarios'
+              : varCount > 0 && !allVarsMapped
+                ? '⚠️ Mapea todas las variables'
+                : `🚀 Enviar a ${effectiveRecipients.length} destinatarios`}
         </button>
       </div>
       {/* Historial de campañas */}
