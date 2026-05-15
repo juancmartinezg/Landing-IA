@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../providers';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 // Diccionario de labels humanos para plantillas conocidas (auto-creadas por el sistema).
 // Si una plantilla no está aquí, se muestra su nombre técnico como fallback.
@@ -58,8 +59,12 @@ export default function MarketingPage() {
     filters: { lead_stage: [] as string[], tags: [] as string[], days_inactive: 0, service: '' },
     param_field_map: {} as Record<string, string>,
     confirmed: false,
-    selected_phones: [] as string[],  // Selección manual de leads (vacío = usa filtros)
-    selection_mode: 'filter' as 'filter' | 'manual',
+    selected_phones: [] as string[],  // Selección manual de leads del CRM
+    selection_mode: 'filter' as 'filter' | 'manual' | 'external',
+    // Modo external: lista no guardada en CRM
+    external_raw: '',         // Textarea del modo "pegar"
+    external_parsed: [] as Array<{phone: string; name?: string; service?: string}>,  // Parsed unificado (pegar + import)
+    external_file_name: '',   // Nombre del archivo importado (UI feedback)
   });
   useEffect(() => {
     Promise.all([
@@ -88,9 +93,97 @@ export default function MarketingPage() {
     return true;
   });
   // Destinatarios efectivos según el modo
-  const effectiveRecipients = form.selection_mode === 'manual'
-    ? leads.filter(l => form.selected_phones.includes(l.contact_id || l.phoneNumber || ''))
-    : filteredLeads;
+  const effectiveRecipients = useMemo(() => {
+    if (form.selection_mode === 'manual') {
+      return leads.filter(l => form.selected_phones.includes(l.contact_id || l.phoneNumber || ''));
+    }
+    if (form.selection_mode === 'external') {
+      // Adaptar al formato de leads para que fieldMissingReport y preview funcionen
+      return form.external_parsed.map(e => ({
+        contact_id: e.phone,
+        phoneNumber: e.phone,
+        customer_name: e.name || '',
+        service_of_interest: e.service || '',
+      }));
+    }
+    return filteredLeads;
+  }, [form.selection_mode, form.selected_phones, form.external_parsed, leads, filteredLeads]);
+  // Parser de texto pegado: cada línea = phone[,name][,service]
+  const parseRawText = (raw: string): Array<{phone: string; name?: string; service?: string; valid: boolean; error?: string}> => {
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    return lines.map(line => {
+      const parts = line.split(',').map(p => p.trim());
+      const rawPhone = parts[0] || '';
+      // Normalizar: solo dígitos y +
+      const phone = rawPhone.replace(/[^\d+]/g, '');
+      const digitsOnly = phone.replace(/\+/g, '');
+      if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+        return { phone: rawPhone, valid: false, error: 'Número inválido (debe tener 10-15 dígitos)' };
+      }
+      return {
+        phone: digitsOnly,
+        name: parts[1] || undefined,
+        service: parts[2] || undefined,
+        valid: true,
+      };
+    });
+  };
+  const parsedRaw = useMemo(() => parseRawText(form.external_raw), [form.external_raw]);
+  const validParsedRaw = parsedRaw.filter(p => p.valid);
+  // Handler para subir CSV/Excel
+  const handleFileImport = async (file: File) => {
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+      const parsed: Array<{phone: string; name?: string; service?: string}> = [];
+      let skippedHeader = false;
+      for (const row of rows) {
+        if (!row || !row.length) continue;
+        const cells = (row as any[]).map(c => String(c || '').trim());
+        const rawPhone = cells[0] || '';
+        // Skip header row si la primera celda no parece teléfono
+        if (!skippedHeader && /^(phone|telefono|teléfono|numero|número|celular|whatsapp)/i.test(rawPhone)) {
+          skippedHeader = true;
+          continue;
+        }
+        const phone = rawPhone.replace(/[^\d+]/g, '').replace(/\+/g, '');
+        if (phone.length < 10 || phone.length > 15) continue;
+        parsed.push({
+          phone,
+          name: cells[1] || undefined,
+          service: cells[2] || undefined,
+        });
+      }
+      if (parsed.length === 0) {
+        showToast('⚠️ No se encontraron números válidos en el archivo');
+        return;
+      }
+      setForm(f => ({ ...f, external_parsed: parsed, external_file_name: file.name, external_raw: '' }));
+      showToast(`✅ ${parsed.length} números importados de ${file.name}`);
+    } catch (e) {
+      showToast('❌ Error leyendo el archivo (¿CSV o Excel válido?)');
+    }
+  };
+  // Sincronizar external_parsed cuando se pega texto manualmente
+  useEffect(() => {
+    if (form.selection_mode === 'external' && form.external_raw && !form.external_file_name) {
+      const valid = validParsedRaw.map(p => ({ phone: p.phone, name: p.name, service: p.service }));
+      setForm(f => ({ ...f, external_parsed: valid }));
+    }
+  }, [form.external_raw, form.external_file_name, form.selection_mode]);
+  // Descargar plantilla CSV
+  const downloadTemplateCSV = () => {
+    const csv = 'phone,name,service\n573001234567,Juan Perez,Seminario 9mm\n573009876543,Maria Lopez,\n573005551234,,';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plantilla_destinatarios.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   // Toggle individual de un teléfono
   const togglePhone = (phone: string) => setForm(f => ({
     ...f,
@@ -188,8 +281,14 @@ export default function MarketingPage() {
         language: form.language,
         param_field_map: form.param_field_map,
       };
-      // Si hay selección manual, mandar phone_list; si no, filtros
-      if (form.selection_mode === 'manual' && form.selected_phones.length > 0) {
+      / Modo external: lista no guardada en CRM (pegada o importada)
+      if (form.selection_mode === 'external' && form.external_parsed.length > 0) {
+        payload.phone_list = form.external_parsed.map(e => ({
+          phone: e.phone,
+          name: e.name || '',
+          service: e.service || '',
+        }));
+      } else if (form.selection_mode === 'manual' && form.selected_phones.length > 0) {
         payload.phone_list = form.selected_phones;
       } else {
         payload.filters = {
@@ -393,11 +492,11 @@ export default function MarketingPage() {
             )}
           </div>
         </div>
-        {/* Selección destinatarios — Tabs Filtros / Manual */}
+        {/* Selección destinatarios — Tabs Filtros / Manual / External */}
         <div className="border-t border-white/5 pt-4 mb-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h4 className="text-xs font-bold text-gray-300">🎯 Destinatarios</h4>
-            <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+            <div className="flex gap-1 bg-white/5 rounded-lg p-1 flex-wrap">
               <button
                 onClick={() => setForm(f => ({ ...f, selection_mode: 'filter' }))}
                 className={`text-[10px] px-3 py-1 rounded-md transition-all ${
@@ -410,103 +509,227 @@ export default function MarketingPage() {
                 className={`text-[10px] px-3 py-1 rounded-md transition-all ${
                   form.selection_mode === 'manual' ? 'bg-purple-600 text-white font-bold' : 'text-gray-400 hover:text-white'
                 }`}>
-                ✋ Elegir uno por uno
+                ✋ Elegir del CRM
+              </button>
+              <button
+                onClick={() => setForm(f => ({ ...f, selection_mode: 'external' }))}
+                className={`text-[10px] px-3 py-1 rounded-md transition-all ${
+                  form.selection_mode === 'external' ? 'bg-purple-600 text-white font-bold' : 'text-gray-400 hover:text-white'
+                }`}>
+                📋 Lista externa
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] text-gray-500 mb-1">Etapa del lead</label>
-              <div className="flex flex-wrap gap-1">
-                {allStages.map(s => (
-                  <button key={s} onClick={() => toggleStage(s)}
-                    className={`text-[9px] px-2 py-1 rounded-full transition-all ${
-                      form.filters.lead_stage.includes(s) ? 'bg-purple-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                    }`}>{s}</button>
-                ))}
+          {/* Modo FILTER + MANUAL: filtros del CRM */}
+          {(form.selection_mode === 'filter' || form.selection_mode === 'manual') && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Etapa del lead</label>
+                  <div className="flex flex-wrap gap-1">
+                    {allStages.map(s => (
+                      <button key={s} onClick={() => toggleStage(s)}
+                        className={`text-[9px] px-2 py-1 rounded-full transition-all ${
+                          form.filters.lead_stage.includes(s) ? 'bg-purple-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                        }`}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Tags</label>
+                  <div className="flex flex-wrap gap-1">
+                    {allTags.slice(0, 15).map(t => (
+                      <button key={t} onClick={() => toggleTag(t)}
+                        className={`text-[9px] px-2 py-1 rounded-full transition-all ${
+                          form.filters.tags.includes(t) ? 'bg-purple-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                        }`}>{t}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Servicio de interés</label>
+                  <select value={form.filters.service} onChange={(e) => setForm(f => ({ ...f, filters: { ...f.filters, service: e.target.value } }))}
+                    className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white outline-none">
+                    <option value="">— Todos —</option>
+                    {allServices.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Días sin actividad (mínimo)</label>
+                  <input type="number" min="0" value={form.filters.days_inactive || ''} onChange={(e) => setForm(f => ({ ...f, filters: { ...f.filters, days_inactive: parseInt(e.target.value) || 0 } }))}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-[11px] text-white outline-none"
+                    placeholder="Ej: 30 (leads inactivos >30 días)" />
+                </div>
               </div>
-            </div>
-            <div>
-              <label className="block text-[10px] text-gray-500 mb-1">Tags</label>
-              <div className="flex flex-wrap gap-1">
-                {allTags.slice(0, 15).map(t => (
-                  <button key={t} onClick={() => toggleTag(t)}
-                    className={`text-[9px] px-2 py-1 rounded-full transition-all ${
-                      form.filters.tags.includes(t) ? 'bg-purple-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                    }`}>{t}</button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="block text-[10px] text-gray-500 mb-1">Servicio de interés</label>
-              <select value={form.filters.service} onChange={(e) => setForm(f => ({ ...f, filters: { ...f.filters, service: e.target.value } }))}
-                className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white outline-none">
-                <option value="">— Todos —</option>
-                {allServices.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] text-gray-500 mb-1">Días sin actividad (mínimo)</label>
-              <input type="number" min="0" value={form.filters.days_inactive || ''} onChange={(e) => setForm(f => ({ ...f, filters: { ...f.filters, days_inactive: parseInt(e.target.value) || 0 } }))}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-[11px] text-white outline-none"
-                placeholder="Ej: 30 (leads inactivos >30 días)" />
-            </div>
-          </div>
-          {/* Lista de leads — solo en modo manual O cuando hay filtros activos */}
-          {(form.selection_mode === 'manual' || form.filters.lead_stage.length > 0 || form.filters.tags.length > 0 || form.filters.service || form.filters.days_inactive > 0) && (
-            <div className="mt-4 bg-white/[0.02] border border-white/5 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-bold text-gray-300">
-                  {form.selection_mode === 'manual'
-                    ? `📋 Leads seleccionados (${form.selected_phones.length})`
-                    : `📋 Leads que cumplen los filtros (${filteredLeads.length})`}
+              {/* Lista de leads — solo en modo manual O cuando hay filtros activos */}
+              {(form.selection_mode === 'manual' || form.filters.lead_stage.length > 0 || form.filters.tags.length > 0 || form.filters.service || form.filters.days_inactive > 0) && (
+                <div className="mt-4 bg-white/[0.02] border border-white/5 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-bold text-gray-300">
+                      {form.selection_mode === 'manual'
+                        ? `📋 Leads seleccionados (${form.selected_phones.length})`
+                        : `📋 Leads que cumplen los filtros (${filteredLeads.length})`}
+                    </p>
+                    {form.selection_mode === 'manual' && (
+                      <button onClick={toggleAllFiltered} className="text-[9px] text-indigo-400 hover:text-indigo-300 font-bold">
+                        {filteredLeads.every(l => form.selected_phones.includes(l.contact_id || l.phoneNumber || ''))
+                          ? '☐ Deseleccionar visibles'
+                          : '☑️ Seleccionar todos los visibles'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-48 overflow-y-auto space-y-1">
+                    {filteredLeads.length === 0 ? (
+                      <p className="text-[10px] text-gray-500 text-center py-3">No hay leads con esos filtros</p>
+                    ) : filteredLeads.slice(0, 100).map(l => {
+                      const phone = l.contact_id || l.phoneNumber || '';
+                      const checked = form.selection_mode === 'manual' ? form.selected_phones.includes(phone) : true;
+                      const isManual = form.selection_mode === 'manual';
+                      return (
+                        <label key={phone}
+                          className={`flex items-center gap-2 px-2 py-1.5 rounded text-[10px] transition-colors ${
+                            isManual ? 'cursor-pointer hover:bg-white/5' : 'opacity-70'
+                          } ${checked && isManual ? 'bg-purple-500/10' : ''}`}>
+                          {isManual && (
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => togglePhone(phone)}
+                              className="w-3 h-3 accent-purple-500"
+                            />
+                          )}
+                          <span className="text-white font-medium flex-1 truncate">
+                            {l.customer_name || l.customer_full_name || '(sin nombre)'}
+                          </span>
+                          <span className="text-gray-500 font-mono text-[9px]">{phone}</span>
+                          {l.lead_stage && (
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-400">
+                              {l.lead_stage}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                    {filteredLeads.length > 100 && (
+                      <p className="text-[9px] text-gray-500 text-center py-1 italic">
+                        ... y {filteredLeads.length - 100} más (aplica más filtros para reducir)
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          {/* Modo EXTERNAL: pegar o importar */}
+          {form.selection_mode === 'external' && (
+            <div className="space-y-3">
+              {/* Banner informativo */}
+              <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                <p className="text-[10px] text-blue-300 leading-relaxed">
+                  ℹ️ <strong>Estos números NO se guardan en tu CRM.</strong> Solo entrarán al CRM si responden a tu mensaje.
+                  Ideal para enviar a listas frías compradas o contactos sueltos sin saturar tu base.
                 </p>
-                {form.selection_mode === 'manual' && (
-                  <button onClick={toggleAllFiltered} className="text-[9px] text-indigo-400 hover:text-indigo-300 font-bold">
-                    {filteredLeads.every(l => form.selected_phones.includes(l.contact_id || l.phoneNumber || ''))
-                      ? '☐ Deseleccionar visibles'
-                      : '☑️ Seleccionar todos los visibles'}
+              </div>
+              {/* Opción A: textarea */}
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">📝 Pegar números (uno por línea)</label>
+                <textarea
+                  value={form.external_raw}
+                  onChange={(e) => setForm(f => ({ ...f, external_raw: e.target.value, external_file_name: '' }))}
+                  rows={6}
+                  placeholder={'573001234567,Juan Perez,Seminario 9mm\n573009876543,Maria Lopez\n573005551234\n...'}
+                  className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-[11px] font-mono text-white outline-none focus:border-purple-500 resize-y" />
+                <p className="text-[9px] text-gray-600 mt-1">
+                  Formato: <code className="bg-white/5 px-1 rounded">número</code> <code className="bg-white/5 px-1 rounded">,nombre</code> (opc) <code className="bg-white/5 px-1 rounded">,servicio</code> (opc) — uno por línea
+                </p>
+              </div>
+              {/* Separador OR */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-[9px] text-gray-600 uppercase tracking-widest">o</span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
+              {/* Opción B: import file */}
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">📊 Importar lista (CSV o Excel)</label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label className="flex-1 min-w-[200px] cursor-pointer bg-white/5 hover:bg-white/10 border border-dashed border-white/20 rounded-lg p-3 text-center transition-all">
+                    <input
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileImport(file);
+                        e.target.value = '';
+                      }}
+                    />
+                    <p className="text-[11px] text-gray-300">
+                      {form.external_file_name ? `📎 ${form.external_file_name}` : '📎 Click para subir CSV/Excel'}
+                    </p>
+                    <p className="text-[9px] text-gray-600 mt-1">Columnas: phone, name, service</p>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={downloadTemplateCSV}
+                    className="text-[10px] px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded-lg font-bold transition-all">
+                    📥 Plantilla CSV
                   </button>
-                )}
+                </div>
               </div>
-              <div className="max-h-48 overflow-y-auto space-y-1">
-                {filteredLeads.length === 0 ? (
-                  <p className="text-[10px] text-gray-500 text-center py-3">No hay leads con esos filtros</p>
-                ) : filteredLeads.slice(0, 100).map(l => {
-                  const phone = l.contact_id || l.phoneNumber || '';
-                  const checked = form.selection_mode === 'manual' ? form.selected_phones.includes(phone) : true;
-                  const isManual = form.selection_mode === 'manual';
-                  return (
-                    <label key={phone}
-                      className={`flex items-center gap-2 px-2 py-1.5 rounded text-[10px] transition-colors ${
-                        isManual ? 'cursor-pointer hover:bg-white/5' : 'opacity-70'
-                      } ${checked && isManual ? 'bg-purple-500/10' : ''}`}>
-                      {isManual && (
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => togglePhone(phone)}
-                          className="w-3 h-3 accent-purple-500"
-                        />
-                      )}
-                      <span className="text-white font-medium flex-1 truncate">
-                        {l.customer_name || l.customer_full_name || '(sin nombre)'}
-                      </span>
-                      <span className="text-gray-500 font-mono text-[9px]">{phone}</span>
-                      {l.lead_stage && (
-                        <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-400">
-                          {l.lead_stage}
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
-                {filteredLeads.length > 100 && (
-                  <p className="text-[9px] text-gray-500 text-center py-1 italic">
-                    ... y {filteredLeads.length - 100} más (aplica más filtros para reducir)
-                  </p>
-                )}
-              </div>
+              {/* Resumen de lo cargado */}
+              {(parsedRaw.length > 0 || form.external_parsed.length > 0) && (
+                <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                    <p className="text-[10px] font-bold text-gray-300">
+                      📊 Resumen de la lista
+                    </p>
+                    <button
+                      onClick={() => setForm(f => ({ ...f, external_raw: '', external_parsed: [], external_file_name: '' }))}
+                      className="text-[9px] text-red-400 hover:text-red-300 font-bold">
+                      🗑️ Limpiar
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-[10px] mb-2">
+                    <span className="text-emerald-400">✅ {form.external_parsed.length} válidos</span>
+                    {!form.external_file_name && parsedRaw.filter(p => !p.valid).length > 0 && (
+                      <span className="text-red-400">⚠️ {parsedRaw.filter(p => !p.valid).length} inválidos</span>
+                    )}
+                    <span className="text-gray-400">
+                      📛 {form.external_parsed.filter(p => p.name).length} con nombre
+                    </span>
+                    <span className="text-gray-500">
+                      🏷️ {form.external_parsed.filter(p => p.service).length} con servicio
+                    </span>
+                  </div>
+                  {/* Preview primeros 5 */}
+                  <div className="max-h-32 overflow-y-auto space-y-0.5">
+                    {form.external_parsed.slice(0, 5).map((e, i) => (
+                      <p key={i} className="text-[9px] text-gray-400 font-mono">
+                        <span className="text-white">{e.phone}</span>
+                        {e.name && <span className="text-emerald-300"> · {e.name}</span>}
+                        {e.service && <span className="text-purple-300"> · {e.service}</span>}
+                      </p>
+                    ))}
+                    {form.external_parsed.length > 5 && (
+                      <p className="text-[9px] text-gray-600 italic">... y {form.external_parsed.length - 5} más</p>
+                    )}
+                  </div>
+                  {/* Errores en líneas pegadas */}
+                  {!form.external_file_name && parsedRaw.filter(p => !p.valid).length > 0 && (
+                    <details className="mt-2">
+                      <summary className="text-[9px] text-red-400 cursor-pointer">Ver errores de parseo</summary>
+                      <div className="mt-1 space-y-0.5 max-h-24 overflow-y-auto">
+                        {parsedRaw.filter(p => !p.valid).slice(0, 10).map((p, i) => (
+                          <p key={i} className="text-[9px] text-red-300 font-mono">
+                            "{p.phone}" — {p.error}
+                          </p>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
