@@ -3,6 +3,34 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../providers';
 import Link from 'next/link';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+// Diccionario de labels humanos para plantillas conocidas (auto-creadas por el sistema).
+// Si una plantilla no está aquí, se muestra su nombre técnico como fallback.
+const TEMPLATE_LABELS: Record<string, { title: string; emoji: string; desc: string; useCase: string }> = {
+  appointment_reminder_v1: {
+    title: 'Recordatorio de cita',
+    emoji: '📅',
+    desc: 'Recuerda al cliente la fecha y hora de su próxima cita.',
+    useCase: 'Ideal para enviar 24h o 1h antes de la cita agendada.',
+  },
+  follow_up_v1: {
+    title: 'Seguimiento comercial',
+    emoji: '💬',
+    desc: 'Reactiva leads que mostraron interés pero no completaron la compra.',
+    useCase: 'Ideal para leads inactivos +7 días o que abandonaron el pago.',
+  },
+};
+// Devuelve el label humano de una plantilla (o el nombre técnico si no está mapeada).
+const humanizeTemplate = (t: any) => {
+  const meta = TEMPLATE_LABELS[t.template_name];
+  if (meta) return `${meta.emoji} ${meta.title}`;
+  // Fallback: capitaliza el nombre técnico (snake_case → Title Case)
+  const pretty = t.template_name
+    .replace(/_v\d+$/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c: string) => c.toUpperCase());
+  const icon = t.category === 'MARKETING' ? '📢' : '🔧';
+  return `${icon} ${pretty}`;
+};
 export default function MarketingPage() {
   const { user } = useAuth();
   const h = { 'client-id': user?.companyId || '' };
@@ -136,14 +164,44 @@ export default function MarketingPage() {
                 <option value="">— Seleccionar plantilla —</option>
                 {templates.map(t => (
                   <option key={t.template_name} value={t.template_name}>
-                    {t.category === 'MARKETING' ? '📢' : '🔧'} {t.template_name} ({t.language})
+                    {humanizeTemplate(t)}
                   </option>
                 ))}
               </select>
             )}
-            {selectedTpl?.body && (
-              <div className="bg-[#0B3D2E] rounded-lg p-3 mt-2">
-                <p className="text-[10px] text-white/80 whitespace-pre-wrap">{selectedTpl.body}</p>
+            {selectedTpl && (
+              <div className="mt-2 space-y-2">
+                {/* Card descriptiva — qué es y cuándo usarla */}
+                {TEMPLATE_LABELS[selectedTpl.template_name] && (
+                  <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3">
+                    <p className="text-[11px] font-bold text-indigo-300 mb-1">
+                      {TEMPLATE_LABELS[selectedTpl.template_name].emoji}{' '}
+                      {TEMPLATE_LABELS[selectedTpl.template_name].title}
+                    </p>
+                    <p className="text-[10px] text-gray-300 leading-relaxed">
+                      {TEMPLATE_LABELS[selectedTpl.template_name].desc}
+                    </p>
+                    <p className="text-[10px] text-indigo-300/80 mt-1.5 italic">
+                      💡 {TEMPLATE_LABELS[selectedTpl.template_name].useCase}
+                    </p>
+                  </div>
+                )}
+                {/* Preview del mensaje real que recibirá el cliente */}
+                {selectedTpl?.body && (
+                  <div>
+                    <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Vista previa del mensaje</p>
+                    <div className="bg-[#0B3D2E] rounded-lg p-3">
+                      <p className="text-[10px] text-white/80 whitespace-pre-wrap">{selectedTpl.body}</p>
+                    </div>
+                  </div>
+                )}
+                {/* Badge de categoría — explica el costo */}
+                <p className="text-[9px] text-gray-500">
+                  {selectedTpl.category === 'MARKETING'
+                    ? '📢 Categoría: Marketing (~$0.025 USD/msg)'
+                    : '🔧 Categoría: Utilitaria (~$0.01 USD/msg)'}{' '}
+                  · Idioma: {selectedTpl.language}
+                </p>
               </div>
             )}
           </div>
