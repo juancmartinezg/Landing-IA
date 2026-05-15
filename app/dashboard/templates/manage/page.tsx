@@ -109,7 +109,10 @@ export default function TemplatesManagerPage() {
       if (data.ok) {
         showToast(`✅ Template "${form.name}" ${data.existing ? 'ya existía' : 'enviado a Meta'}. Estado: ${data.status || 'PENDING'}`);
         setShowCreate(false);
-        setForm({ name: '', category: 'UTILITY', body: '', example: [''] });
+        setForm({
+          name: '', category: 'UTILITY', body: '', example: [''],
+          is_carousel: false, carousel_label: '', carousel_body_text: '', carousel_services: [],
+        });
         loadTemplates();
       } else {
         showToast(`❌ ${data.error || 'Error creando template'}`);
