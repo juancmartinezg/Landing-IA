@@ -67,7 +67,15 @@ export default function TemplatesManagerPage() {
     category: 'UTILITY',
     body: '',
     example: [''],
+    // Modo carrusel (UI condicional)
+    is_carousel: false,
+    carousel_label: '',
+    carousel_body_text: '',
+    carousel_services: [] as string[],
   });
+  // Catálogo de servicios del tenant (para el selector del carrusel)
+  const [servicesCatalog, setServicesCatalog] = useState<any[]>([]);
+  const [carouselCreating, setCarouselCreating] = useState(false);
   const loadTemplates = () => {
     setLoading(true);
     fetch(`${API_URL}/templates/list`, { headers: h })
@@ -75,7 +83,14 @@ export default function TemplatesManagerPage() {
       .then(d => { setTemplates(d.templates || []); setLoading(false); })
       .catch(() => setLoading(false));
   };
-  useEffect(() => { loadTemplates(); }, []);
+  useEffect(() => {
+    loadTemplates();
+    // Cargar catálogo del tenant (para el selector del carrusel)
+    fetch(`${API_URL}/services`, { headers: h })
+      .then(r => r.json())
+      .then(d => setServicesCatalog(d.services || []))
+      .catch(() => {});
+  }, []);
   const handleCreate = async () => {
     if (!form.name.trim() || !form.body.trim()) { showToast('⚠️ Nombre y cuerpo son requeridos'); return; }
     setCreating(true);
@@ -124,6 +139,63 @@ export default function TemplatesManagerPage() {
       showToast('🔄 Estados actualizados desde Meta');
     } catch { showToast('Error consultando Meta'); }
   };
+  // Default body neuroventas multi-tenant (mismo que el backend)
+  const DEFAULT_CAROUSEL_BODY = (
+    '¡Hola {{1}}! 👋\n\n' +
+    'En *{{2}}* preparamos esta selección especial para ti.\n\n' +
+    'Mira las opciones abajo y toca *Reservar* en la que más te ' +
+    'guste — o *Más info* si quieres detalles antes de decidir.\n\n' +
+    '⚡ *Cupos limitados.* No esperes a que se agoten 👇'
+  );
+  const handleCreateCarousel = async () => {
+    if (form.carousel_services.length < 2) {
+      showToast('⚠️ Selecciona al menos 2 servicios');
+      return;
+    }
+    if (form.carousel_services.length > 10) {
+      showToast('⚠️ Máximo 10 servicios por carrusel');
+      return;
+    }
+    const bodyText = form.carousel_body_text.trim() || DEFAULT_CAROUSEL_BODY;
+    // Validación frontend: requiere {{1}} y {{2}}
+    if (!bodyText.includes('{{1}}') || !bodyText.includes('{{2}}')) {
+      showToast('⚠️ El mensaje debe incluir {{1}} (nombre cliente) y {{2}} (negocio)');
+      return;
+    }
+    setCarouselCreating(true);
+    try {
+      const res = await fetch(`${API_URL}/templates/carousel`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          services: form.carousel_services,
+          label: form.carousel_label.trim() || `Catálogo ${form.carousel_services.length} productos`,
+          body_text: bodyText,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok || data.template_id) {
+        showToast(`✅ Carrusel enviado a Meta. Estado: ${data.status || 'PENDING'} (revisión 10 min - 24h)`);
+        setShowCreate(false);
+        setForm({
+          name: '', category: 'UTILITY', body: '', example: [''],
+          is_carousel: false, carousel_label: '', carousel_body_text: '', carousel_services: [],
+        });
+        loadTemplates();
+      } else {
+        showToast(`❌ ${data.error || 'Error creando carrusel'}`);
+      }
+    } catch { showToast('Error de conexión'); }
+    setCarouselCreating(false);
+  };
+  const toggleCarouselService = (slug: string) => {
+    setForm(f => ({
+      ...f,
+      carousel_services: f.carousel_services.includes(slug)
+        ? f.carousel_services.filter(s => s !== slug)
+        : [...f.carousel_services, slug],
+    }));
+  };
   // Contar variables {{N}} en el body
   const varCount = (form.body.match(/\{\{\d+\}\}/g) || []).length;
   return (
@@ -134,14 +206,28 @@ export default function TemplatesManagerPage() {
           <Link href="/dashboard" className="text-gray-400 hover:text-white text-sm">← Dashboard</Link>
           <h1 className="text-xl font-bold">Plantillas WhatsApp 📝</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={handleRefresh} className="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 rounded-xl text-xs font-bold transition-all">
             🔄 Verificar estado
           </button>
-          <button onClick={() => setShowCreate(!showCreate)}
-            className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-sm font-bold transition-all">
-            {showCreate ? '✕ Cerrar' : '+ Crear plantilla'}
+          <button onClick={() => { setShowCreate(true); setForm(f => ({ ...f, is_carousel: false })); }}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+              showCreate && !form.is_carousel ? 'bg-indigo-600' : 'bg-indigo-600/30 hover:bg-indigo-600/50'
+            }`}>
+            ✨ Crear plantilla
           </button>
+          <button onClick={() => { setShowCreate(true); setForm(f => ({ ...f, is_carousel: true })); }}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+              showCreate && form.is_carousel ? 'bg-purple-600' : 'bg-purple-600/30 hover:bg-purple-600/50'
+            }`}>
+            🎠 Crear carrusel
+          </button>
+          {showCreate && (
+            <button onClick={() => setShowCreate(false)}
+              className="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 rounded-xl text-xs font-bold transition-all">
+              ✕ Cerrar
+            </button>
+          )}
         </div>
       </div>
       {/* Banner costos Meta */}
@@ -152,10 +238,10 @@ export default function TemplatesManagerPage() {
           <a href="https://developers.facebook.com/docs/whatsapp/pricing" target="_blank" className="text-indigo-400 underline ml-1">Ver precios Meta →</a>
         </p>
       </div>
-      {/* Formulario crear */}
-      {showCreate && (
+      {/* Formulario crear plantilla TEXTO */}
+      {showCreate && !form.is_carousel && (
         <div className="bg-white/[0.03] border border-indigo-500/20 rounded-2xl p-6 mb-6">
-          <h3 className="font-bold mb-4">✨ Crear plantilla nueva</h3>
+          <h3 className="font-bold mb-4">✨ Crear plantilla de texto</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Nombre interno *</label>
@@ -215,7 +301,7 @@ export default function TemplatesManagerPage() {
               <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Preview</p>
               <div className="bg-[#0B3D2E] rounded-xl p-4 max-w-sm">
                 <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">
-                  {form.body.replace(/\{\{(\d+)\}\}/g, (_, n) => {
+                  {form.body.replace(/\{\{(\d+)\}\}/g, (_: string, n: string) => {
                     const idx = parseInt(n) - 1;
                     return form.example[idx] || `[variable ${n}]`;
                   })}
@@ -237,6 +323,172 @@ export default function TemplatesManagerPage() {
             <button onClick={handleCreate} disabled={creating || !form.name.trim() || !form.body.trim()}
               className="flex-1 py-3 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition-all">
               {creating ? '⏳ Enviando a Meta...' : '📤 Crear y enviar a revisión'}
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Formulario crear CARRUSEL */}
+      {showCreate && form.is_carousel && (
+        <div className="bg-white/[0.03] border border-purple-500/20 rounded-2xl p-6 mb-6">
+          <h3 className="font-bold mb-4">🎠 Crear carrusel de marketing</h3>
+          {/* Info badge */}
+          <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-3 mb-4">
+            <p className="text-[11px] text-purple-300 leading-relaxed">
+              🎯 <strong>Carrusel visual con tus productos/servicios</strong> + mensaje de apertura neuroventas.
+              Los clientes ven hasta 10 productos con foto, precio y botones de acción. Una vez aprobado por Meta (~10 min - 24h),
+              úsalo en campañas de marketing. Costo Meta: ~$0.06 USD/mensaje.
+            </p>
+          </div>
+          {/* Etiqueta amigable */}
+          <div className="mb-4">
+            <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Etiqueta del carrusel</label>
+            <input value={form.carousel_label} onChange={(e) => setForm({ ...form, carousel_label: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-purple-500 text-white"
+              placeholder="Ej: Catálogo principal, Promos del mes, etc." />
+            <p className="text-[9px] text-gray-600 mt-1">Para identificarlo en tu lista. Si lo dejas vacío, se autogenera.</p>
+          </div>
+          {/* Selector de servicios */}
+          <div className="mb-4">
+            <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
+              Servicios/productos a mostrar * <span className="text-gray-600 normal-case">— mín 2, máx 10</span>
+            </label>
+            {servicesCatalog.length === 0 ? (
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
+                <p className="text-[10px] text-amber-300">
+                  ⚠️ No tienes servicios en tu catálogo. <Link href="/dashboard/services" className="text-indigo-400 underline">Crear servicios →</Link>
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3 max-h-64 overflow-y-auto space-y-1">
+                  {servicesCatalog.map((s: any) => {
+                    const slug = s.slug || s.id || '';
+                    const checked = form.carousel_services.includes(slug);
+                    const hasImage = !!s.image_url;
+                    const price = s.pricing?.promotional_price || s.pricing?.regular_price || 0;
+                    const currency = s.pricing?.currency || 'COP';
+                    return (
+                      <label key={slug}
+                        className={`flex items-center gap-2 px-2 py-2 rounded text-[11px] cursor-pointer transition-colors ${
+                          checked ? 'bg-purple-500/10 border border-purple-500/30' : 'hover:bg-white/5 border border-transparent'
+                        } ${!hasImage ? 'opacity-60' : ''}`}>
+                        <input type="checkbox" checked={checked} onChange={() => toggleCarouselService(slug)}
+                          disabled={!hasImage}
+                          className="w-3 h-3 accent-purple-500" />
+                        {hasImage ? (
+                          <img src={s.image_url} alt="" className="w-10 h-10 rounded object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded bg-white/5 flex items-center justify-center text-[8px] text-gray-500">
+                            sin foto
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium truncate">{s.name || slug}</p>
+                          <p className="text-[9px] text-gray-500">${price.toLocaleString()} {currency}{!hasImage && ' · ⚠️ Sin imagen — no se puede incluir'}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[9px] text-gray-600 mt-1">
+                  Seleccionados: <span className={`font-bold ${
+                    form.carousel_services.length >= 2 && form.carousel_services.length <= 10 ? 'text-emerald-400' : 'text-red-400'
+                  }`}>{form.carousel_services.length}</span>/10
+                  · Solo se pueden seleccionar productos con imagen.
+                </p>
+              </>
+            )}
+          </div>
+          {/* Mensaje de apertura (body) */}
+          <div className="mb-4">
+            <label className="block text-xs text-gray-500 uppercase tracking-widest mb-1">
+              Mensaje de apertura * <span className="text-gray-600 normal-case">— aparece ANTES del carrusel</span>
+            </label>
+            <textarea
+              value={form.carousel_body_text || DEFAULT_CAROUSEL_BODY}
+              onChange={(e) => setForm({ ...form, carousel_body_text: e.target.value })}
+              rows={6}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-purple-500 text-white resize-y font-mono"
+            />
+            <div className="flex items-center justify-between gap-2 mt-1 flex-wrap">
+              <p className="text-[9px] text-gray-600">
+                Variables obligatorias: <code className="bg-white/5 px-1 rounded">{'{{1}}'}</code> = nombre cliente ·
+                <code className="bg-white/5 px-1 rounded ml-1">{'{{2}}'}</code> = nombre del negocio
+              </p>
+              <button type="button" onClick={() => setForm({ ...form, carousel_body_text: DEFAULT_CAROUSEL_BODY })}
+                className="text-[9px] text-purple-400 hover:text-purple-300 font-bold">
+                🔄 Restaurar texto sugerido
+              </button>
+            </div>
+          </div>
+          {/* Preview WhatsApp del mensaje */}
+          {(form.carousel_body_text || DEFAULT_CAROUSEL_BODY) && (
+            <div className="mb-4">
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">📱 Vista previa WhatsApp</p>
+              <div className="bg-[#0B3D2E] rounded-xl p-4 max-w-sm border-l-4 border-emerald-500/50">
+                <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">
+                  {(form.carousel_body_text || DEFAULT_CAROUSEL_BODY)
+                    .replace(/\{\{1\}\}/g, 'Juan')
+                    .replace(/\{\{2\}\}/g, user?.companyId || 'Tu negocio')
+                    .split(/(\*[^*]+\*)/)
+                    .map((part: string, idx: number) =>
+                      part.startsWith('*') && part.endsWith('*') ? (
+                        <strong key={idx} className="text-white">{part.slice(1, -1)}</strong>
+                      ) : (
+                        <span key={idx}>{part}</span>
+                      )
+                    )}
+                </p>
+                {/* Mini-preview del carrusel */}
+                {form.carousel_services.length > 0 && (
+                  <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
+                    {form.carousel_services.slice(0, 5).map((slug, i) => {
+                      const s = servicesCatalog.find((x: any) => (x.slug || x.id) === slug);
+                      return (
+                        <div key={i} className="shrink-0 w-20 h-24 bg-white/10 rounded border border-white/20 overflow-hidden">
+                          {s?.image_url ? (
+                            <img src={s.image_url} alt="" className="w-full h-16 object-cover" />
+                          ) : (
+                            <div className="w-full h-16 bg-white/5 flex items-center justify-center text-[8px] text-gray-500">🖼️</div>
+                          )}
+                          <p className="text-[7px] text-white/80 px-1 pt-0.5 truncate">{s?.name || ''}</p>
+                        </div>
+                      );
+                    })}
+                    {form.carousel_services.length > 5 && (
+                      <div className="shrink-0 w-20 h-24 flex items-center justify-center text-[10px] text-white/40">
+                        +{form.carousel_services.length - 5} más
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <p className="text-[9px] text-gray-500 mt-1 italic">
+                Vista previa con valores ejemplo. Cuando envíes la campaña, {'{{1}}'} y {'{{2}}'} se reemplazan automáticamente con los datos reales.
+              </p>
+            </div>
+          )}
+          {/* Banner costo + advertencia */}
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 mb-4">
+            <p className="text-[10px] text-amber-300 leading-relaxed">
+              ⚠️ <strong>Meta revisa el carrusel antes de aprobarlo.</strong> Toma entre 10 minutos y 24 horas.
+              Una vez aprobado, podrás usarlo en campañas de marketing. Costo Meta: ~$0.06 USD por mensaje enviado.
+            </p>
+          </div>
+          {/* Botones acción */}
+          <div className="flex gap-2">
+            <button onClick={() => setShowCreate(false)}
+              className="flex-1 py-3 rounded-xl text-sm font-bold border border-white/10 hover:bg-white/5">Cancelar</button>
+            <button onClick={handleCreateCarousel}
+              disabled={carouselCreating || form.carousel_services.length < 2 || form.carousel_services.length > 10}
+              className="flex-1 py-3 rounded-xl text-sm font-bold bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-purple-600/20">
+              {carouselCreating
+                ? '⏳ Enviando a Meta...'
+                : form.carousel_services.length < 2
+                  ? '⚠️ Selecciona al menos 2 servicios'
+                  : form.carousel_services.length > 10
+                    ? '⚠️ Máximo 10 servicios'
+                    : `🎠 Crear carrusel (${form.carousel_services.length} productos)`}
             </button>
           </div>
         </div>
