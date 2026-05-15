@@ -21,6 +21,15 @@ const TEMPLATE_LABELS: Record<string, { title: string; emoji: string; desc: stri
 };
 // Devuelve el label humano de una plantilla (o el nombre técnico si no está mapeada).
 const humanizeTemplate = (t: any) => {
+  // Carruseles: emoji especial + label del cliente + count de cards
+  if (t.is_carousel || t.type === 'carousel') {
+    const label = t.label || t.template_name;
+    const pretty = label
+      .replace(/_v\d+$/, '')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c: string) => c.toUpperCase());
+    return `🎠 ${pretty} (${t.card_count || 0} productos)`;
+  }
   const meta = TEMPLATE_LABELS[t.template_name];
   if (meta) return `${meta.emoji} ${meta.title}`;
   // Fallback: capitaliza el nombre técnico (snake_case → Title Case)
@@ -78,7 +87,16 @@ export default function MarketingPage() {
   });
   const selectedTpl = templates.find(t => t.template_name === form.template_name);
   const varCount = (selectedTpl?.body || '').match(/\{\{\d+\}\}/g)?.length || 0;
-  const estimatedCost = filteredLeads.length * (selectedTpl?.category === 'MARKETING' ? 0.025 : 0.01);
+  // Costo Meta por mensaje según tipo:
+  // - UTILITY: ~$0.01 USD
+  // - MARKETING texto: ~$0.025 USD
+  // - MARKETING carrusel: ~$0.06 USD (más caro por la imagen + interactividad)
+  const costPerMsg = selectedTpl?.is_carousel
+    ? 0.06
+    : selectedTpl?.category === 'MARKETING'
+      ? 0.025
+      : 0.01;
+  const estimatedCost = filteredLeads.length * costPerMsg;
   const allTags = [...new Set(leads.flatMap(l => l.tags || []))];
   const allStages = ['nuevo', 'contactado', 'interesado', 'negociacion', 'cerrado_ganado', 'cerrado_perdido'];
   const allServices = [...new Set(leads.map(l => l.service_of_interest).filter(Boolean))];
@@ -172,7 +190,19 @@ export default function MarketingPage() {
             {selectedTpl && (
               <div className="mt-2 space-y-2">
                 {/* Card descriptiva — qué es y cuándo usarla */}
-                {TEMPLATE_LABELS[selectedTpl.template_name] && (
+                {selectedTpl.is_carousel ? (
+                  <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                    <p className="text-[11px] font-bold text-purple-300 mb-1">
+                      🎠 Carrusel de productos
+                    </p>
+                    <p className="text-[10px] text-gray-300 leading-relaxed">
+                      Muestra tu catálogo completo de forma visual e interactiva. El cliente ve {selectedTpl.card_count || 0} productos con foto, precio y botones para reservar o pedir info.
+                    </p>
+                    <p className="text-[10px] text-purple-300/80 mt-1.5 italic">
+                      💡 Ideal para reactivar leads inactivos mostrándoles toda tu oferta de un solo mensaje. <span className="text-purple-300 font-bold">Lo último en tecnología WhatsApp.</span>
+                    </p>
+                  </div>
+                ) : TEMPLATE_LABELS[selectedTpl.template_name] && (
                   <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3">
                     <p className="text-[11px] font-bold text-indigo-300 mb-1">
                       {TEMPLATE_LABELS[selectedTpl.template_name].emoji}{' '}
@@ -187,7 +217,7 @@ export default function MarketingPage() {
                   </div>
                 )}
                 {/* Preview del mensaje real que recibirá el cliente */}
-                {selectedTpl?.body && (
+                {selectedTpl?.body && !selectedTpl.is_carousel && (
                   <div>
                     <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Vista previa del mensaje</p>
                     <div className="bg-[#0B3D2E] rounded-lg p-3">
@@ -195,11 +225,32 @@ export default function MarketingPage() {
                     </div>
                   </div>
                 )}
+                {/* Preview especial del carrusel */}
+                {selectedTpl.is_carousel && (
+                  <div>
+                    <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Vista previa del carrusel</p>
+                    <div className="bg-[#0B3D2E] rounded-lg p-3 flex gap-1.5 overflow-x-auto">
+                      {Array.from({ length: Math.min(selectedTpl.card_count || 0, 5) }).map((_, i) => (
+                        <div key={i} className="shrink-0 w-16 h-20 bg-white/10 rounded border border-white/20 flex flex-col items-center justify-center">
+                          <span className="text-[8px] text-white/40">🖼️</span>
+                          <span className="text-[7px] text-white/30 mt-1">Card {i+1}</span>
+                        </div>
+                      ))}
+                      {(selectedTpl.card_count || 0) > 5 && (
+                        <div className="shrink-0 w-16 h-20 flex items-center justify-center text-[9px] text-white/40">
+                          +{(selectedTpl.card_count || 0) - 5} más
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {/* Badge de categoría — explica el costo */}
                 <p className="text-[9px] text-gray-500">
-                  {selectedTpl.category === 'MARKETING'
-                    ? '📢 Categoría: Marketing (~$0.025 USD/msg)'
-                    : '🔧 Categoría: Utilitaria (~$0.01 USD/msg)'}{' '}
+                  {selectedTpl.is_carousel
+                    ? '🎠 Carrusel Marketing (~$0.06 USD/msg) · Premium'
+                    : selectedTpl.category === 'MARKETING'
+                      ? '📢 Categoría: Marketing (~$0.025 USD/msg)'
+                      : '🔧 Categoría: Utilitaria (~$0.01 USD/msg)'}{' '}
                   · Idioma: {selectedTpl.language}
                 </p>
               </div>
