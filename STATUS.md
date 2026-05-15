@@ -2,6 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
+**API v199 + Bot v191 + Frontend `e1a5f15`** — Sprint Marketing Carousel + Polish CERRADO 🦁🎠 (15 mayo, ~3h). **Carruseles MARKETING en campañas masivas**: `/marketing/send-bulk` ahora envía carruseles APROBADOS fuera de ventana 24h con `media_id` por card subido al `phone_number_id` del tenant (helper `_upload_image_to_meta_for_bulk` con cache `(image_url, phone_id)` anti Bug #36). `/templates/list` extendido con `is_carousel`, `card_count`, `body`, `var_count`, `body_example`, `category` real desde Meta. **Test E2E producción**: carrusel JMC 10 cards enviado a número real fuera de ventana 24h, recibido correctamente ✅. UX completa: humanización plantillas (📅 Recordatorio / 💬 Seguimiento / 🎠 Carrusel) en `/marketing` y `/templates/manage`, preview WhatsApp real con valores ejemplo en verde negrita, validación obligatoria mapeo de variables (botón disabled si faltan), tabs **🔍 Por filtros** vs **✋ Elegir uno por uno** con multi-select checkboxes, estimador costo carrusel $0.06 USD/msg vs $0.025 texto. **Diferenciador competitivo**: ni Manychat ni Wati permiten enviar carruseles MARKETING desde su UI nativa.
 **API v194 + Bot v191 + Frontend `8d7d698`** — Sprint Enhanced CAPI + Templates Manager + Bulk Send COMPLETO 🦁 (14 mayo sesión 3 final). Bulk Send: `/dashboard/marketing` envío masivo templates a leads filtrados por etapa/tags/servicio/inactividad + quotas por plan (Solo 100/Growth 1000/Agency ∞) + estimador costo USD + historial campañas + audit log + banner transparencia Meta. API v194 `POST /marketing/send-bulk` + `GET /marketing/campaigns`.
 **API v193 + Bot v191 + Frontend `6c91137`** — Sprint Enhanced CAPI + Templates Manager + Sprint E COMPLETO 🦁 (14 mayo sesión 3, ~6h). Enhanced CAPI: PII completo en TODOS los eventos (email+name+city+document SHA-256 + fbc click ID) + value=regular_price + Lead re-send con PII. **Templates Manager UI**: `/dashboard/templates/manage` crear/listar/borrar templates UTILITY+MARKETING + preview WhatsApp + banner costos Meta + auto-refresh status. CRM: tarjeta lead muestra anuncio+click ID+email+ciudad+documento. **Meta Match Rate: 4/10 → 7-8/10.**
 **API v192 + Bot v191 + Frontend `4c51579`** 
@@ -111,7 +112,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
 - `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~8,900 líneas, **v189** — Sprint E completo: captura PII 5 campos single+multi-persona + email confirmación Resend + cron recordatorios cascada WA→template→email + botones 1h (confirmar/reprogramar/cancelar) + no-show + FLOW_STATE_GUARD_UNIVERSAL debounce + funnel_mode 6 modos + Lead Qualifier + Shipping step-machine + payment reuse + regla 24b; Calendly mode: CalendarPicker v7.3 (`min_date`/`max_date`/`unavailable_dates`) + `_get_available_dates` y `_get_available_slots` con cascada svc→tenant→default + `available_weekdays` y `booking_mode` por servicio + handler async `_internal_action=post_booking_messages` (no bloquea flow) + `post_payment_flow=send_group_link` con mensaje custom + `screen` y `selected_slot` del nivel raíz v6.0/7.3 + scheduling_flow_id desde config_pro) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
 - `SaaS_API_Handler` — incluye **`POST /scheduling-flow/setup`** auto-onboarding multi-tenant del WhatsApp Flow CalendarPicker v7.3 (crea + sube JSON + publica + guarda flow_id en config_pro, idempotente)
-- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** + **Auto-onboarding Scheduling Flow + Templates Reminder/Follow-up multi-idioma** + **Wizard 2.0 Premium** + **Multi-tenant funnel_mode + Lead Qualifier whitelist** + **Cron poll templates Meta** + **Templates Manager UI** (~18,600 líneas, ~134 endpoints, **v193** — `GET /templates/list` + `POST /templates/custom` UTILITY/MARKETING + `DELETE /templates/custom` + category dynamic en `_create_meta_template` — `POST /templates/cron-poll-all` itera tenants PENDING + `handle_onboarding` persiste locale + auto-create templates en `handle_meta_exchange`) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
+- `SaaS_API_Handler` — API + Admin Panel + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** + **Auto-onboarding Scheduling Flow + Templates Reminder/Follow-up multi-idioma** + **Wizard 2.0 Premium** + **Multi-tenant funnel_mode + Lead Qualifier whitelist** + **Cron poll templates Meta** + **Templates Manager UI** + **Marketing Carousel Bulk Send** (~19,210 líneas, **v199** — `/templates/list` enriquecido con `is_carousel`/`card_count`/`body`/`var_count`/`body_example`/`category` real desde Meta + `/marketing/send-bulk` detecta carrusel + helper `_upload_image_to_meta_for_bulk` cache `(url, phone_id)` + payload Meta `components.carousel.cards` con `media_id` por card) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
 - `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os + SOURCE_THRESHOLDS human_agent=2 + preserva source SK)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -153,6 +154,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **Multicanal**: Instagram DM + Facebook Messenger activos (Bot v114) — misma IA Gemini, catalog lista texto, pago, historial por canal
 - [x] **Enhanced CAPI** (Bot v191): PII completo en todos los eventos (email+name+city+doc SHA-256 + fbc click ID formato `fb.1.{ts}.{ctwa_clid}`) + value=regular_price (no anticipo) + Lead re-send con PII tras captura email. Match Rate 4/10 → 7-8/10.
 - [x] **Templates Manager** (API v193 + Frontend `6c91137`): crear/listar/borrar templates custom UTILITY+MARKETING via Meta Graph API + preview WhatsApp + banner costos + auto-refresh status
+- [x] **Marketing Carousel Bulk Send** (API v199 + Frontend `e1a5f15`): envío masivo de carruseles MARKETING aprobados fuera de ventana 24h. Helper `_upload_image_to_meta_for_bulk` multi-tenant. UX completa: labels humanos, preview WA real con valores ejemplo, validación mapeo de variables, multi-select leads. **Test E2E producción ✅**.
 ### ⚙️ API SaaS (~80 endpoints)
 - [x] Config, onboarding, services CRUD
 - [x] Leads CRUD + tags + score + stage + notas + recordatorios + AI insight + CSV import
@@ -888,6 +890,59 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Causa**: 2 `payment_table.update_item` (L3712 y L4138) usaban `Key={"contact_id": phone}` pero la tabla tiene PK `phoneNumber`. DynamoDB no lanza error — el update simplemente no aplica.
 - **Fix (Bot v152)**: cambiar a `Key={"phoneNumber": ...}` en ambos call sites.
 - **Lección 40 reincidencia**: este es el 4to bug del estilo "PK incorrecta en update silencioso" del año. Necesario: auditoría automatizada que recorra todos los `update_item(Table=X, Key=Y)` y valide Y contra el KeySchema real.
+### 15 mayo 2026 — Sprint Marketing Carousel + Polish CERRADO 🦁🎠
+> Sesión ~3h. Cerró el envío masivo de **carruseles MARKETING fuera de ventana 24h** (lo que ningún competidor LATAM tiene en su UI). 3 deploys API (v197/v198/v199) + 4 commits frontend (`db06bfe` → `695156a` → `2611ba9` → `e1a5f15`). Test E2E real con tarjeta Meta validando carrusel de 10 cards entregado a número personal del founder.
+#### Auditoría inicial (regla #5: 1 cambio por vez)
+- [x] **Hallazgo crítico**: 4 endpoints de carrusel YA EXISTÍAN al 100% (`POST /templates/carousel` en L7671, `GET /templates/carousel`, `PUT /templates/carousel/activate`, `DELETE /templates/carousel`). Los carruseles ya nacían con `category: MARKETING` en Meta. **Cero código nuevo de creación.**
+- [x] **Gap real identificado**: `handle_marketing_send_bulk` (L7156) solo buscaba en `templates` (auto) y `custom_templates` — NO leía `carousels_catalog`. Por eso bulk send daba "Template no encontrado" para carruseles. **El sprint era plumbing, no greenfield.**
+#### Patch 1 — `/templates/list` incluye carruseles (API v197)
+- [x] `handle_list_templates` lee también `carousels_catalog` y devuelve carruseles APPROVED unificados con flag `is_carousel: true` + `card_count` + `label` + `body: "Catalogo visual con N productos/servicios"` + `category: MARKETING` + `editable: false`
+- [x] Skip silencioso de carruseles no APPROVED (PENDING/REJECTED no aparecen en marketing UI)
+- [x] Test verificado: `JMC` ahora retorna 3 templates (2 auto + 1 carrusel) en vez de 2
+#### Patch 2 — `/marketing/send-bulk` soporta carruseles (API v198)
+- [x] **Helper `_upload_image_to_meta_for_bulk(image_url, phone_number_id, access_token)`**: descarga imagen → POST a `/{phone_id}/media` → retorna `media_id`. Cache 15 min keyed por `(image_url, phone_number_id)` (anti Bug #36).
+- [x] **Cache `_bulk_media_cache`**: dict global keyed `f"{url}::{phone_id}"`. Multi-tenant safe.
+- [x] **Lookup extendido en `handle_marketing_send_bulk`**: tras buscar en `templates` y `custom_templates`, busca también en `carousels_catalog`. Si encuentra match, setea `is_carousel=True` + `carousel_data` con el item completo.
+- [x] **Payload Meta carrusel**: si `is_carousel`, lee `services_catalog` del tenant → toma N servicios activos con precio → sube imagen a Meta (con cache) por card → arma `components.carousel.cards` con `card_index`, header image (media_id), body (nombre + precio), 2 botones quick_reply (`svc_{slug}` + `info_{slug}`). Pad para matchear `card_count` exacto (Meta lo exige).
+- [x] **Fallback robusto**: si falla upload de cualquier imagen → recipient queda en `failed` con error claro, no rompe la campaña entera.
+- [x] **Reusa lógica del bot**: mismo payload structure que `_enviar_catalogo_template_carousel` (L1744) — cero reinvención.
+#### Patch 3 — `/templates/list` enriquece body real desde Meta (API v199)
+- [x] **Bug latente detectado**: templates `auto` solo guardaban `template_name`/`template_id` en `config_pro.templates` — sin `body` ni count de variables. Frontend marketing mostraba preview vacío → cliente no sabía qué iba a enviar → mapeo de variables ciego.
+- [x] **Fix multi-capa**: el polling de status a Meta (L7541) ahora también extrae `body`, `var_count` (regex `\{\{N\}\}`), `body_example` (primer entry de `example.body_text`), y `category` real desde el response de `/{waba_id}/message_templates`. Cero round-trips extra a Meta (reusa el GET existente).
+- [x] **Skip guard para carruseles**: `if t.get("is_carousel"): continue` evita sobreescribir el body descriptivo del carrusel.
+- [x] **Test verificado**: `appointment_reminder_v1` → 5 variables (Juan, Seminario Tiro 9mm, sabado 17 mayo, 10:00 AM, Escuela JMC Guarne). `follow_up_v1` → 2 variables (Juan, Seminario Tiro 9mm). `catalogo_jmc_10cards` → 0 variables.
+#### Frontend Patch 1 — Humanizar plantillas en `/dashboard/marketing` (Frontend `db06bfe`)
+- [x] Diccionario `TEMPLATE_LABELS` con metadata humana para plantillas auto conocidas (`appointment_reminder_v1` → 📅 Recordatorio de cita, `follow_up_v1` → 💬 Seguimiento comercial).
+- [x] Helper `humanizeTemplate(t)` con fallback inteligente (capitaliza nombre técnico si no está mapeado).
+- [x] Card descriptiva indigo con título + descripción + caso de uso ideal.
+- [x] Preview del body del template (no solo el nombre técnico).
+#### Frontend Patch 2 — Preview carrusel + estimador costo (Frontend `695156a`)
+- [x] `humanizeTemplate` extendido para `is_carousel`: emoji 🎠 + label cliente + count cards.
+- [x] Card morada describiendo qué es el carrusel + "lo último en tecnología WhatsApp".
+- [x] Preview visual con miniaturas de cards apiladas (máx 5 visibles + "+N más").
+- [x] Estimador costo actualizado: carrusel $0.06 USD/msg vs marketing $0.025 vs utility $0.01.
+#### Frontend Patch 3 — Preview WA real + validación vars + multi-select leads (Frontend `2611ba9`)
+- [x] **Preview WhatsApp REAL**: usa `body_example` de Meta para mostrar el mensaje exacto que recibirá el lead con valores ejemplo en `*negrita*` (rendered con fondo emerald + texto bold). Cliente entiende qué van a recibir sus leads ANTES de enviar.
+- [x] **Validación obligatoria mapeo**: dropdowns rojo (vacío) → verde (mapeado). Botón "Enviar" DISABLED si quedan variables sin mapear. Banner rojo arriba del botón explicando qué falta.
+- [x] **Opciones extendidas mapeo**: agregadas `appointment_date`, `appointment_time`, `appointment_location`, `custom_value` (texto fijo). Antes solo 4, ahora 8.
+- [x] **Tabs destinatarios**: 🔍 Por filtros (default, comportamiento previo) vs ✋ Elegir uno por uno (NUEVO).
+- [x] **Multi-select leads**: lista scrollable con checkboxes individuales. Botón "Seleccionar todos los visibles". Counter en vivo. Backend ya soportaba `phone_list` → cero patch backend.
+- [x] **Botón con texto dinámico**: "⚠️ Mapea variables" / "⚠️ Selecciona destinatarios" / "🚀 Enviar a N destinatarios" según estado.
+#### Frontend Patch 4 — Humanizar `/dashboard/templates/manage` (Frontend `e1a5f15`)
+- [x] Mismo `TEMPLATE_LABELS` + helper `humanize()` reaplicado.
+- [x] Tarjetas rediseñadas: emoji + título humano grande arriba + subtítulo descriptivo + preview del body (verde WhatsApp) + badges contextuales (🤖 Sistema / ✨ Personalizada / 🎠 Carrusel) + nombre técnico discreto al fondo en mono gris (para soporte/debugging).
+- [x] Cliente entiende **inmediatamente** qué es cada plantilla sin tener que abrir nada.
+#### Test E2E producción ✅
+- [x] **Enviado**: 1 carrusel `catalogo_escuela_de_tiro_jmc_10cards` (10 cards) al número del founder `573017881094` vía `/marketing/send-bulk` con `phone_list` explícita.
+- [x] **Recibido**: carrusel completo con las 10 cards renderizadas en WhatsApp ~5 segundos después. **Fuera de ventana 24h** (mensaje frío legítimo gracias a `category: MARKETING`).
+- [x] **Costo real**: $0.06 USD a tarjeta Meta del tenant.
+- [x] **Validación clave**: este es el feature que NINGÚN competidor LATAM (Manychat/Wati/Respond.io) permite hacer desde su UI nativa.
+#### Lecciones nuevas (sesión 15 mayo)
+59. **🦁 Auditar antes de codear (Lección 48 reincidida)**: cuando el cliente pide "agregar X feature", primero verificar si ya existe parcialmente. Sprint planeado a 17h se redujo a 3h porque los 4 endpoints de carrusel ya estaban hechos — solo faltaba el plumbing del `send-bulk`. Filosofía león: ¿esto cabe dentro de algo que ya funciona?
+60. **🟢 Body de templates auto requiere refresh desde Meta**: cuando el sistema crea templates automáticamente (sin que el cliente ingrese el body), DDB solo tiene `template_name` + `template_id`. El `body` real vive en Meta. Patrón: cuando hagas polling de status, aprovechar para extraer también `body`/`example`/`category` y enriquecer el response del frontend. Cero round-trips extra.
+61. **🟢 Helper de upload con cache `(input, emisor)` keyed (Lección 30 reusada)**: media_ids de Meta están atados al `phone_number_id` del uploader. Cache `_bulk_media_cache` con key `f"{url}::{phone_id}"` previene cross-tenant leaks + ahorra requests a Meta cuando un tenant manda múltiples campañas con las mismas imágenes del catálogo.
+62. **🦁 Diferenciador real vs gimmick**: enviar carrusel MARKETING fuera de ventana 24h no es feature cosmética — es **upsell visual sin ventana de conversación**. Es el equivalente a un email con catálogo visual pero en WhatsApp. Manychat/Wati lo permiten via API si el cliente codea, pero NO desde UI nativa. Vendible como "Premium WhatsApp Marketing" en el plan Agency.
+---
 ### 13 mayo 2026 (sesión maratón ~13h) — Multi-tenant MASTER + 6 bugs críticos producción 🦁
 > 9 sprints completos en una sesión. Bot v153→v174 (21 versiones), API v185→v189 (4 versiones), Frontend `a904590`→`cf1344d` (5 commits). Test E2E real con WhatsApp validando cada deploy. Sprint A+B+C+D-lite+E.3+E.1.b backend completos.
 #### ✅ Sprints cerrados HOY
@@ -1722,17 +1777,16 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
-██████████████████████████████████░ 98%
+██████████████████████████████████░ 99%
 ### ⏱️ Métricas de desarrollo reales
 | Métrica | Valor |
 |---|---|
-| **Horas invertidas hasta hoy** | ~545h |
+| **Horas invertidas hasta hoy** | ~574h |
 | **Horas pendientes (completo)** | ~535h |
 | **Total proyecto completo** | ~1,080h |
 | **Equivalente invertido** | ~3.6 meses full-time senior |
 | **Equivalente pendiente** | ~3.5 meses full-time senior |
 | **MVP cobrable (Sprint 1)** | ✅ COMPLETADO — trial + billing + quotas E2E |
-
 #### Desglose horas invertidas
 | Bloque | Horas |
 |---|---|
@@ -1751,9 +1805,11 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | Sesión 8 mayo (multicanal FB/IG completo + fixes + affiliate module) | ~18h |
 | Sesión 8-9 mayo noche (Sprint 1 completo: trial+billing+quotas+admin editor+30 deploys) | ~7h |
 | Sesión 8 mayo tarde (memoria source-aware + 6 bugs CRM + cleanup 615 entries) | ~3h |
+| Sesión 11-13 mayo (multi-tenant MASTER + 12 sprints + 10 bugs producción) | ~20h |
+| Sesión 14 mayo (Enhanced CAPI + Templates Manager + Bulk Send) | ~6h |
+| Sesión 15 mayo (Sprint Marketing Carousel + Polish + Test E2E) | ~3h |
 | Debugging, rollbacks, incidentes varios | ~20h |
-| **Total** | **~545h** |
-
+| **Total** | **~574h** |
 #### Desglose horas pendientes
 | Bloque | Horas |
 |---|---|
@@ -1761,7 +1817,6 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | ~~Sprint 1 — Feature Flags + Quotas~~ | ~~20h~~ ✅ COMPLETADO |
 | ~~Sprint 1 — Programa de afiliados~~ | ~~10h~~ ✅ COMPLETADO |
 | ~~Sprint Calendly Mode + UI Scheduling multi-tenant~~ | ~~8h~~ ✅ COMPLETADO (Bot v154-v162 + API v148 + 4 commits frontend) |
-
 | Sprint 2 — Multicanal IG/FB (backend listo, falta webhooks + bandeja) | ~40h |
 | Admin Panel C8-C12 + D-K completo | ~120h |
 | Sprint 3 — IA superpoderes | ~60h |
@@ -1771,20 +1826,15 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | Sprint 7 — Rugido final + PWA + WebSocket | ~40h |
 | QA, testing, pulido antes de lanzamiento | ~40h |
 | **Total** | **~600h** |
-
 > 💡 **Nota:** Lo que está hecho es la infraestructura más compleja. Lo que falta tiene más features pero menor complejidad técnica por feature. El MVP cobrable (Sprint 1) está a ~93h de distancia.
-
 #### 🧠 Porcentaje real por dificultad técnica
-
 > El 86% mide *cantidad de features*. Por dificultad técnica real, el proyecto está al **~92%**.
-
 | Nivel | Componentes | Estado |
 |---|---|---|
 | ⭐⭐⭐⭐⭐ Muy difícil | Multi-tenant strict, Bot IA + memoria, CAPI + atribución, Multi-pasarela pagos, Migración multicanal contact_id, 2FA triple, WhatsApp Flows encriptados | ✅ Todo hecho |
 | ⭐⭐⭐⭐ Difícil | Ads Pro + IA recomendaciones, Admin Panel observabilidad, Stripe/Wompi billing | ✅ Parcial — billing pendiente |
 | ⭐⭐⭐ Medio | Feature Flags + Quotas, Afiliados, Webhooks IG/FB + bandeja unificada, Admin Panel D-K | ❌ Pendiente |
 | ⭐⭐ Simple | i18n, Video IA HeyGen, Sprints 4-7 en general | ❌ Pendiente |
-
 > 💡 **En palabras simples:** el 26% de features que falta representa solo el ~13% de la dificultad técnica total. El motor del Ferrari está construido — lo que falta es la tapicería, el GPS y el aire acondicionado.
 | Categoría | % |
 |---|---|
@@ -1801,9 +1851,9 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 | 🟡 Multi-idioma plataforma (bot+frontend) | 0% — sprint dedicado |
 | 🟡 Admin Panel completo (F-K) | ~25% (D+E cerradas) |
 | 🟡 Web Chat Widget | 0% |
-**Última medición:** 14 mayo 2026 — **Sprint Enhanced CAPI + Templates Manager + Bulk Send CERRADOS**
- 🦁 API v193 + Bot v191 + Frontend `6c91137`. 3 sesiones en 2 días (~26h total). 48 versiones del bot (v153→v191). 8 versiones API (v185→v193). 14 commits frontend. 12 sprints completados + 10 bugs producción cerrados. Meta Match Rate 4/10 → 7-8/10. Templates APPROVED (appointment_reminder_v1 + follow_up_v1). Cron recordatorios + no-show ENABLED. Captura PII 5 campos single+multi-persona. Email confirmación Resend multi-idioma. CRM muestra anuncio+click ID. Próximo: Bulk Send / Campañas Marketing.
-
+**Última medición:** 15 mayo 2026 — **Sprint Marketing Carousel + Polish CERRADO** 🦁🎠
+API v199 + Bot v191 + Frontend `e1a5f15`. Sesión ~3h. 3 deploys API (v197/v198/v199) + 4 commits frontend (`db06bfe` → `695156a` → `2611ba9` → `e1a5f15`). **Test E2E producción**: carrusel JMC 10 cards entregado a número real fuera ventana 24h ✅. Cliente puede enviar carruseles MARKETING aprobados desde UI nativa (ningún competidor LATAM tiene esto). UX completa: humanización plantillas, preview WhatsApp real con valores ejemplo, validación obligatoria mapeo variables, multi-select leads con checkboxes. 4 lecciones nuevas (59-62). Próximo: Multi-idioma plataforma + Fase F Soporte + Admin F-K restante.
+**Medición anterior:** 14 mayo 2026 — **Sprint Enhanced CAPI + Templates Manager + Bulk Send CERRADOS** 🦁 API v193 + Bot v191 + Frontend `6c91137`. 3 sesiones en 2 días (~26h total). 48 versiones del bot (v153→v191). 8 versiones API (v185→v193). 14 commits frontend. 12 sprints completados + 10 bugs producción cerrados. Meta Match Rate 4/10 → 7-8/10. Templates APPROVED. Cron recordatorios + no-show ENABLED. Captura PII 5 campos single+multi-persona.
 ### Hitos de moral 🦁
 - [x] **0% → 25%** — Bot WhatsApp + API SaaS base
 - [x] **25% → 50%** — Multi-tenant + Ads Pro + CRM
@@ -1833,8 +1883,9 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 - [x] **97% → 98%** — Sprint Brand DNA + Wizard 2.0 CERRADO 🦁 Brand DNA scraping multi-source + Brand Assets Library + Wizard Backend 9 endpoints + Wizard Frontend 8 pasos + Andromeda overlay + cross-tenant + Wizard Packs LS. API v165-v179, frontend `246103f`. 27 deploys + 8 commits en 1 sesión.
 - [x] **98% → 99%** — Sprint multi-tenant MASTER 🦁 (13-14 mayo, 2 sesiones ~20h). 12 sprints: funnel_mode 6 modos + Lead Qualifier IA + Shipping step-machine + Sprint E completo (captura PII 5 campos single+multi-persona + email confirmación Resend + cron recordatorios cascada WA→template→email + botones confirmar/reprogramar/cancelar + no-show) + auto-create templates 4 idiomas + payment link reuse + welcome menu fix debounce + anti-hallucination prompt. Bot v153→v189 (36 versiones), API v185→v191, Frontend 7 commits. 10 bugs producción cerrados.
 - [x] **99% → 99.5%** — Sprint Enhanced CAPI + Templates Manager 🦁 (14 mayo sesión 3). PII completo CAPI + fbc click ID + value=regular_price + Templates Manager UI UTILITY+MARKETING. Bot v191, API v192-v193, Frontend `6c91137`. **Meta Match Rate: 4/10 → 7-8/10.**
-- [x] **99.5% → 99.7%** — Sprint Bulk Send / Campañas Marketing 🦁 (14 mayo sesión 3 final). `/dashboard/marketing` envío masivo templates + filtros leads (etapa/tags/servicio/inactividad) + mapeo variables→campos lead + estimador costo USD + checkbox "Entiendo el cargo Meta" + quotas por plan + historial campañas + audit log. API v194 + Frontend `8d7d698`. ⭐ ESTÁS AQUÍ
-- [ ] **99.7% → 100%** — Multi-idioma plataforma + Fase F Soporte/Ticketing + Admin F-K restante + Web Chat Widget + RUGIDO 🦁
+- [x] **99.5% → 99.7%** — Sprint Bulk Send / Campañas Marketing 🦁 (14 mayo sesión 3 final). `/dashboard/marketing` envío masivo templates + filtros leads (etapa/tags/servicio/inactividad) + mapeo variables→campos lead + estimador costo USD + checkbox "Entiendo el cargo Meta" + quotas por plan + historial campañas + audit log. API v194 + Frontend `8d7d698`.
+- [x] **99.7% → 99.8%** — Sprint Marketing Carousel + Polish CERRADO 🦁🎠 (15 mayo, ~3h). Carruseles MARKETING en campañas masivas fuera de ventana 24h. `/templates/list` enriquecido + `/marketing/send-bulk` con helper `_upload_image_to_meta_for_bulk` cache `(url, phone_id)` + payload `components.carousel.cards`. UX completa: humanización plantillas en `/marketing` y `/templates/manage`, preview WhatsApp real con valores ejemplo, validación mapeo variables, multi-select leads checkbox. **Test E2E producción**: carrusel JMC 10 cards entregado a número real fuera ventana 24h ✅. API v197-v199, Frontend `db06bfe` → `695156a` → `2611ba9` → `e1a5f15`. **Diferenciador real**: ningún competidor LATAM tiene esto en UI nativa. ⭐ ESTÁS AQUÍ
+- [ ] **99.8% → 100%** — Multi-idioma plataforma + Fase F Soporte/Ticketing + Admin F-K restante + Web Chat Widget + RUGIDO 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
 ---
 ## 📞 CONTACTO
