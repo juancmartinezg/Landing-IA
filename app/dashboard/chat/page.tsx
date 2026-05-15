@@ -955,25 +955,40 @@ export default function ChatPage() {
                   </div>
                 </div>
                 {/* Atribución */}
-                {l.source_first_campaign_id && (
-                  <div className="mb-4 pt-4 border-t border-white/5">
-                    <p className="text-[10px] text-purple-400 uppercase tracking-widest font-bold mb-2">🎯 Atribución</p>
-                    <div className="flex justify-between">
-                      <span className="text-[10px] text-gray-500">Campaña</span>
-                      <span className="text-[10px] text-purple-400 font-bold truncate max-w-[200px]">
-                        {l.source_first_campaign_name || `ID: ${l.source_first_campaign_id.slice(-8)}`}
-                      </span>
-                    </div>
-                    {l.source_first_ctwa_clid && (
-                      <div className="flex justify-between mt-1">
-                        <span className="text-[10px] text-gray-500">Click ID</span>
-                        <span className="text-[10px] text-gray-400 font-mono truncate max-w-[200px]">
-                          {l.source_first_ctwa_clid.slice(0, 16)}...
+                <div className="mb-4 pt-4 border-t border-white/5">
+                  <p className="text-[10px] text-purple-400 uppercase tracking-widest font-bold mb-2">🎯 Origen</p>
+                  {l.source_first_campaign_id ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-gray-500">Campaña</span>
+                        <span className="text-[10px] text-purple-400 font-bold truncate max-w-[200px]">
+                          {l.source_first_campaign_name || l.source_first_headline || `ID: ...${l.source_first_campaign_id.slice(-8)}`}
                         </span>
                       </div>
-                    )}
-                  </div>
-                )}
+                      {l.source_first_ctwa_clid && (
+                        <div className="flex justify-between mt-1">
+                          <span className="text-[10px] text-gray-500">Click ID</span>
+                          <span className="text-[10px] text-gray-400 font-mono truncate max-w-[200px]">
+                            {l.source_first_ctwa_clid.slice(0, 16)}...
+                          </span>
+                        </div>
+                      )}
+                      {l.source_first_url && (
+                        <div className="flex justify-between mt-1">
+                          <span className="text-[10px] text-gray-500">Anuncio</span>
+                          <a href={l.source_first_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-indigo-400 hover:text-indigo-300 truncate max-w-[200px]">
+                            Ver anuncio ↗
+                          </a>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span className="text-[10px] text-gray-500">Fuente</span>
+                      <span className="text-[10px] text-gray-400">📱 Orgánico / directo</span>
+                    </div>
+                  )}
+                </div>
                 {/* Etapa del pipeline */}
                 <div className="mb-4 pt-4 border-t border-white/5">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">Etapa</p>
