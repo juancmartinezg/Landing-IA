@@ -21,6 +21,8 @@ interface AuthContextType {
   signUpWithEmail: (email: string, password: string, name: string) => Promise<{ok: boolean, needsConfirm?: boolean, error?: string}>;
   signInWithEmail: (email: string, password: string) => Promise<{ok: boolean, error?: string}>;
   confirmSignUp: (email: string, code: string) => Promise<{ok: boolean, error?: string}>;
+  forgotPassword: (email: string) => Promise<{ok: boolean, error?: string}>;
+  confirmForgotPassword: (email: string, code: string, newPassword: string) => Promise<{ok: boolean, error?: string}>;
   logout: () => void;
 }
 const AuthContext = createContext<AuthContextType>({
@@ -32,6 +34,8 @@ const AuthContext = createContext<AuthContextType>({
   signUpWithEmail: async () => ({ok: false}),
   signInWithEmail: async () => ({ok: false}),
   confirmSignUp: async () => ({ok: false}),
+  forgotPassword: async () => ({ok: false}),
+  confirmForgotPassword: async () => ({ok: false}),
   logout: () => {},
 });
 export const useAuth = () => useContext(AuthContext);
@@ -231,6 +235,37 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       return { ok: false, error: e.message || 'Código inválido' };
     }
   };
+  // Dispara email de Cognito con código de 6 dígitos para resetear contraseña
+  const forgotPassword = async (email: string) => {
+    try {
+      await cognitoFetch('ForgotPassword', { ClientId: COGNITO_CLIENT_ID, Username: email });
+      return { ok: true };
+    } catch (e: any) {
+      const msg = e.message || '';
+      if (msg.includes('UserNotFoundException')) return { ok: false, error: 'No existe una cuenta con este email.' };
+      if (msg.includes('LimitExceededException')) return { ok: false, error: 'Demasiados intentos. Espera unos minutos.' };
+      if (msg.includes('InvalidParameterException')) return { ok: false, error: 'Esta cuenta no puede recuperar contraseña (¿entraste con Google?).' };
+      return { ok: false, error: msg || 'Error al enviar código' };
+    }
+  };
+  // Confirma el código y setea la nueva contraseña
+  const confirmForgotPassword = async (email: string, code: string, newPassword: string) => {
+    try {
+      await cognitoFetch('ConfirmForgotPassword', {
+        ClientId: COGNITO_CLIENT_ID,
+        Username: email,
+        ConfirmationCode: code,
+        Password: newPassword,
+      });
+      return { ok: true };
+    } catch (e: any) {
+      const msg = e.message || '';
+      if (msg.includes('CodeMismatchException')) return { ok: false, error: 'Código incorrecto.' };
+      if (msg.includes('ExpiredCodeException')) return { ok: false, error: 'Código expirado. Solicita uno nuevo.' };
+      if (msg.includes('InvalidPasswordException')) return { ok: false, error: 'Contraseña débil: mínimo 8 caracteres, mayúscula y número.' };
+      return { ok: false, error: msg || 'Error al cambiar contraseña' };
+    }
+  };
   const login = loginWithGoogle;
   const logout = () => {
     localStorage.removeItem('cb_user');
@@ -240,7 +275,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     window.location.href = logoutUrl;
   };
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, loginWithEmail, signUpWithEmail, signInWithEmail, confirmSignUp, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, loginWithEmail, signUpWithEmail, signInWithEmail, confirmSignUp, forgotPassword, confirmForgotPassword, logout }}>
+
       {children}
     </AuthContext.Provider>
   );

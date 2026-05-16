@@ -64,10 +64,10 @@ async function attemptPasskeyLogin(email: string): Promise<{ ok: boolean; compan
 }
 
 export default function LoginPage() {
-  const { user, loading, loginWithGoogle, signUpWithEmail, signInWithEmail, confirmSignUp } = useAuth();
+  const { user, loading, loginWithGoogle, signUpWithEmail, signInWithEmail, confirmSignUp, forgotPassword, confirmForgotPassword } = useAuth();
   const router = useRouter();
   const [checked, setChecked] = useState(false);
-  const [mode, setMode] = useState<'login' | 'register' | 'confirm' | '2fa'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'confirm' | '2fa' | 'forgot' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
@@ -241,6 +241,162 @@ export default function LoginPage() {
     );
   }
 
+  // Pantalla "Olvidé mi contraseña" - paso 1: pedir email + disparar código
+  if (mode === 'forgot') {
+    return (
+      <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-10">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <img src="/cb-logo.webp" alt="Logo" className="w-12 h-12 object-contain" />
+              <span className="text-2xl font-bold text-white tracking-tighter">clientes.bot</span>
+            </div>
+            <p className="text-gray-400 text-sm">Recuperar contraseña</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-indigo-600/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">🔑</div>
+              <h2 className="text-lg font-bold text-white mb-2">¿Olvidaste tu contraseña?</h2>
+              <p className="text-gray-400 text-xs">Te enviaremos un código de 6 dígitos por email.</p>
+            </div>
+            {error && <p className="text-red-400 text-xs text-center mb-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">{error}</p>}
+            <input
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              type="email"
+              placeholder="Tu email"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white mb-4"
+              autoFocus
+            />
+            <button
+              onClick={async () => {
+                if (!email) { setError('Escribe tu email'); return; }
+                setSubmitting(true); setError('');
+                const res = await forgotPassword(email);
+                setSubmitting(false);
+                if (res.ok) { setMode('reset'); setCode(''); setPassword(''); setPassword2(''); }
+                else if (res.error) setError(res.error);
+              }}
+              disabled={submitting || !email}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 text-white font-bold py-4 rounded-2xl transition-all mb-3"
+            >
+              {submitting ? '⏳ Enviando...' : '📧 Enviar código'}
+            </button>
+            <button
+              onClick={() => { setMode('login'); setError(''); }}
+              className="w-full text-gray-500 hover:text-gray-400 text-xs py-2 transition-all"
+            >
+              ← Volver al login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  // Pantalla "Olvidé mi contraseña" - paso 2: código + nueva contraseña
+  if (mode === 'reset') {
+    return (
+      <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-10">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <img src="/cb-logo.webp" alt="Logo" className="w-12 h-12 object-contain" />
+              <span className="text-2xl font-bold text-white tracking-tighter">clientes.bot</span>
+            </div>
+            <p className="text-gray-400 text-sm">Nueva contraseña</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-emerald-600/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">🔓</div>
+              <h2 className="text-lg font-bold text-white mb-2">Ingresa el código</h2>
+              <p className="text-gray-400 text-xs">
+                Enviamos un código de 6 dígitos a <strong className="text-white">{email}</strong>
+              </p>
+            </div>
+            {error && <p className="text-red-400 text-xs text-center mb-4 bg-red-500/10 border border-red-500/20 rounded-xl p-3">{error}</p>}
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={code}
+              onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+              placeholder="000000"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-center text-2xl font-bold tracking-[0.5em] text-white outline-none focus:border-indigo-500 transition-all mb-3"
+              autoFocus
+            />
+            <div className="relative mb-3">
+              <input
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                type={showPass ? 'text' : 'password'}
+                placeholder="Nueva contraseña"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white pr-12"
+              />
+              <button type="button" onClick={() => setShowPass(!showPass)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white text-sm transition-all">
+                {showPass ? '🙈' : '👁️'}
+              </button>
+            </div>
+            <input
+              value={password2}
+              onChange={e => setPassword2(e.target.value)}
+              type={showPass ? 'text' : 'password'}
+              placeholder="Confirmar contraseña"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-indigo-500 text-white mb-2"
+            />
+            <p className="text-[9px] text-gray-500 mb-4 ml-1">Mínimo 8 caracteres, una mayúscula y un número</p>
+            <button
+              onClick={async () => {
+                if (code.length !== 6) { setError('Ingresa los 6 dígitos'); return; }
+                if (password.length < 8) { setError('La contraseña debe tener mínimo 8 caracteres'); return; }
+                if (password !== password2) { setError('Las contraseñas no coinciden'); return; }
+                setSubmitting(true); setError('');
+                const res = await confirmForgotPassword(email, code, password);
+                setSubmitting(false);
+                if (res.ok) {
+                  // Auto-login tras reset exitoso
+                  const signIn = await signInWithEmail(email, password);
+                  if (signIn.ok) {
+                    localStorage.setItem('cb_last_email', email);
+                    const stored = localStorage.getItem('cb_user');
+                    const parsed = stored ? JSON.parse(stored) : {};
+                    if (parsed.companyId) router.push('/dashboard');
+                    else router.push('/auth/welcome');
+                  } else {
+                    setMode('login');
+                    setError('Contraseña actualizada. Inicia sesión.');
+                    setPassword('');
+                    setPassword2('');
+                  }
+                } else if (res.error) setError(res.error);
+              }}
+              disabled={submitting || code.length !== 6 || !password || !password2}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white font-bold py-4 rounded-2xl transition-all mb-3"
+            >
+              {submitting ? '⏳ Cambiando...' : '✅ Cambiar contraseña'}
+            </button>
+            <button
+              onClick={async () => {
+                setError('');
+                const res = await forgotPassword(email);
+                if (!res.ok && res.error) setError(res.error);
+                else setError('');
+              }}
+              className="w-full text-indigo-400 hover:text-indigo-300 text-xs font-medium py-2 transition-all"
+            >
+              📧 Reenviar código
+            </button>
+            <button
+              onClick={() => { setMode('login'); setCode(''); setPassword(''); setPassword2(''); setError(''); }}
+              className="w-full text-gray-500 hover:text-gray-400 text-xs py-2 transition-all"
+            >
+              ← Volver al login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   // Pantalla 2FA (código por email)
   if (mode === '2fa') {
     return (
@@ -444,7 +600,14 @@ export default function LoginPage() {
               </button>
             </form>
           )}
-
+          {mode === 'login' && (
+            <div className="mt-3 text-center">
+              <button onClick={() => { setMode('forgot'); setError(''); setPassword(''); setPassword2(''); setCode(''); }}
+                className="text-indigo-400 hover:text-indigo-300 text-xs transition-all">
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+          )}
           {mode !== 'confirm' && (
             <div className="mt-4 text-center">
               <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setPassword(''); setPassword2(''); }}
