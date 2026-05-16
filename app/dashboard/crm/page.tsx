@@ -141,6 +141,11 @@ export default function CRMPage() {
       .then(res => res.json())
       .then(data => setAgentsList((data.agents || []).filter((a: any) => a.active)))
       .catch(() => {});
+    // Cargar campañas para resolver campaign_id → nombre en tarjeta + dropdown
+    fetch(`${API_URL}/ads/campaigns`, { headers: { 'client-id': user?.companyId || '' } })
+      .then(res => res.json())
+      .then(data => setCampaignsList(data.campaigns || []))
+      .catch(() => {});
     fetch(`${API_URL}/leads`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => {
@@ -525,6 +530,7 @@ export default function CRMPage() {
       if (newLead.zip_code) lead.zip_code = newLead.zip_code;
       if (newLead.notes) lead.notes = newLead.notes;
       if (newLead.paid) lead.paid = true;
+      if ((newLead as any).campaign_id) lead.campaign_id = (newLead as any).campaign_id;
       if (customFields.length > 0) {
         lead.custom_fields = {};
         customFields.forEach(cf => { if (cf.name && cf.value) lead.custom_fields[cf.name] = cf.value; });
@@ -873,6 +879,19 @@ export default function CRMPage() {
                 {newLead.paid && <span className="text-white text-xs">✓</span>}
               </button>
               <span className="text-xs text-gray-400">✅ Ya realizó el pago</span>
+            </div>
+            {/* Dropdown de campaña — visible siempre para atribución */}
+            <div className="sm:col-span-2 md:col-span-3">
+              <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">📢 Campaña de origen <span className="text-gray-600 normal-case">(para atribución Meta)</span></label>
+              <select value={(newLead as any).campaign_id || ''} onChange={(e: any) => setNewLead({...newLead, campaign_id: e.target.value} as any)}
+                className="w-full bg-[#0B0F1A] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
+                <option value="" className="bg-[#1a1f2e] text-white">📱 Orgánico / directo (sin campaña)</option>
+                {campaignsList.map((c: any) => (
+                  <option key={c.campaign_id || c.id} value={c.campaign_id || c.id} className="bg-[#1a1f2e] text-white">
+                    {c.status === 'ACTIVE' ? '🟢' : '⏸️'} {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
             {customFields.map((cf, idx) => (
               <div key={idx}>
@@ -1383,10 +1402,19 @@ export default function CRMPage() {
                 )}
                 {selectedLead.lead?.source_first_campaign_id && (
                   <div className="flex justify-between">
-                    <span className="text-gray-500">📢 Anuncio</span>
+                    <span className="text-gray-500">📢 Campaña</span>
                     <span className="font-medium text-xs text-purple-400 truncate max-w-[200px]" title={selectedLead.lead.source_first_campaign_id}>
-                      {selectedLead.lead.source_first_campaign_name || `ID: ${selectedLead.lead.source_first_campaign_id.slice(-8)}`}
+                      {(() => {
+                        const camp = campaignsList.find((c: any) => c.campaign_id === selectedLead.lead.source_first_campaign_id || c.id === selectedLead.lead.source_first_campaign_id);
+                        return camp?.name || selectedLead.lead.source_first_campaign_name || `📱 Orgánico / directo`;
+                      })()}
                     </span>
+                  </div>
+                )}
+                {!selectedLead.lead?.source_first_campaign_id && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">📢 Campaña</span>
+                    <span className="font-medium text-xs text-gray-500">📱 Orgánico / directo</span>
                   </div>
                 )}
                 {selectedLead.lead?.source_first_ctwa_clid && (
