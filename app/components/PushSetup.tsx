@@ -29,16 +29,19 @@ export default function PushSetup() {
         const messaging = getMessaging(app);
         const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
         if (token) {
-          const savedToken = localStorage.getItem('cb_push_token');
-          if (savedToken !== token) {
-            await fetch(`${API_URL}/push/subscribe`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'client-id': user.companyId },
-              body: JSON.stringify({ token, device: 'web' }),
-            });
-            localStorage.setItem('cb_push_token', token);
-            console.log('[PushSetup] Token registrado');
-          }
+          // Detectar device real (mobile vs desktop)
+          const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+          const device = isMobile ? (/iphone|ipad|ipod/i.test(navigator.userAgent) ? 'ios' : 'android') : 'web';
+          // Siempre re-suscribir: el endpoint /push/subscribe es idempotente (PK=token).
+          // Esto garantiza que el token NUEVO del navegador SIEMPRE quede registrado
+          // y actualiza last_used aunque el token no haya cambiado.
+          await fetch(`${API_URL}/push/subscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'client-id': user.companyId },
+            body: JSON.stringify({ token, device }),
+          });
+          localStorage.setItem('cb_push_token', token);
+          console.log(`[PushSetup] Token registrado (device=${device})`);
         }
         // Foreground messages
         onMessage(messaging, (payload: any) => {
