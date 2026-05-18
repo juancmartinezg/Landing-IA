@@ -1056,6 +1056,42 @@ export default function ChatPage() {
                 {/* Acciones rápidas */}
                 <div className="pt-4 border-t border-white/5 space-y-2">
                   <button
+                    onClick={async () => {
+                      const amount = prompt('💳 Monto del link de pago (en COP):', '250000');
+                      if (!amount || isNaN(Number(amount))) return;
+                      const desc = prompt('Descripción (ej: Anticipo Plan Parejas):', p.service_name || l.service_of_interest || 'Pago');
+                      if (!desc) return;
+                      try {
+                        const res = await fetch(`${API_URL}/payments/generate-link`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                          body: JSON.stringify({ phone: selectedPhone, amount: Number(amount), description: desc }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.payment_url) {
+                          // Enviar el link al cliente por WhatsApp
+                          await fetch(`${API_URL}/conversations/send`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+                            body: JSON.stringify({
+                              phone: selectedPhone,
+                              content: `💳 *Link de pago*\n\n${desc}\n💰 Monto: $${Number(amount).toLocaleString()} COP\n\n👉 ${data.payment_url}\n\n🔒 Pago 100% seguro`
+                            }),
+                          });
+                          loadBotMessages(selectedPhone!);
+                          alert('✅ Link de pago enviado al cliente');
+                        } else {
+                          alert('⚠️ ' + (data.error || 'No se pudo generar el link'));
+                        }
+                      } catch {
+                        alert('❌ Error de conexión');
+                      }
+                    }}
+                    className="w-full text-[10px] py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition-all"
+                  >
+                    💳 Generar link de pago
+                  </button>
+                  <button
                     onClick={() => window.open(`/dashboard/crm?phone=${selectedPhone}`, '_blank')}
                     className="w-full text-[10px] py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all"
                   >
