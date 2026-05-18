@@ -124,6 +124,11 @@ export default function CRMPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [campaignsList, setCampaignsList] = useState<any[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+  // MP-4.5: PII pendientes de revisión
+  const [piiPending, setPiiPending] = useState<any[]>([]);
+  const [piiModalItem, setPiiModalItem] = useState<any>(null);
+  const [piiActionLoading, setPiiActionLoading] = useState(false);
+  const [piiDiscardReason, setPiiDiscardReason] = useState('');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   useEffect(() => {
     fetch(`${API_URL}/config`, { headers: { 'client-id': user?.companyId || '' } })
@@ -156,6 +161,68 @@ export default function CRMPage() {
       })
       .catch(() => setLoading(false));
   }, []);
+  // MP-4.5: cargar PII pendientes + polling 30s
+  useEffect(() => {
+    if (!user?.companyId) return;
+    const loadPiiPending = () => {
+      fetch(`${API_URL}/pii/pending?limit=100`, { headers: { 'client-id': user.companyId } })
+        .then(res => res.json())
+        .then(data => setPiiPending(data.items || []))
+        .catch(() => {});
+    };
+    loadPiiPending();
+    const piiInterval = setInterval(loadPiiPending, 30000);
+    return () => clearInterval(piiInterval);
+  }, [user?.companyId]);
+  // MP-4.5: confirmar PII manualmente
+  const confirmPiiManual = async (contactId: string) => {
+    setPiiActionLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/pii/confirm-manual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ contact_id: contactId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPiiModalItem(null);
+        setPiiPending(piiPending.filter((p: any) => p.contact_id !== contactId));
+        alert('✅ Datos confirmados');
+      } else {
+        alert('⚠️ ' + (data.error || 'No se pudo confirmar'));
+      }
+    } catch {
+      alert('❌ Error de conexión');
+    }
+    setPiiActionLoading(false);
+  };
+  // MP-4.5: descartar PII (cliente debe rellenar de nuevo)
+  const discardPii = async (contactId: string) => {
+    if (!piiDiscardReason.trim() || piiDiscardReason.trim().length < 5) {
+      alert('Escribe una razón breve (mínimo 5 caracteres) — ayuda a auditar después.');
+      return;
+    }
+    setPiiActionLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/pii/discard`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({ contact_id: contactId, reason: piiDiscardReason.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPiiModalItem(null);
+        setPiiDiscardReason('');
+        setPiiPending(piiPending.filter((p: any) => p.contact_id !== contactId));
+        alert('✅ Datos descartados. El cliente puede rellenar de nuevo.');
+      } else {
+        alert('⚠️ ' + (data.error || 'No se pudo descartar'));
+      }
+    } catch {
+      alert('❌ Error de conexión');
+    }
+    setPiiActionLoading(false);
+  };
   useEffect(() => {
     let result = leads;
     if (search) {
@@ -1020,6 +1087,143 @@ export default function CRMPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+      {/* MP-4.5: Banner de PII Pendientes de Revisión */}
+      {piiPending.length > 0 && (
+        <div className="mb-4 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/30 rounded-2xl p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex-1">
+              <p className="text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-2">
+                📋 {piiPending.length} {piiPending.length === 1 ? 'cliente' : 'clientes'} con datos pendientes de revisión
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                El cliente terminó de llenar el formulario PII. Confirma para enviarlos a Meta CAPI o descártalos si hay errores.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
+            {piiPending.slice(0, 9).map((item: any) => {
+              const captured = item.pii_review_captured_at || 0;
+              const minsAgo = captured ? Math.floor((Date.now() / 1000 - captured) / 60) : 0;
+              return (
+                <div key={item.contact_id} onClick={() => setPiiModalItem(item)}
+                  className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-amber-500/40 rounded-xl p-3 cursor-pointer transition-all">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="text-[11px] font-bold truncate flex-1">{item.full_name || 'Sin nombre'}</p>
+                    {item.asistente_total > 1 && (
+                      <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-full shrink-0">
+                        {item.asistente_num}/{item.asistente_total}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500 truncate">📞 {item.phone_normalized || item.contact_id}</p>
+                  {item.email && <p className="text-[10px] text-gray-500 truncate">📧 {item.email}</p>}
+                  {(item.city || item.country) && (
+                    <p className="text-[10px] text-gray-500 truncate">📍 {[item.city, item.country].filter(Boolean).join(', ')}</p>
+                  )}
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                      item.pii_review_status === 'EDITING'
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'bg-amber-500/20 text-amber-400'
+                    }`}>
+                      {item.pii_review_status === 'EDITING' ? '✏️ Editando' : '⏳ Esperando confirmación'}
+                    </span>
+                    <span className="text-[9px] text-gray-600">
+                      {minsAgo < 60 ? `${minsAgo}m` : `${Math.floor(minsAgo / 60)}h`}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {piiPending.length > 9 && (
+            <p className="text-[10px] text-gray-500 mt-2 text-center">+ {piiPending.length - 9} más</p>
+          )}
+        </div>
+      )}
+      {/* MP-4.5: Modal de detalle PII pendiente */}
+      {piiModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => !piiActionLoading && setPiiModalItem(null)}>
+          <div className="bg-[#0B0F1A] border border-amber-500/30 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-base font-bold text-white">📋 Revisar datos del cliente</h3>
+                <p className="text-[10px] text-gray-500 mt-0.5">
+                  {piiModalItem.asistente_total > 1
+                    ? `Asistente ${piiModalItem.asistente_num} de ${piiModalItem.asistente_total}`
+                    : 'Titular'}
+                </p>
+              </div>
+              <button onClick={() => !piiActionLoading && setPiiModalItem(null)} className="text-gray-500 hover:text-white text-lg shrink-0">✕</button>
+            </div>
+            <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4 mb-4 space-y-2 text-xs">
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-500 shrink-0">👤 Nombre</span>
+                <span className="font-medium text-right">{piiModalItem.full_name || '—'}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-500 shrink-0">🆔 Documento</span>
+                <span className="font-medium text-right">{piiModalItem.document_id || '—'}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-500 shrink-0">📧 Email</span>
+                <span className="font-medium text-right text-indigo-400 truncate">{piiModalItem.email || '—'}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-500 shrink-0">📞 WhatsApp</span>
+                <span className="font-medium text-right">{piiModalItem.phone_normalized ? `+${piiModalItem.phone_normalized}` : (piiModalItem.phone_alt || '—')}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-500 shrink-0">📍 Ubicación</span>
+                <span className="font-medium text-right">
+                  {[piiModalItem.city, piiModalItem.region, piiModalItem.country].filter(Boolean).join(', ') || '—'}
+                </span>
+              </div>
+              {piiModalItem.payment_ref && (
+                <div className="flex justify-between gap-3 pt-2 border-t border-white/5">
+                  <span className="text-gray-500 shrink-0">💳 Pago ref</span>
+                  <span className="font-medium text-right text-[10px] text-emerald-400 truncate font-mono">{piiModalItem.payment_ref}</span>
+                </div>
+              )}
+              <div className="flex justify-between gap-3 pt-2 border-t border-white/5">
+                <span className="text-gray-500 shrink-0">📱 Contacto</span>
+                <span className="font-medium text-right text-[10px] text-gray-400 font-mono">{piiModalItem.contact_id}</span>
+              </div>
+            </div>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mb-4">
+              <p className="text-[10px] text-amber-300">
+                <strong>✅ Confirmar:</strong> persiste los datos finales en el CRM + envía Lead enriquecido a Meta CAPI + email de confirmación al cliente.
+              </p>
+              <p className="text-[10px] text-amber-300 mt-2">
+                <strong>❌ Descartar:</strong> elimina los datos del buffer. El cliente verá que debe rellenar de nuevo el formulario.
+              </p>
+            </div>
+            <div className="mb-3">
+              <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">Razón del descarte (opcional)</label>
+              <input
+                value={piiDiscardReason}
+                onChange={(e) => setPiiDiscardReason(e.target.value)}
+                placeholder="Ej: Email mal escrito, cliente debe corregir"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-amber-500 text-white"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => discardPii(piiModalItem.contact_id)}
+                disabled={piiActionLoading}
+                className="flex-1 py-2 rounded-xl text-xs font-bold bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600 hover:text-white transition-all disabled:opacity-50">
+                {piiActionLoading ? '⏳' : '❌ Descartar'}
+              </button>
+              <button
+                onClick={() => confirmPiiManual(piiModalItem.contact_id)}
+                disabled={piiActionLoading}
+                className="flex-1 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all disabled:opacity-50">
+                {piiActionLoading ? '⏳ Confirmando...' : '✅ Confirmar y enviar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
       {/* Alertas inteligentes */}

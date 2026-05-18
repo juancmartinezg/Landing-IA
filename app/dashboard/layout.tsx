@@ -42,6 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [reminders, setReminders] = useState<any[]>([]);
   const [showReminders, setShowReminders] = useState(false);
   const [unreadChats, setUnreadChats] = useState(0);
+  const [piiPendingCount, setPiiPendingCount] = useState(0);
   const [tokenWarning, setTokenWarning] = useState<{status: string, message: string, needs_reconnect: boolean, days_left?: number} | null>(null);
   const [trialInfo, setTrialInfo] = useState<{status: string, trial_ends_at: number, days_left: number} | null>(null);
   // E-7: estado del impersonate (banner rojo cuando hay ticket activo)
@@ -189,6 +190,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setUnreadChats(paused);
         })
         .catch(() => {});
+      // MP-4.5: contar PII pendientes de revision
+      fetch(`${API_URL}/pii/pending?limit=100`, { headers: { 'client-id': user.companyId } })
+        .then(res => res.json())
+        .then(data => setPiiPendingCount((data.items || []).length))
+        .catch(() => {});
     }
     const interval = setInterval(() => {
       if (user?.companyId) {
@@ -203,6 +209,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             const paused = convs.filter((c: any) => c.flow_state === 'PAUSED_FOR_HUMAN').length;
             setUnreadChats(paused);
           })
+          .catch(() => {});
+        // MP-4.5: refresh PII pendientes
+        fetch(`${API_URL}/pii/pending?limit=100`, { headers: { 'client-id': user.companyId } })
+          .then(res => res.json())
+          .then(data => setPiiPendingCount((data.items || []).length))
           .catch(() => {});
       }
     }, 60000);
@@ -242,6 +253,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {item.href === '/dashboard/chat' && unreadChats > 0 && (
                 <span className="ml-auto bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                   {unreadChats > 9 ? '9+' : unreadChats}
+                </span>
+              )}
+              {item.href === '/dashboard/crm' && piiPendingCount > 0 && (
+                <span className="ml-auto bg-amber-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center" title="Datos PII pendientes de revisión">
+                  {piiPendingCount > 9 ? '9+' : piiPendingCount}
                 </span>
               )}
             </Link>
@@ -292,6 +308,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {item.href === '/dashboard/chat' && unreadChats > 0 && (
                     <span className="ml-auto bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                       {unreadChats > 9 ? '9+' : unreadChats}
+                    </span>
+                  )}
+                  {item.href === '/dashboard/crm' && piiPendingCount > 0 && (
+                    <span className="ml-auto bg-amber-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center" title="Datos PII pendientes de revisión">
+                      {piiPendingCount > 9 ? '9+' : piiPendingCount}
                     </span>
                   )}
                 </Link>
