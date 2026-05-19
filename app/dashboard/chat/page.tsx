@@ -850,7 +850,8 @@ export default function ChatPage() {
             )}
           </>
         )}
-     {/* Drawer slide-over — Info del lead (LeadCard unificado) */}
+      </div>
+      {/* Drawer slide-over — Info del lead (LeadCard unificado) */}
       {showLeadPanel && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setShowLeadPanel(false)} />}
       <div className={`fixed z-50 bg-[#0B0F1A] border-l border-white/10 transition-transform duration-300 overflow-y-auto
         bottom-0 left-0 right-0 h-[85vh] rounded-t-2xl lg:rounded-none lg:top-0 lg:left-auto lg:right-0 lg:w-[400px] lg:h-full
