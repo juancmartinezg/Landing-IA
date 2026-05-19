@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../providers';
+import LeadCard from '../../components/LeadCard';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function ChatPage() {
   const { user } = useAuth();
