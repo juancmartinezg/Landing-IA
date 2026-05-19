@@ -176,10 +176,11 @@ export default function LeadCard({
         method: 'POST', headers: h, body: JSON.stringify({ phone, amount: Number(amount), description: desc }),
       });
       const data = await res.json();
-      if (res.ok && data.payment_url) {
+      const paymentUrl = data.url || data.payment_url;
+      if (res.ok && paymentUrl) {
         await fetch(`${API_URL}/conversations/send`, {
           method: 'POST', headers: h,
-          body: JSON.stringify({ phone, content: `💳 *Link de pago*\n\n${desc}\n💰 $${Number(amount).toLocaleString()} COP\n\n👉 ${data.payment_url}\n\n🔒 Pago seguro` }),
+          body: JSON.stringify({ phone, content: `💳 *Link de pago*\n\n${desc}\n💰 $${Number(amount).toLocaleString()} COP\n\n👉 ${paymentUrl}\n\n🔒 Pago seguro` }),
         });
         alert('✅ Link enviado al cliente');
       } else {
