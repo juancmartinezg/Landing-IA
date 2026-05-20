@@ -83,7 +83,25 @@ export default function MarketingPage() {
   const filteredLeads = leads.filter(l => {
     const phone = l.contact_id || l.phoneNumber || '';
     if (!phone || phone.startsWith('demo_')) return false;
-    if (form.filters.lead_stage.length > 0 && !form.filters.lead_stage.includes(l.lead_stage || 'nuevo')) return false;
+   if (form.filters.lead_stage.length > 0) {
+      // Normalizador: lowercase + sin tildes + INTENCION→intencion, "CERRADO GANADO"→cerrado_ganado
+      const _norm = (s: string) => (s || '')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita tildes
+        .replace(/\s+/g, '_'); // "CERRADO GANADO" → "cerrado_ganado"
+      // Bot escribe en lead_status (con t), CRM admin en lead_stage (sin t). Soportamos ambos.
+      const leadStatusNorm = _norm(l.lead_status || '');
+      const leadStageNorm = _norm(l.lead_stage || 'nuevo');
+      // Aliases: el bot dice "intencion de compra" pero el filtro UI tiene "interesado"
+      const matchesAny = form.filters.lead_stage.some(filterStage => {
+        const fn = _norm(filterStage);
+        return leadStageNorm === fn 
+            || leadStatusNorm === fn
+            || (fn === 'interesado' && (leadStatusNorm === 'interesado' || leadStatusNorm === 'intencion_de_compra'))
+            || (fn === 'cerrado_ganado' && (leadStatusNorm === 'cerrado_ganado' || l.is_buyer === true));
+      });
+      if (!matchesAny) return false;
+    }
     if (form.filters.tags.length > 0 && !(l.tags || []).some((t: string) => form.filters.tags.includes(t))) return false;
     if (form.filters.service && (l.service_of_interest || '').toLowerCase() !== form.filters.service.toLowerCase()) return false;
     if (form.filters.days_inactive > 0) {
@@ -602,9 +620,9 @@ export default function MarketingPage() {
                             {l.customer_name || l.customer_full_name || '(sin nombre)'}
                           </span>
                           <span className="text-gray-500 font-mono text-[9px]">{phone}</span>
-                          {l.lead_stage && (
+                          {(l.lead_stage || l.lead_status) && (
                             <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-400">
-                              {l.lead_stage}
+                              {l.lead_stage || l.lead_status}
                             </span>
                           )}
                         </label>
