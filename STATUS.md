@@ -2,6 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
+**API v224 + Bot v236 + Frontend `f18ab09`** — Sprint AUDIT-1 cerrado 🦁🔍 (20 mayo, sesión ~3h auditoría). 4 deudas técnicas reales cerradas + 5 confirmadas como falsos pendientes (ya hechas).
 **API v223 + Bot v230 + Frontend `fa61f4b`** — Sprint PII Review Multi-tenant (MP-1 a MP-4) CERRADO 🦁📋💎 (18 mayo, sesión maratón ~12h).
 **Sprint PII Review Multi-tenant + Match Rate Meta** (18 mayo ~12h): Pipeline completo de captura PII post-pago con revisión humana antes de enviar a Meta CAPI. **5 mega-patches deployados:**
 - **MP-1** (Bot v221): Blacklist nombre + helper `_is_invalid_name` (rechaza preguntas como "¿cuánto cuesta?" detectadas como nombre) + rename `dni→document_number` con **dual-read soft** (lee ambos, escribe solo nuevo) + fix `_ensure_lead_created_at` raíz (cierra Bug #9 ENÉSIMA reincidencia — todos los `update_item` a Leads_CRM_v2 ahora garantizan `created_at` con `if_not_exists`).
@@ -126,9 +127,11 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~9,700 líneas, **v207** — Sprint Revenue Protection: `_save_lead_attribution` con `if_not_exists` idempotente + fallback campaign_id desde AdsAttribution + pax_count en 3 call sites + anti-hallucination datos servicio completo + Gemini cascada sin reply mentiroso + audio transcrito S3 + imagen S3 privado + rehidratación CRM + TTL 7d sesiones + ACTIVE passive state + WEBHOOK_RAW debug log) — Sprint E completo: captura PII 5 campos single+multi-persona + email confirmación Resend + cron recordatorios cascada WA→template→email + botones 1h (confirmar/reprogramar/cancelar) + no-show + FLOW_STATE_GUARD_UNIVERSAL debounce + funnel_mode 6 modos + Lead Qualifier + Shipping step-machine + payment reuse + regla 24b; Calendly mode: CalendarPicker v7.3 (`min_date`/`max_date`/`unavailable_dates`) + `_get_available_dates` y `_get_available_slots` con cascada svc→tenant→default + `available_weekdays` y `booking_mode` por servicio + handler async `_internal_action=post_booking_messages` (no bloquea flow) + `post_payment_flow=send_group_link` con mensaje custom + `screen` y `selected_slot` del nivel raíz v6.0/7.3 + scheduling_flow_id desde config_pro) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
+- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~9,700 líneas, **v236** — AUDIT-1 fixes: guards defensivos `search_memory` + `get_services_catalog` (empty company_id → return None/[]) + `_cid_pay` blindado arriba del webhook post-pago (Bug 9.A/B raíz cerrado). Previamente Sprint Revenue Protection:
+ `_save_lead_attribution` con `if_not_exists` idempotente + fallback campaign_id desde AdsAttribution + pax_count en 3 call sites + anti-hallucination datos servicio completo + Gemini cascada sin reply mentiroso + audio transcrito S3 + imagen S3 privado + rehidratación CRM + TTL 7d sesiones + ACTIVE passive state + WEBHOOK_RAW debug log) — Sprint E completo: captura PII 5 campos single+multi-persona + email confirmación Resend + cron recordatorios cascada WA→template→email + botones 1h (confirmar/reprogramar/cancelar) + no-show + FLOW_STATE_GUARD_UNIVERSAL debounce + funnel_mode 6 modos + Lead Qualifier + Shipping step-machine + payment reuse + regla 24b; Calendly mode: CalendarPicker v7.3 (`min_date`/`max_date`/`unavailable_dates`) + `_get_available_dates` y `_get_available_slots` con cascada svc→tenant→default + `available_weekdays` y `booking_mode` por servicio + handler async `_internal_action=post_booking_messages` (no bloquea flow) + `post_payment_flow=send_group_link` con mensaje custom + `screen` y `selected_slot` del nivel raíz v6.0/7.3 + scheduling_flow_id desde config_pro) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
 - `SaaS_API_Handler` — incluye **`POST /scheduling-flow/setup`** auto-onboarding multi-tenant del WhatsApp Flow CalendarPicker v7.3 (crea + sube JSON + publica + guarda flow_id en config_pro, idempotente)
-- `SaaS_API_Handler` — (~19,500 líneas, **v215** — Marketing: `/templates/list` enriquecido + `/marketing/send-bulk` carrusel + paralelización 20w + fallbacks variables + body_text custom carrusel + sufijo timestamp único + phone_list acepta dicts + `/chat/media` presigned URL + `/conversations/active` DESC + sync-meta campaign_id+PII fallback AdsAttribution + clamp 7d + breakdown razones + `/attribution/sync-crm` cron endpoint) + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** + **Auto-onboarding Scheduling Flow + Templates Reminder/Follow-up multi-idioma** + **Wizard 2.0 Premium** + **Multi-tenant funnel_mode + Lead Qualifier whitelist** + **Cron poll templates Meta** + **Templates Manager UI** + **Marketing Carousel Bulk Send** (~19,210 líneas, **v199** — `/templates/list` enriquecido con `is_carousel`/`card_count`/`body`/`var_count`/`body_example`/`category` real desde Meta + `/marketing/send-bulk` detecta carrusel + helper `_upload_image_to_meta_for_bulk` cache `(url, phone_id)` + payload Meta `components.carousel.cards` con `media_id` por card) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
+- `SaaS_API_Handler` — (~19,500 líneas, **v224** — AUDIT-1 fix: `/admin/overview` audit scan con `#act: action` ExpressionAttributeNames (Bug 9.C reserved keyword). Previamente v215 Marketing:
+ `/templates/list` enriquecido + `/marketing/send-bulk` carrusel + paralelización 20w + fallbacks variables + body_text custom carrusel + sufijo timestamp único + phone_list acepta dicts + `/chat/media` presigned URL + `/conversations/active` DESC + sync-meta campaign_id+PII fallback AdsAttribution + clamp 7d + breakdown razones + `/attribution/sync-crm` cron endpoint) + B6.5 cron + C1-C7 tenants + Feature Flags + Quotas + Message Packs + **Affiliates** + Multi-carousel + Release con notif + **Feature Overrides (Fase D)** + **Impersonate completo (Fase E)** + **Auto-onboarding Scheduling Flow + Templates Reminder/Follow-up multi-idioma** + **Wizard 2.0 Premium** + **Multi-tenant funnel_mode + Lead Qualifier whitelist** + **Cron poll templates Meta** + **Templates Manager UI** + **Marketing Carousel Bulk Send** (~19,210 líneas, **v199** — `/templates/list` enriquecido con `is_carousel`/`card_count`/`body`/`var_count`/`body_example`/`category` real desde Meta + `/marketing/send-bulk` detecta carrusel + helper `_upload_image_to_meta_for_bulk` cache `(url, phone_id)` + payload Meta `components.carousel.cards` con `media_id` por card) — conversations/active FB/IG + multi-carousel + carousels_catalog + emails afiliados + cron payout
 - `WhatsApp_Remarketing` — Follow-up + auto-return + renewal (~505 líneas, **v7** — delays variables por intent)
 - `promote-memory-candidates` — Auto-promoción memoria source-aware (~155 líneas, **v2** — fix import os + SOURCE_THRESHOLDS human_agent=2 + preserva source SK)
 ### Tablas DynamoDB (19 — todas con PITR)
@@ -1086,6 +1089,39 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 65. **🔴 HTTP 400 sin body = diagnóstico ciego**: `urllib.request.urlopen` lanza `HTTPError` sin leer el body de Meta. Capturar con `except urllib.error.HTTPError as e: e.read()` para ver el mensaje real.
 66. **🔴 `send_meta_capi_event` y `handle_leads_sync_meta` son 2 paths distintos**: el bot usa el wrapper (con fallback), la API usa `_send_meta_event` directo. Ambos necesitan campaign_id + PII. Fix en ambos.
 67. **🦁 26 deploys sin tumbar producción**: disciplina de `py_compile` + `publish-version` + 1 cambio por vez. Rollback disponible en cada versión.
+### 20 mayo 2026 (madrugada) — Sprint AUDIT-1: filosofía león aplicada 🦁🔍
+> Sesión ~3h. Cero features nuevas. 100% auditoría de pendientes del STATUS + cierre quirúrgico de deuda técnica real. 2 deploys (Bot v236 + API v224). 0 producción rota. 4 wins limpios + 5 "pendientes" confirmados como ya cerrados (auditar antes de codear funciona).
+#### Cerrados en esta sesión
+- [x] **Env vars muertas eliminadas del Bot**: `TABLE_PRODUCTS`, `TABLE_CLIENTS`, `CATALOG_ID` borradas tras confirmar código fantasma (3 funciones `enviar_catalogo_saas`, `enviar_detalle_producto_saas`, `get_saas_products` declaradas pero nunca llamadas + `CATALOG_ID 998604755824586` confirmado "does not exist" en Meta Graph). Backup S3 `dead-code-cleanup/` con `saas_products` (5 items viejos) + `saas_clients` (1 item huérfano). Limpieza Fase 3 del código (~80 líneas) pendiente para sesión dedicada.
+- [x] **REMARKETING_DELAY_HOURS=24h** (era 0.25h modo testing). Restauración atómica con `--cli-input-json` tras incidente operacional (ver Lección 54).
+- [x] **Google Calendar multi-tenant confirmado funcionando** — `_get_google_calendar_service(company_id)` y `create_calendar_event(..., company_id=...)` ya reciben el parámetro desde Bot v163.
+- [x] **3 ValidationException raíz cerradas** (Bot v236 + API v224):
+  - **Bug 9.A** — `get_services_catalog("")` en webhook Wompi por cascada de `item.get("company_id", DEFAULT_COMPANY_ID)` cuando key existe vacía (Lección 48 reincidencia). Fix: mover `_cid_pay` blindado ARRIBA del bloque post-pago (antes de CAPI Purchase, stock descuento, save_session multi-persona). 3 ocurrencias del antipatrón reemplazadas.
+  - **Bug 9.B** — `search_memory("")` y `get_services_catalog("")` sin guards defensivos. Fix: `if not company_id: return None/[]` al inicio de ambas funciones. Defense-in-depth contra cualquier call site futuro (especialmente path Instagram que tarda en resolver tenant).
+  - **Bug 9.C** — `/admin/overview` audit scan con reserved keyword `action` en `ProjectionExpression`. Fix: agregar `"#act": "action"` a `ExpressionAttributeNames` + cambiar a `ProjectionExpression="company_id, #act"`.
+#### Confirmados como "ya cerrados" (falsos pendientes del STATUS)
+- ✅ `customer_email` viajando OK en Purchase CAPI (98% según Meta dashboard 20 mayo)
+- ✅ Google Calendar multi-tenant ya recibe `company_id` desde v163
+- ✅ Env vars muertas del Bot (`WHATSAPP_TOKEN`, `META_APP_ID`, etc.) ya no existían — eran false positive de sesión anterior
+- ✅ Sprint Calendly UI completo desde frontend `bd3cad7`
+- ✅ Match Rate Meta subió 5.7 → 6.5/10 + 98% email coverage en Purchase
+#### Incidente operacional resuelto (Lección 54)
+- **Bug operacional crítico**: `aws lambda update-function-configuration --environment 'Variables={KEY=VAL}'` es **DESTRUCTIVO** — borra todas las env vars no especificadas. Al subir `REMARKETING_DELAY_HOURS=24` con shorthand, se borraron las otras 8 env vars del Remarketing.
+- **Recuperación**: leer config de versión publicada anterior (v8) con `aws lambda get-function-configuration --qualifier 8` + restaurar con `--cli-input-json file://config.json` que permite JSON estructurado correcto.
+- **Lección 54 (CRÍTICA)**: NUNCA usar `update-function-configuration --environment` con shorthand `Variables={K=V}`. **SIEMPRE** patrón leer→modificar→escribir con `--cli-input-json file://...json` que incluye TODAS las env vars. Aplica a Lambda, RDS parameter groups, ECS task definitions — cualquier API AWS que reciba "el set completo" de variables.
+#### Pendientes reales identificados (próxima sesión)
+- **Bug #44 carrusel skip** (`last_service_slug` huérfano sin lifecycle): guard en L8321-8325 chequea solo `last_service_slug` poblado sin importar `flow_state`. Cliente recurrente con servicio viejo pide catálogo → solo texto, NO carrusel. Fix quirúrgico ~30min.
+- **Bug #45 customer_email no se persiste en `Leads_CRM_v2`**: bot LEE de Wompi pero NUNCA escribe a CRM. 0/100 leads JMC tienen email. Webhook Wompi recibe email del cliente al pagar pero no se persiste. Match Rate Lead bajo. Fix ~1h.
+- **UI editable de `post_booking_messages`** por servicio: hoy se setea en DDB manual (JMC tiene 3 mensajes globales OK pero cada tenant nuevo necesita poder editarlos desde UI). Estimado 2h frontend.
+- **Limpieza código fantasma saas_products** (Fase 3): ~80 líneas + 2 tablas DDB pendientes de borrar tras 7 días sin regresiones.
+- **Bug latente Remarketing**: env var `PHONE_NUMBER_ID=1048898704969876` apunta a WABA viejo post-migración. No bloquea (lee del config_pro), pero confunde debugging. Actualizar a `1050792924791062`.
+- **Meta App Review**: re-enviar SOLO `ads_read` con video Embedded Signup completo (logout→login→permisos checkbox). `catalog_management` se descarta — confirmado que NO usamos Meta Catalog API (templates de carrusel ≠ Catalog API).
+- **Test E2E remarketing real** con número distinto al founder (info abandonment + cart abandonment).
+#### Hallazgos meta de la auditoría
+- **4 de 9 items del Bloque 1 ya estaban cerrados** — solo 5 son pendientes reales. 14h estimadas inicialmente se redujeron a ~3h + 3h restantes (Bug #44, Bug #45, UI post_booking).
+- **Defense-in-depth funciona**: guards en `search_memory` y `get_services_catalog` no requieren auditar 20+ call sites — protege contra TODOS los futuros llamadores que pasen empty string. Costo: 4 líneas. Beneficio: ValidationException nunca más por este vector.
+- **Auditar antes de codear (Lección 48 reaplicada 5ta vez)**: cuando el cliente pide cerrar pendientes, primero verificar si ya están hechos. Las sesiones intensas dejan deuda de documentación; el código suele estar más adelantado que el STATUS.
+---
 ## ⏳ PENDIENTE PARA CONTINUAR — Sprint E sin terminar
 ### Sprint E.1.b Frontend (continuar mañana)
 - [ ] **Onboarding wizard**: selector locale con auto-detect `navigator.language` → mapear a es/en_US/pt_BR/fr → enviar a `/onboarding` o `/config`
@@ -1813,6 +1849,10 @@ Transformar el wizard de Ads actual (5 pasos, 1 imagen genérica) en un **wizard
 29. **🔴 Orden correcto para borrar código duplicado**: 1) agregar los kwargs nuevos a la función "buena"; 2) py_compile + tests; 3) borrar la mala. NUNCA borrar primero — los call sites quedan rotos.
 30. **🔴 Cache de IDs externos keyed por contexto del emisor**: media_ids de Meta, tokens de Stripe, file_ids de Google, etc. NUNCA keyed solo por input. Siempre `(input, emisor_id)`.
 31. **🔴 Auditoría env vars post-migración de integraciones**: tras migrar WABA, Stripe account, Meta pixel, etc., revisar TODAS las env vars de TODAS las Lambdas. El valor viejo puede seguir "funcionando" durante días hasta que lo uses en una operación privilegiada.
+### Reglas nuevas — sesión 20 mayo (AUDIT-1)
+32. **🔴 NUNCA `update-function-configuration --environment Variables={K=V}` con shorthand**: ese formato es **DESTRUCTIVO** — borra TODAS las env vars no especificadas. Aplica a Lambda, RDS parameter groups, ECS task definitions. Patrón seguro obligatorio: leer config completa con `get-function-configuration` → modificar dict en memoria → escribir con `--cli-input-json file://config.json`. Si vas a cambiar 1 sola variable, el archivo JSON debe incluir LAS 9 (o las que sean) — no solo la que cambias. Costo del error: 8 env vars perdidas + 15 min de recuperación leyendo de versión publicada anterior.
+33. **🦁 Auditar antes de codear (5ta reaplicación)**: cuando el usuario pide cerrar pendientes del STATUS, primero VERIFICAR si ya están cerrados con grep + CloudWatch + DDB. Las sesiones intensas dejan deuda de documentación; el código suele estar más adelantado que la lista. Sprint AUDIT-1 confirmó: 4 de 9 items "pendientes" ya estaban cerrados. Tiempo ahorrado: ~10h.
+34. **🔴 Defense-in-depth en funciones de DDB con PK requerida**: cualquier función que haga `table.get_item(Key={"pk": value})` debe tener guard `if not value: return None/[]` AL INICIO. Sin el guard, `value=""` genera `ValidationException` silente en CloudWatch (no rompe runtime pero ensucia logs). Costo: 4 líneas por función. Beneficio: blindaje contra todos los call sites futuros sin auditar cada uno individualmente.
 ---
 ## 🚀 DEPLOY
 ### Frontend
@@ -1836,7 +1876,18 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ```
 ---
 ## 📊 PROGRESO GLOBAL
+### Barra 1 — Features construidos del proyecto total
 █████████████████████████████████░ 99.9%
+### Barra 2 — Pendientes cerrados de los abiertos (auditoría 20 mayo)
+█████░░░░░░░░░░░░░░░░░░░░░░ 18% (4/22 items)
+**Inventario de pendientes** al 20 mayo 2026:
+- 🔴 Deuda técnica reciente: **4 de 9 abiertos** (Bug #44 carrusel skip, Bug #45 customer_email, UI post_booking_messages, test E2E remarketing, código fantasma saas_products Fase 3)
+- 🟠 Sprint E sin terminar: **2 abiertos** (Frontend wizard locale + selector idioma, Cron poll templates Meta)
+- 🟡 Backlog menor: **6 abiertos** (B6.5.6 Push FCM ads, B6.5.10 sistema aprende post-apply, M19 Test event code, M20 Dashboard Match Rate por tenant, D-4 Cron expire feature overrides, C5 Eventos timeline enriquecido)
+- 🟧 Frontend pequeños: **2 abiertos** (Dropdown selector templates en `/dashboard/templates`, Sección "Multicanal" visible en landing)
+- ⚪ Operacional Meta: **1 abierto** (re-enviar video Embedded Signup para `ads_read`)
+**Cerrados en sesión AUDIT-1** (20 mayo): env vars muertas del Bot + REMARKETING_DELAY_HOURS=24h + 3 ValidationException raíz (Bug 9.A/B/C) + Google Calendar multi-tenant confirmado.
+> **Filosofía:** la Barra 2 es la métrica honesta del día a día. La Barra 1 ya está al 99.9% (features construidos), pero para "100% sin nada abierto" faltan 18 items reales (~22-30h de trabajo). Cada % de la Barra 2 = 1 pendiente cerrado.
 ### ⏱️ Métricas de desarrollo reales
 | Métrica | Valor |
 |---|---|
@@ -1949,8 +2000,10 @@ API v199 + Bot v191 + Frontend `e1a5f15`. Sesión ~3h. 3 deploys API (v197/v198/
 - [x] **99.7% → 99.8%** — Sprint Marketing Carousel + Polish CERRADO 🦁🎠 (15 mayo, ~3h). API v197-v199, Frontend `db06bfe` → `e1a5f15`.
 - [x] **99.8% → 99.9%** — Sprint Marketing Completo + Atribución + Revenue Protection 🦁💰 (15-16 mayo, ~20h). Bot v198→v207 (10 deploys). API v200→v215 (16 deploys). Frontend `e1a5f15` → `b30b7f5` (8 commits). 463 leads atribución backfill + 334 sesiones zombies + 121 Purchase re-enviados CON campaign_id. Carrusel marketing editor visual + lista externa + audio/imagen S3 + rehidratación CRM + TTL sesiones + pax_count fix + anti-hallucination + ROAS fix. **Diferenciador: ni Manychat ni Wati tienen carrusel marketing desde UI + atribución CAPI completa + editor visual + lista externa.** ⭐ ESTÁS AQUÍ
 - [ ] **99.9% → 100%** — Multi-idioma + Fase F Soporte + Web Chat Widget + RUGIDO 🦁 (15 mayo, ~3h). Carruseles MARKETING en campañas masivas fuera de ventana 24h. `/templates/list` enriquecido + `/marketing/send-bulk` con helper `_upload_image_to_meta_for_bulk` cache `(url, phone_id)` + payload `components.carousel.cards`. UX completa: humanización plantillas en `/marketing` y `/templates/manage`, preview WhatsApp real con valores ejemplo, validación mapeo variables, multi-select leads checkbox. **Test E2E producción**: carrusel JMC 10 cards entregado a número real fuera ventana 24h ✅. API v197-v199, Frontend `db06bfe` → `695156a` → `2611ba9` → `e1a5f15`. **Diferenciador real**: ningún competidor LATAM tiene esto en UI nativa. ⭐ ESTÁS AQUÍ
-- [ ] **99.8% → 100%** — Multi-idioma plataforma + Fase F Soporte/Ticketing + Admin F-K restante + Web Chat Widget + RUGIDO 🦁
+- [x] **99.9% Sprint AUDIT-1** (20 mayo, ~3h): cero features nuevas, 100% auditoría. 4 deudas técnicas cerradas + 5 falsos pendientes confirmados como ya hechos. Bot v236 + API v224. Defense-in-depth en `search_memory` y `get_services_catalog`. `_cid_pay` blindado arriba del webhook. ⭐ ESTÁS AQUÍ
+- [ ] **99.9% → 100%** — Cerrar 18 pendientes reales (Bug #44 + Bug #45 + UI post_booking + Sprint E frontend + Backlog menor + Multi-idioma + Fase F Soporte + Web Chat Widget) → RUGIDO 🦁
 > *"Cada % se gana con café. Cada café se gana con un commit."*
+> *"La Barra 2 es la verdad. La Barra 1 es el marketing. Si llegas a 100% en ambas, ruges."*
 ---
 ## 📞 CONTACTO
 - Email: soporte@clientes.bot
