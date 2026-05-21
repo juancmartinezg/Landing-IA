@@ -871,6 +871,10 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                           <p className="font-bold text-sm truncate">{c.name}</p>
                           <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold ${c.status_human === 'activa' ? 'bg-emerald-500/20 text-emerald-400' : c.status_human === 'pausada' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-gray-500/20 text-gray-400'}`}>{c.status_human}</span>
                         </div>
+                        <p className="text-[9px] text-gray-600 font-mono select-all cursor-pointer" title="Click para copiar ID"
+                          onClick={(e: any) => { e.stopPropagation(); navigator.clipboard.writeText(c.campaign_id || ''); showToast('ID copiado'); }}>
+                          ID: {c.campaign_id}
+                        </p>
                         <div className="flex gap-3 text-[10px] text-gray-400">
                           <span>${(c.metrics?.spend || 0).toLocaleString()}</span>
                           <span>{c.metrics?.leads || 0} leads</span>

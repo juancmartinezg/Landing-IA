@@ -99,6 +99,7 @@ export default function CRMPage() {
   const [activeCarriers, setActiveCarriers] = useState<string[]>([]);
   const [servicesList, setServicesList] = useState<any[]>([]);
   const [filterProduct, setFilterProduct] = useState('all');
+  const [filterCampaign, setFilterCampaign] = useState('all');
   const [showImport, setShowImport] = useState(false);
   const [showAddLead, setShowAddLead] = useState(false);
   const [editingLead, setEditingLead] = useState(false);
@@ -254,9 +255,16 @@ export default function CRMPage() {
         result = result.filter(l => l.assigned_agent_id === filterAgent);
       }
     }
+    if (filterCampaign !== 'all') {
+      if (filterCampaign === 'organic') {
+        result = result.filter(l => !l.source_first_campaign_id);
+      } else {
+        result = result.filter(l => l.source_first_campaign_id === filterCampaign);
+      }
+    }
     setFiltered(result);
     setPage(1);
-  }, [search, filterStatus, filterTag, filterProduct, filterAgent, leads]);
+  }, [search, filterStatus, filterTag, filterProduct, filterAgent, filterCampaign, leads]);
   const loadDetail = (phone: string) => {
     fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
@@ -884,6 +892,21 @@ export default function CRMPage() {
               <option value="unassigned" className="bg-[#1a1f2e] text-white">Sin asignar</option>
               {agentsList.map((a: any) => (
                 <option key={a.agent_id} value={a.agent_id} className="bg-[#1a1f2e] text-white">{a.name}</option>
+              ))}
+            </select>
+          )}
+          {campaignsList.length > 0 && (
+            <select
+              value={filterCampaign}
+              onChange={(e) => setFilterCampaign(e.target.value)}
+              className="flex-1 sm:flex-none bg-[#0B0F1A] border border-white/10 rounded-xl px-2 py-2 text-xs outline-none focus:border-indigo-500 text-white"
+            >
+              <option value="all" className="bg-[#1a1f2e] text-white">📢 Campaña</option>
+              <option value="organic" className="bg-[#1a1f2e] text-white">📱 Orgánico / directo</option>
+              {campaignsList.map((c: any) => (
+                <option key={c.campaign_id || c.id} value={c.campaign_id || c.id} className="bg-[#1a1f2e] text-white">
+                  {c.name} ({(c.campaign_id || c.id || '').slice(-8)})
+                </option>
               ))}
             </select>
           )}
