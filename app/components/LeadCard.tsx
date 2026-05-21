@@ -317,12 +317,18 @@ export default function LeadCard({
         <div className="space-y-2">
           {campId ? (
             <>
-              <div className="flex justify-between gap-3">
-                <span className="text-[10px] text-gray-500">📢 Campaña</span>
-                <a href={`/dashboard/ads?campaign=${campId}`} target="_blank" rel="noopener noreferrer"
-                  className="text-[10px] text-purple-400 hover:text-purple-300 font-bold truncate max-w-[200px] cursor-pointer">
-                  {campName || `ID: ...${campId.slice(-8)}`} ↗
-                </a>
+              <div className="space-y-1">
+                <div className="flex justify-between gap-3">
+                  <span className="text-[10px] text-gray-500">📢 Campaña</span>
+                  <a href={`/dashboard/ads?campaign=${campId}`} target="_blank" rel="noopener noreferrer"
+                    className="text-[10px] text-purple-400 hover:text-purple-300 font-bold truncate max-w-[200px] cursor-pointer">
+                    {campName || 'Ver campaña'} ↗
+                  </a>
+                </div>
+                <p className="text-[9px] text-gray-600 font-mono text-right select-all cursor-pointer" title="Click para copiar ID"
+                  onClick={() => { navigator.clipboard.writeText(campId); }}>
+                  ID: {campId}
+                </p>
               </div>
               {clid && <Row label="🔗 Click ID" value={clid.slice(0, 16) + '...'} color="text-gray-400" truncate />}
               {sourceUrl && (
@@ -554,12 +560,11 @@ export default function LeadCard({
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
             {timeline.map((ev: any, i: number) => (
               <div key={i} className="flex items-start gap-2 px-2 py-1.5 bg-white/[0.02] rounded-lg">
-                <span className="text-[10px] mt-0.5">
-                  {ev.action?.includes('STAGE') ? '📊' : ev.action?.includes('PAYMENT') ? '💳' : ev.action?.includes('AGENT') ? '🧑‍💼' : ev.action?.includes('NOTE') ? '📝' : '📌'}
-                </span>
+                <span className="text-[10px] mt-0.5">{ev.icon || '📌'}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-gray-300 truncate">{ev.action || ev.description || 'Evento'}</p>
-                  <p className="text-[9px] text-gray-600">{ev.agent_id || ''} · {new Date((ev.timestamp || 0) * 1000).toLocaleDateString()}</p>
+                  <p className="text-[10px] text-gray-300 truncate">{ev.title || ev.action || 'Evento'}</p>
+                  <p className="text-[9px] text-gray-600 truncate">{ev.description || ''}</p>
+                  <p className="text-[9px] text-gray-700">{ev.ts ? new Date(ev.ts * 1000).toLocaleString() : ''}</p>
                 </div>
               </div>
             ))}
