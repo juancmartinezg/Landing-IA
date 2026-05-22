@@ -2,6 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
+**API v228 + Bot v240 + Frontend `f18ab09`** — Sprint Fix Atribución ROAS CERRADO 🦁🎯 (21 mayo, sesión ~5h). Filtro CRM por campaña + Resolución ad_id→campaign_id Meta Graph + Backfill 9 purchases $2.38M + Fix release preserva flow_state mid-captura.
 **API v224 + Bot v236 + Frontend `f18ab09`** — Sprint AUDIT-1 cerrado 🦁🔍 (20 mayo, sesión ~3h auditoría). 4 deudas técnicas reales cerradas + 5 confirmadas como falsos pendientes (ya hechas).
 **API v223 + Bot v230 + Frontend `fa61f4b`** — Sprint PII Review Multi-tenant (MP-1 a MP-4) CERRADO 🦁📋💎 (18 mayo, sesión maratón ~12h).
 **Sprint PII Review Multi-tenant + Match Rate Meta** (18 mayo ~12h): Pipeline completo de captura PII post-pago con revisión humana antes de enviar a Meta CAPI. **5 mega-patches deployados:**
@@ -127,7 +128,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 ---
 ## 📐 INFRAESTRUCTURA
 ### Lambdas (4 activas — todas con `log_error` → ErrorLog)
-- `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~9,700 líneas, **v236** — AUDIT-1 fixes: guards defensivos `search_memory` + `get_services_catalog` (empty company_id → return None/[]) + `_cid_pay` blindado arriba del webhook post-pago (Bug 9.A/B raíz cerrado). Previamente Sprint Revenue Protection:
+- `WhatsApp_Typebot_Bridge` — ot WhatsApp multi-tenant strict (~11,084 líneas, **v240** — AUDIT-1 fixes: guards defensivos `search_memory` + `get_services_catalog` (empty company_id → return None/[]) + `_cid_pay` blindado arriba del webhook post-pago (Bug 9.A/B raíz cerrado). Previamente Sprint Revenue Protection:
  `_save_lead_attribution` con `if_not_exists` idempotente + fallback campaign_id desde AdsAttribution + pax_count en 3 call sites + anti-hallucination datos servicio completo + Gemini cascada sin reply mentiroso + audio transcrito S3 + imagen S3 privado + rehidratación CRM + TTL 7d sesiones + ACTIVE passive state + WEBHOOK_RAW debug log) — Sprint E completo: captura PII 5 campos single+multi-persona + email confirmación Resend + cron recordatorios cascada WA→template→email + botones 1h (confirmar/reprogramar/cancelar) + no-show + FLOW_STATE_GUARD_UNIVERSAL debounce + funnel_mode 6 modos + Lead Qualifier + Shipping step-machine + payment reuse + regla 24b; Calendly mode: CalendarPicker v7.3 (`min_date`/`max_date`/`unavailable_dates`) + `_get_available_dates` y `_get_available_slots` con cascada svc→tenant→default + `available_weekdays` y `booking_mode` por servicio + handler async `_internal_action=post_booking_messages` (no bloquea flow) + `post_payment_flow=send_group_link` con mensaje custom + `screen` y `selected_slot` del nivel raíz v6.0/7.3 + scheduling_flow_id desde config_pro) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
 - `SaaS_API_Handler` — incluye **`POST /scheduling-flow/setup`** auto-onboarding multi-tenant del WhatsApp Flow CalendarPicker v7.3 (crea + sube JSON + publica + guarda flow_id en config_pro, idempotente)
 - `SaaS_API_Handler` — (~19,500 líneas, **v224** — AUDIT-1 fix: `/admin/overview` audit scan con `#act: action` ExpressionAttributeNames (Bug 9.C reserved keyword). Previamente v215 Marketing:
@@ -1121,7 +1122,51 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **4 de 9 items del Bloque 1 ya estaban cerrados** — solo 5 son pendientes reales. 14h estimadas inicialmente se redujeron a ~3h + 3h restantes (Bug #44, Bug #45, UI post_booking).
 - **Defense-in-depth funciona**: guards en `search_memory` y `get_services_catalog` no requieren auditar 20+ call sites — protege contra TODOS los futuros llamadores que pasen empty string. Costo: 4 líneas. Beneficio: ValidationException nunca más por este vector.
 - **Auditar antes de codear (Lección 48 reaplicada 5ta vez)**: cuando el cliente pide cerrar pendientes, primero verificar si ya están hechos. Las sesiones intensas dejan deuda de documentación; el código suele estar más adelantado que el STATUS.
----
+### 21 mayo 2026 — Sprint Fix Atribución ROAS + Release Preserva Flow 🦁🎯
+> Sesión ~5h. Cerró 4 bugs encadenados que tenían ROAS invisible en producción + un bug raíz de takeover humano que rompía multi-persona. 2 deploys (Bot v240 + API v227 + API v228) + 2 backfills DDB. ROAS de campaña BOT visible por primera vez: 3.8x ($1.54M / $405k en 7d).
+#### Bug #66 (CRÍTICO 🔴) — Filtro CRM por campaña no devolvía leads
+- **Síntoma**: 499 leads en total, dropdown mostraba 17 campañas activas, pero al filtrar por cualquiera → "No hay leads con esos filtros".
+- **Diagnóstico iterativo**: scan DDB reveló 721 leads con `source_first_campaign_id` poblado. Top 3 campañas tenían 292/243/181 leads. Pero `/ads/campaigns` devolvía IDs que NO matcheaban con los del CRM (`120246281898050200` lead vs `120246281898030200` campaign — IDs hermanos pero distintos).
+- **Causa raíz**: Meta a veces manda `ad_id` en `referral.source_id` (no `campaign_id`). El bot lo guardaba en una variable mal nombrada `source_first_campaign_id`. Documentación Meta no era explícita.
+- **Hallazgo posterior**: tras verificación contra Meta Graph API, los IDs del lead SÍ existían como campañas reales (algunas ARCHIVED). El bug era menos severo de lo pensado — la mayoría de leads SÍ tenían campaign_id correcto, solo el endpoint `/ads/analyze` no los leía.
+- **Fix multicapa**:
+  - **Bot v240** — helper `_resolve_ad_to_campaign(ad_id, company_id)` con cache 24h. Llama Meta Graph API `?fields=campaign{id}` cuando sea necesario. Guarda `source_first_ad_id` + `source_first_campaign_id` por separado (auditable).
+  - **`_extract_referral`** ahora devuelve `ad_id` (el valor crudo) en lugar de asumir `campaign_id`.
+  - **`_save_lead_attribution`** resuelve via Graph antes de persistir. Fallback: si Meta no resuelve, guarda el ad_id como campaign_id (mejor algo que nada).
+- **Test E2E**: filtro CRM por campaña 030200 funciona ✅. Lead Cesar Barrera (post-v240) muestra ambos campos correctamente.
+#### Bug #67 (REVENUE 🟥) — Análisis IA mostraba 0 ventas con 9 pagos reales
+- **Síntoma**: campaña BOT con $405k gastado y 267 leads → "Generas leads ($1,518 cada uno) pero no hay ventas atribuidas al bot". Realidad: 9 pagos reales por $2.38M.
+- **Causa**: línea 13222 de `SaaS_API_Handler` llamaba función `_get_attribution_data(client_id, campaign_id)` que **NO EXISTÍA**. NameError silente capturado por try/except → `attr=None` → `purchases=0`. La función correcta era `_b65_get_attribution_for_campaign(company_id, cid, days=7)` que SÍ existe (línea 9825) y devuelve `{"leads", "purchases", "revenue_cents"}`.
+- **Doble bug**: además de la función inexistente, las keys que pedía (`purchases_7d`, `revenue_7d`) tampoco matcheaban con las reales (`purchases`, `revenue_cents`).
+- **Fix (API v227)**: cambiar `_get_attribution_data` → `_b65_get_attribution_for_campaign(client_id, campaign_id, days=7)` + ajustar keys del dict.
+- **Backfill**: AdsAttribution tenía solo 11 purchases (de antes del wrapper en `_send_meta_event`). Script CloudShell cruzó `StudentPaymentState` (status=PAGADO) con `Leads_CRM_v2.source_first_campaign_id` → backfilleó 9 purchases nuevos ($2.38M). Idempotente con `ConditionExpression`.
+- **Resultado verificado**: análisis IA ahora muestra **"Funnel completo: 97,422 impr → 3,162 clicks (3.25% CTR) → 267 leads ($1,518 CPL) → 7 ventas (ROAS 3.8x)"** + recomendación **SCALE** 🟢.
+- **Lección 55**: try/except que captura toda Exception oculta NameError. Llamadas a funciones de tu propio codebase deben validarse con grep antes de deploy. Tests E2E no detectaron porque el path solo se ejecuta cuando hay campaign_id válido.
+#### Bug #68 (REVENUE 🟥) — Release humano rompía flow CAPTURING_ATTENDEES
+- **Síntoma**: cliente Guillermo (3454) pagó $560k para 4 personas. Bot inició captura: nombre ✅, doc ✅, teléfono ✅. Cliente se enredó en el 4to campo. Asesor intervino. Cuando devolvió al bot, `flow_state=CHAT_MODE` → flow muerto → 0 leads sintéticos creados → 1 Purchase event a Meta de $560k (en vez de 4 × $140k).
+- **Diagnóstico**: 2 sesiones JMC con `attendees_total>1` + `attendees_current=1` + `attendees_list=[]` + `flow_state=CHAT_MODE` + `released_at` presente. Causa exacta confirmada en logs CloudWatch (PAX STICKY pax_confirmed=4 + release posterior).
+- **Causa raíz**: `handle_conversation_release` en API forzaba `flow_state=CHAT_MODE` siempre, sin importar si el flow estaba mid-captura. Los buffers quedaban huérfanos.
+- **Fix (API v228)** — preserva flow_state mid-captura con prioridades:
+  - **Prioridad 1**: si `attendees_total>1` + (`attendees_current>=1` OR buffer OR pending_attendees_capture) + lista incompleta → restaura `CAPTURING_ATTENDEES`
+  - **Prioridad 2**: si `pending_lead_details` OR `lead_details_step>0` → restaura `AWAITING_LEAD_DETAILS`
+  - **Prioridad 3**: si `pax_confirmed>1` sin `customer_name` → restaura `AWAITING_PAX_COUNT`
+  - **Fallback**: `CHAT_MODE` (comportamiento original)
+- **Mensaje al cliente**: si reanuda flow mid-captura, le envía "Retomamos donde quedamos. Vamos por el Asistente X/Y. Por favor confirmame el dato pendiente." (en vez del genérico).
+- **Lección 56**: en handlers de "devolver al bot" tras takeover humano, NUNCA forzar reset del flow_state. El agente puede haber intervenido mid-captura. Defense-in-depth: leer el estado anterior y restaurar inteligentemente.
+- **Lección 57**: bugs raíz de multi-persona explican por qué $2.38M se reportó como 7 transacciones cuando en realidad fueron ~12 personas (3454 con 4 + 5052 con 2 + el resto single). La métrica a Meta es correcta filosóficamente (1 phone = 1 user_data hash) pero perdemos atribución granular por persona.
+#### Cleanups Python operacionales (sesión 21 mayo)
+- **Lección 58 — f-strings multilínea con `\n` literal NO compilan**: Python rechaza f-strings con saltos de línea reales adentro. Patrón seguro: `chr(92)+"n"` como literal o concatenación `+ "\\n" +`. Aplicar patches sobre versión FRESCA del Lambda (descargar con `aws lambda get-function`), no sobre archivos parchados a medias en `/tmp`.
+- **Lección 59 — Rutas de deploy distintas entre Bot y API**: `~/.deploy_bot.sh` lee de `/tmp/aud/bot/`, `~/.deploy_api.sh` lee de `/tmp/api/api/` (subcarpeta doble). Documentado para sesiones futuras.
+#### Pendiente identificado (sin bloquear)
+- 🟡 12 ventas reales reportadas como 7 transacciones a Meta: filosóficamente correcto (Meta optimiza por phone hash, 1 click = 1 hash), pero falta migrar el módulo M11-M16 (chat lineal) al PII Flow v6 de Meta para que la captura sea atómica y no se rompa por takeover humano. Estimado 4-6h en sesión dedicada.
+Resumen sesión 21 mayo
+✅ Filtro CRM por campaña funcionando (probado en producción)
+✅ Análisis IA muestra ROAS 3.8x con 7 ventas reales (antes mostraba 0)
+✅ Bot v240 deployed (resolver ad_id→campaign_id Meta Graph)
+✅ API v227 deployed (fix análisis IA con función correcta)
+✅ API v228 deployed (release preserva flow mid-captura)
+✅ 9 purchases ($2.38M) backfilleados a AdsAttribution
+✅ 4 lecciones nuevas (55-59)
 ## ⏳ PENDIENTE PARA CONTINUAR — Sprint E sin terminar
 ### Sprint E.1.b Frontend (continuar mañana)
 - [ ] **Onboarding wizard**: selector locale con auto-detect `navigator.language` → mapear a es/en_US/pt_BR/fr → enviar a `/onboarding` o `/config`
