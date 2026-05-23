@@ -83,16 +83,20 @@ export default function LeadCard({
     if (phone && companyId) loadData();
   }, [phone, companyId]);
   // Cargar servicios si no vienen del padre (variant=chat los pasa vacíos)
+  // Solo depende de companyId — servicesList NO va en deps porque el padre
+  // puede pasar [] inline (nuevo array cada render) → loop infinito.
   useEffect(() => {
-    if (servicesList.length === 0 && companyId) {
-      fetch(`${API_URL}/services`, { headers: { 'client-id': companyId } })
-        .then(r => r.json())
-        .then(d => setInternalServices(d.services || []))
-        .catch(() => {});
-    } else {
+    if (!companyId) return;
+    if (servicesList.length > 0) {
       setInternalServices(servicesList);
+      return;
     }
-  }, [servicesList, companyId]);
+    fetch(`${API_URL}/services`, { headers: { 'client-id': companyId } })
+      .then(r => r.json())
+      .then(d => setInternalServices(d.services || []))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId]);
   // === Helpers de resolución de datos ===
   const l = lead || {};
   const p = payment || {};
