@@ -34,6 +34,13 @@ export default function LeadCard({
   const [aiInsight, setAiInsight] = useState<any>(null);
   const [loadingAi, setLoadingAi] = useState(false);
   const [reportingMeta, setReportingMeta] = useState(false);
+  const [showMarkPaid, setShowMarkPaid] = useState(false);
+  const [markPaidSlug, setMarkPaidSlug] = useState('');
+  const [markPaidAmount, setMarkPaidAmount] = useState('');
+  const [markPaidMethod, setMarkPaidMethod] = useState('transferencia');
+  const [markPaidNotes, setMarkPaidNotes] = useState('');
+  const [markPaidSendCapi, setMarkPaidSendCapi] = useState(true);
+  const [markPaidSubmitting, setMarkPaidSubmitting] = useState(false);
   const [reminderText, setReminderText] = useState('');
   const [reminderDate, setReminderDate] = useState('');
   const [reminders, setReminders] = useState<any[]>([]);
@@ -165,6 +172,47 @@ export default function LeadCard({
       alert(data.ok || data.capi_sent ? '✅ Venta reportada a Meta' : '⚠️ ' + (data.error || 'Error'));
     } catch { alert('❌ Error de conexión'); }
     setReportingMeta(false);
+  };
+  const openMarkPaid = () => {
+    // Pre-rellenar con el servicio actual si existe
+    const existingSlug = p.service_slug || '';
+    const existingService = servicesList.find((s: any) => s.slug === existingSlug);
+    setMarkPaidSlug(existingSlug || (servicesList[0]?.slug || ''));
+    // Pre-rellenar monto con el del PENDING o el catalogo
+    const fallbackPrice = existingService?.pricing?.promotional_price || existingService?.pricing?.regular_price || 0;
+    setMarkPaidAmount(String(p.amount || fallbackPrice || ''));
+    setMarkPaidMethod('transferencia');
+    setMarkPaidNotes('');
+    setMarkPaidSendCapi(true);
+    setShowMarkPaid(true);
+  };
+  const markPaidManual = async () => {
+    if (!markPaidSlug) { alert('Selecciona un servicio'); return; }
+    const amountNum = Number(String(markPaidAmount).replace(/[^0-9]/g, ''));
+    if (!amountNum || amountNum <= 0) { alert('Monto invalido'); return; }
+    setMarkPaidSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/payments/mark-paid-manual`, {
+        method: 'POST', headers: h,
+        body: JSON.stringify({
+          phone, service_slug: markPaidSlug, amount: amountNum,
+          payment_method: markPaidMethod, notes: markPaidNotes.trim(),
+          send_capi: markPaidSendCapi,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        alert(`✅ Pago marcado.\n\nEl cliente recibira mensaje de confirmacion + ${
+          data.message?.includes('agendamiento') ? 'flujo de agendamiento' : 'flujo post-pago configurado'
+        }.${markPaidSendCapi ? '\n📤 Evento Purchase enviado a Meta CAPI.' : ''}`);
+        setShowMarkPaid(false);
+        loadData();
+        onRefresh?.();
+      } else {
+        alert('⚠️ ' + (data.error || 'No se pudo marcar el pago'));
+      }
+    } catch { alert('❌ Error de conexion'); }
+    setMarkPaidSubmitting(false);
   };
   const generatePaymentLink = async () => {
     const amount = prompt('💳 Monto del link de pago (COP):', '250000');
@@ -435,6 +483,11 @@ export default function LeadCard({
             className="py-2 rounded-xl text-[10px] font-bold bg-amber-600/20 border border-amber-500/30 text-amber-400 hover:bg-amber-600 hover:text-white transition-all">
             💳 Link pago
           </button>
+          <button onClick={openMarkPaid}
+            className="py-2 rounded-xl text-[10px] font-bold bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all"
+            title="El cliente pago por fuera (efectivo/transferencia/QR) - marcar como pagado">
+            ✅ Pago externo
+          </button>
           <button onClick={() => updateStage('contactado')}
             className="py-2 rounded-xl text-[10px] font-bold bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600 hover:text-white transition-all">
             📞 Contactado
@@ -626,6 +679,93 @@ export default function LeadCard({
           ✕ Cerrar
         </button>
       </div>
+      {/* === MODAL: MARCAR PAGO EXTERNO === */}
+      {showMarkPaid && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={() => !markPaidSubmitting && setShowMarkPaid(false)}>
+          <div className="bg-[#0B0F1A] border border-emerald-500/30 rounded-2xl p-5 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-base font-bold">✅ Marcar pago externo</h3>
+                <p className="text-[10px] text-gray-500 mt-0.5">Cliente pago por efectivo / transferencia / QR / otro medio</p>
+              </div>
+              <button onClick={() => !markPaidSubmitting && setShowMarkPaid(false)} className="text-gray-500 hover:text-white text-lg">✕</button>
+            </div>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">👤 Cliente</label>
+                <p className="text-xs font-bold">{name}</p>
+                <p className="text-[10px] text-gray-500">+{phone}</p>
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">🏷️ Servicio</label>
+                <select value={markPaidSlug} onChange={e => {
+                  setMarkPaidSlug(e.target.value);
+                  const svc = servicesList.find((s: any) => s.slug === e.target.value);
+                  if (svc) {
+                    const price = svc.pricing?.promotional_price || svc.pricing?.regular_price || 0;
+                    setMarkPaidAmount(String(price));
+                  }
+                }}
+                  className="w-full bg-[#0B0F1A] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-emerald-500 text-white">
+                  <option value="">— Seleccionar servicio —</option>
+                  {servicesList.map((s: any) => (
+                    <option key={s.slug} value={s.slug}>
+                      {s.name} {s.pricing?.regular_price ? `($${Number(s.pricing.regular_price).toLocaleString()})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">💰 Monto pagado (COP)</label>
+                <input value={markPaidAmount} onChange={e => setMarkPaidAmount(e.target.value)}
+                  placeholder="280000"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-emerald-500 text-white" />
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">💳 Método de pago</label>
+                <select value={markPaidMethod} onChange={e => setMarkPaidMethod(e.target.value)}
+                  className="w-full bg-[#0B0F1A] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-emerald-500 text-white">
+                  <option value="efectivo">💵 Efectivo</option>
+                  <option value="transferencia">🏦 Transferencia bancaria</option>
+                  <option value="qr">📱 QR / Nequi / Daviplata</option>
+                  <option value="link_externo">🔗 Link otra pasarela</option>
+                  <option value="otro">🤝 Otro</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">📝 Notas (opcional)</label>
+                <textarea value={markPaidNotes} onChange={e => setMarkPaidNotes(e.target.value)}
+                  placeholder="Ej: Cliente envio comprobante por WhatsApp. Pago confirmado por QR."
+                  rows={2}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-emerald-500 text-white resize-none" />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer p-2 bg-white/[0.03] rounded-lg border border-white/5">
+                <input type="checkbox" checked={markPaidSendCapi} onChange={e => setMarkPaidSendCapi(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-500" />
+                <div className="flex-1">
+                  <p className="text-xs font-bold">📤 Enviar a Meta CAPI</p>
+                  <p className="text-[10px] text-gray-500">Notifica la venta a Meta para mejorar tus campañas</p>
+                </div>
+              </label>
+            </div>
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 mb-4">
+              <p className="text-[10px] text-emerald-300">
+                <strong>Esto va a:</strong> marcar la venta como PAGADO en el CRM + enviar mensaje de confirmación al cliente por WhatsApp + disparar el flujo post-pago (agendamiento / envío / acceso según el servicio){markPaidSendCapi ? ' + reportar a Meta CAPI.' : '.'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowMarkPaid(false)} disabled={markPaidSubmitting}
+                className="flex-1 py-2 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-all disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={markPaidManual} disabled={markPaidSubmitting || !markPaidSlug || !markPaidAmount}
+                className="flex-1 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 transition-all disabled:opacity-50">
+                {markPaidSubmitting ? '⏳ Marcando...' : '✅ Confirmar pago'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
