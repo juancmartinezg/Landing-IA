@@ -26,6 +26,8 @@ const menuItems = [
   { href: '/dashboard/gateway', label: 'Pasarela', icon: '🏦', roles: ['owner'] },
   { href: '/dashboard/inventory', label: 'Inventario', icon: '📦', roles: ['owner', 'admin'] },
   { href: '/dashboard/ads', label: 'Anuncios IA', icon: '🚀', roles: ['owner', 'admin'] },
+  { href: '/dashboard/ads/library', label: 'Biblioteca creativos', icon: '📚', roles: ['owner', 'admin'] },
+  { href: '/dashboard/ads/video-wizard', label: 'Wizard de Video', icon: '🎬', roles: ['owner', 'admin'] },
   { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: '📱', roles: ['owner'] },
   { href: '/dashboard/settings', label: 'Configuracion', icon: '⚙️', roles: ['owner'] },
   { href: '/dashboard/billing', label: 'Suscripción', icon: '💎', roles: ['owner'] },

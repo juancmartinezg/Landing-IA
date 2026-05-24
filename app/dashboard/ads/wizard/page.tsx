@@ -640,7 +640,7 @@ export default function WizardPage() {
                           const img = previewImages.find((im: any) => im.index === imgIdx);
                           if (!img?.image_url) continue;
                           const copyIdx = imageHookMap[imgIdx] ?? (i % copies.length);
-                          const copyText = copies[copyIdx]?.text || copies[0]?.text || '';
+                          const copyText = copies[copyIdx]?.primary_text || copies[copyIdx]?.text || copies[0]?.primary_text || copies[0]?.text || '';
                           // Hook: primera oración, máx 30 chars
                           const hookText = (copyText.split('.')[0] || copyText).substring(0, 30).trim() || 'Ver más';
                           try {
@@ -687,6 +687,11 @@ export default function WizardPage() {
                             className="border border-white/10 px-4 py-3 rounded-xl text-xs font-bold hover:bg-white/5 disabled:opacity-50" title="Re-incrustar con copies actualizados">
                             🔄 Re-incrustar
                           </button>
+                          <Link href="/dashboard/ads/video-wizard"
+                            className="border border-purple-500/30 px-4 py-3 rounded-xl text-xs font-bold hover:bg-purple-600/10 text-purple-300 whitespace-nowrap"
+                            title="Lanzar también una campaña de video">
+                            📹 + Video
+                          </Link>
                           <button onClick={launchCampaign} disabled={launching || overlayInProgress}
                             className="flex-1 min-w-[200px] bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50">
                             {launching ? '⏳ Publicando en Meta...' : '🚀 Lanzar campaña'}
