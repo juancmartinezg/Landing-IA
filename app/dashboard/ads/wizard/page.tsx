@@ -161,7 +161,21 @@ export default function WizardPage() {
     if (!plan) return; setGeneratingCopies(true);
     try {
       const svc = services.find((s: any) => s.slug === selectedSlug);
-      const r = await fetch(`${API_URL}/ads/wizard/generate-copies`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ copy_angles: plan.copy_angles || [], product_name: svc?.name || selectedSlug || 'Mi producto', cta_text: plan.cta_text || 'Compra ahora', tone: plan.tone || 'profesional', language, benefits, use_brand_dna: true }) });
+      const r = await fetch(`${API_URL}/ads/wizard/generate-copies`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          copy_angles: plan.copy_angles || [],
+          product_name: svc?.name || selectedSlug || 'Mi producto',
+          service_slug: selectedSlug,  // enriquece prompt con precio + descripcion del catalogo
+          cta_text: plan.cta_text || 'Reserva ahora',
+          tone: plan.tone || 'profesional',
+          language,
+          channel: channels.includes('instagram') ? 'instagram' : 'facebook',
+          benefits,
+          use_brand_dna: true,
+        }),
+      });
       const d = await r.json();
       if (d.ok) {
         const newCopies = d.copies || [];
@@ -181,26 +195,52 @@ export default function WizardPage() {
   const launchCampaign = async () => {
     setLaunching(true);
     try {
-      // Construir variants respetando el mapping imagen→copy elegido por el cliente
-      const variants = selectedImages.map((imgIdx) => {
-        const img = previewImages.find((i: any) => i.index === imgIdx);
+      // Bug #69+#72: usar wizard_launch con copies completos (4 campos) + arrays paralelos
+      // de imagenes en 3 formatos. Backend arma asset_feed_spec Advantage+ en Meta.
+      const orderedImages = selectedImages
+        .map((imgIdx) => previewImages.find((i: any) => i.index === imgIdx))
+        .filter(Boolean);
+      const image_urls = orderedImages.map((img: any) => img.image_url || '');
+      const image_urls_vertical = orderedImages.map((img: any) => img.image_vertical || '');
+      const image_urls_horizontal = orderedImages.map((img: any) => img.image_horizontal || '');
+      const video_urls = orderedImages.map((img: any) => img.video_url || '');
+      // Construir copies en orden — uno por cada imagen (segun imageHookMap)
+      const orderedCopies = selectedImages.map((imgIdx) => {
         const copyIdx = imageHookMap[imgIdx] ?? 0;
-        const c = copies[copyIdx] || copies[0] || {};
-        return {
-          headline: campaignName?.substring(0, 60),
-          text: typeof c === 'string' ? c : (c.text || ''),
-          description: plan?.cta_text || '',
-          image_url: img?.image_url || '',
-        };
-      }).filter((v: any) => v.image_url);
-      const r = await fetch(`${API_URL}/ads/campaigns/publish`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: campaignName, objective: strategy === 'branding' || strategy === 'promote' ? 'OUTCOME_AWARENESS' : 'OUTCOME_ENGAGEMENT', budget_daily: parseInt(budgetDaily) || 20000, variants, country: 'CO', duration, service_slug: selectedSlug, age_min: 18, age_max: 65, gender: 'all', cities: [], interests: [] }) });
+        return copies[copyIdx] || copies[0] || {};
+      });
+      const r = await fetch(`${API_URL}/ads/wizard/launch`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: campaignName,
+          image_urls,
+          image_urls_vertical,
+          image_urls_horizontal,
+          video_urls,
+          copies: orderedCopies,
+          cta_text: plan?.cta_text || '',
+          strategy,
+          channels,
+          budget_daily: parseInt(budgetDaily) || 20000,
+          duration: parseInt(duration) || 7,
+          service_slug: selectedSlug,
+          country: 'CO',
+          cities: [],
+          age_min: 18,
+          age_max: 65,
+          gender: 'all',
+          interests: [],
+        }),
+      });
       if (r.ok) {
-        // Limpiar borrador tras lanzamiento exitoso — sino relanza al volver al wizard
         if (typeof window !== 'undefined' && draftKey) localStorage.removeItem(draftKey);
         showToast('🚀 ¡Campaña publicada!');
         setTimeout(() => { window.location.href = '/dashboard/ads'; }, 2000);
+      } else {
+        const d = await r.json();
+        showToast('❌ ' + (d.error || 'Error'));
       }
-      else { const d = await r.json(); showToast('❌ ' + (d.error || 'Error')); }
     } catch { showToast('Error de conexión'); }
     setLaunching(false);
   };
@@ -466,17 +506,68 @@ export default function WizardPage() {
                     {copies.map((c: any, i: number) => {
                       const usedIn = Object.entries(imageHookMap).filter(([_, ci]) => ci === i).map(([ii]) => parseInt(ii));
                       const usedLabels = usedIn.map(ii => selectedImages.indexOf(ii) + 1).filter(n => n > 0);
+                      const primaryText = c.primary_text || c.text || '';
+                      const primaryLen = c.char_count || primaryText.length || 0;
+                      const ctaOptions = ['MESSAGE_PAGE', 'LEARN_MORE', 'SHOP_NOW', 'SIGN_UP', 'CONTACT_US', 'GET_QUOTE', 'APPLY_NOW', 'BOOK_TRAVEL'];
+                      const ctaLabels: Record<string, string> = {
+                        MESSAGE_PAGE: '💬 Enviar mensaje',
+                        LEARN_MORE: '📖 Más información',
+                        SHOP_NOW: '🛒 Comprar ahora',
+                        SIGN_UP: '📝 Registrarse',
+                        CONTACT_US: '📞 Contactar',
+                        GET_QUOTE: '💰 Cotizar',
+                        APPLY_NOW: '✍️ Postular',
+                        BOOK_TRAVEL: '✈️ Reservar',
+                      };
+                      const updateCopy = (field: string, value: string) => {
+                        const updated = [...copies];
+                        updated[i] = { ...c, [field]: value };
+                        setCopies(updated);
+                      };
                       return (
                         <div key={i} className={`bg-white/[0.02] border rounded-xl p-3 ${usedLabels.length > 0 ? 'border-purple-500/50 ring-1 ring-purple-500/30' : 'border-white/5'}`}>
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <div className="flex items-center gap-2 mb-3 flex-wrap">
                             <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">V{i + 1}</span>
-                            <span className="text-[9px] text-gray-500">{c.angle}</span>
+                            <span className="text-[9px] text-gray-500">{c.pattern || c.angle}</span>
                             {usedLabels.length > 0 && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">📸 En imagen{usedLabels.length > 1 ? 'es' : ''} {usedLabels.join(', ')}</span>}
-                            <span className="text-[9px] text-gray-600 ml-auto">{c.char_count || c.text?.length || 0} chars</span>
                           </div>
-                          <textarea value={c.text} onChange={(e) => { const updated = [...copies]; updated[i] = { ...c, text: e.target.value }; setCopies(updated); }}
-                            rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white resize-none" />
-                          {c.social_proof_used && <p className="text-[9px] text-emerald-400 mt-1 italic">🛡️ {c.social_proof_used}</p>}
+                          <div className="space-y-2">
+                            <div>
+                              <label className="text-[9px] text-gray-500 uppercase tracking-widest block mb-1">
+                                Headline <span className="text-gray-600">({(c.headline || '').length}/40)</span>
+                              </label>
+                              <input value={c.headline || ''} maxLength={40}
+                                onChange={(e) => updateCopy('headline', e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] text-gray-500 uppercase tracking-widest block mb-1">
+                                Texto principal <span className={`${primaryLen >= 400 && primaryLen <= 600 ? 'text-emerald-400' : 'text-yellow-400'}`}>({primaryLen}/600 — ideal 400-600)</span>
+                              </label>
+                              <textarea value={primaryText} maxLength={600}
+                                onChange={(e) => updateCopy('primary_text', e.target.value)}
+                                rows={4} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white resize-none" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[9px] text-gray-500 uppercase tracking-widest block mb-1">
+                                  Descripción <span className="text-gray-600">({(c.description || '').length}/30)</span>
+                                </label>
+                                <input value={c.description || ''} maxLength={30}
+                                  onChange={(e) => updateCopy('description', e.target.value)}
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white" />
+                              </div>
+                              <div>
+                                <label className="text-[9px] text-gray-500 uppercase tracking-widest block mb-1">CTA botón</label>
+                                <select value={c.cta_button || 'MESSAGE_PAGE'}
+                                  onChange={(e) => updateCopy('cta_button', e.target.value)}
+                                  className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
+                                  {ctaOptions.map((o) => <option key={o} value={o}>{ctaLabels[o]}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                          {c.social_proof_used && <p className="text-[9px] text-emerald-400 mt-2 italic">🛡️ {c.social_proof_used}</p>}
                         </div>
                       );
                     })}
@@ -556,11 +647,23 @@ export default function WizardPage() {
                             const ovRes = await fetch(`${API_URL}/ads/overlay-and-resize`, {
                               method: 'POST',
                               headers: { ...h, 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ image_url: img.image_url, overlay_text: hookText, include_overlay: true }),
+                              body: JSON.stringify({
+                                image_url: img.image_url,
+                                overlay_text: hookText,
+                                include_overlay: true,
+                                service_slug: selectedSlug,  // auto-fill chips precio + ubicacion desde business_profile
+                              }),
                             });
                             const ovData = await ovRes.json();
                             if (ovData.ok && ovData.square) {
-                              setPreviewImages((prev: any[]) => prev.map((p: any) => p.index === imgIdx ? { ...p, image_url: ovData.square, overlay_applied: true } : p));
+                              // Guardar los 3 formatos para que wizard_launch los mande como arrays paralelos
+                              setPreviewImages((prev: any[]) => prev.map((p: any) => p.index === imgIdx ? {
+                                ...p,
+                                image_url: ovData.square,
+                                image_vertical: ovData.vertical || '',
+                                image_horizontal: ovData.horizontal || '',
+                                overlay_applied: true,
+                              } : p));
                               success++;
                             }
                           } catch {}
