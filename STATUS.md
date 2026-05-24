@@ -2,8 +2,8 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**API v239 + Bot v242 + Frontend `99e72d2`** — Sprint Match Rate Meta + Mark-Paid-Manual + Ads Pro v3 fixes CERRADO 🦁🎯💯 (22-23 mayo, sesión maratón ~11h). Bug #45 raíz cerrado + bonus external_id sobreescritura + bonus country/region/zip CAPI + endpoint `/leads/sync-meta-leads` retroactivo + endpoint `/payments/mark-paid-manual` (asesor marca pagos externos efectivo/transferencia/QR) + apply-action 8 acciones + analyze MAX_TOKENS fix. **277 eventos CAPI con PII enriquecida** + payload validado en Graph Explorer (events_received:1, messages:[]).
-**API v228 + Bot v240 + Frontend `f18ab09`** — Sprint Fix Atribución ROAS CERRADO 🦁🎯 (21 mayo, sesión ~5h). Filtro CRM por campaña + Resolución ad_id→campaign_id Meta Graph + Backfill 9 purchases $2.38M + Fix release preserva flow_state mid-captura.
+**API v275 + Bot v243 + Frontend `2a077ea`** — Sprint Ads Pro v3 + Biblioteca + Wizard Video CERRADO 🦁🎬📚 (23-24 mayo, sesión maratón ~25h efectivas en 36h — madrugada + mañana + noche). **5 bugs revenue-critical full-stack + 2 bugs históricos cerrados como bonus.** Bug #69 (copies 4 campos completos: headline+primary 400-600+description+cta_button enum 8 opciones) + Bug #70 (refs reales como inlineData a Gemini, multi-tenant agnostico, 100/10 visualmente) + Bug #71 (3 formatos Meta HD nativos: 1080×1080/1080×1920/1920×1080 vía Pillow crop wide-composition, costo $0 extra) + Bug #72 (wizard_launch acepta arrays paralelos image_urls_vertical/horizontal/video_urls + Meta Advantage+ asset_feed_spec) + Bug #73 (upload video manual MP4/MOV via presigned S3 + /ads/video/register persiste en biblioteca + video_data en campaigns/publish para Meta /advideos). Bug doble flujo scheduling cerrado: PII Flow movido al FINAL del async post_booking (Single + Multi unificados con Flow recursivo, eliminada rama AWAITING_LEAD_DETAILS/CAPTURING_ATTENDEES). Bug histórico /register routing usaba endswith capturando /ads/video/register. Frontend mobile lag (loop infinito useEffect en servicios). **Tabla AdsCreativeGenerations** creada (PK company_id, SK generation_id, GSIs campaign_id-generated_at + vertical-generated_at, PITR ✅, TTL 365d) — base Hypothesis Engine + Pattern Marketplace + Benchmark + Fatigue Prediction. **Vertex AI Imagen 3** configurado como helper futuro (Service Account + Secrets Manager + google-auth-layer:1) — disponible para outpainting con máscara cuando se necesite. **Pillow layer Python 3.14 reconstruido** + fuentes Inter Bold/Regular TTF reales (las .otf de GitHub eran HTML 4xx). **Memoria Lambda** API + Bot 512→1024MB (2x CPU, fix lag mobile). **Biblioteca creativos full-stack**: GET /ads/library?type=image|video|copy|winners + DELETE bulk + cap-aware persist multi-tenant via plan_features (starter=50, growth=500, agency/enterprise/owner_lifetime=-1) + frontend /dashboard/ads/library con 4 tabs (imágenes/videos/copies/ganadores) + multiselect + bulk delete + banner cap warning. **Wizard de Video standalone** /dashboard/ads/video-wizard 4 steps (tipo/brief/upload-o-biblioteca/textos+lanzar) con upload manual MP4/MOV + elegir de biblioteca + placeholders honestos "Generar IA / Avatar HeyGen → Próximamente". **Sidebar reorganizado**: 3 items bajo Ads (Anuncios IA / Biblioteca creativos / Wizard de Video). **Wizard imagen Step 8** UI: copies 4 campos editables (headline 40 + primary_text 400-600 con validador color + description 30 + cta_button select con 8 opciones Meta) + botón "📹 + Video" cuando overlay aplicado. business_vertical=escuela_tiro configurado en JMC (alimenta moat correctamente).
+**API v239 + Bot v242 + Frontend `99e72d2`** — Sprint Match Rate Meta + Mark-Paid-Manual + Ads Pro v3 fixes CERRADO 🦁🎯💯 (22-23 mayo, sesión maratón ~11h). Bug #45 raíz cerrado + bonus external_id sobreescritura + bonus country/region/zip CAPI + endpoint `/leads/sync-meta-leads` retroactivo + endpoint `/payments/mark-paid-manual` (asesor marca pagos externos efectivo/transferencia/QR) + apply-action 8 acciones + analyze MAX_TOKENS fix. **277 eventos CAPI con PII enriquecida** + payload validado en Graph Explorer (events_received:1, messages:[]).**API v228 + Bot v240 + Frontend `f18ab09`** — Sprint Fix Atribución ROAS CERRADO 🦁🎯 (21 mayo, sesión ~5h). Filtro CRM por campaña + Resolución ad_id→campaign_id Meta Graph + Backfill 9 purchases $2.38M + Fix release preserva flow_state mid-captura.
 **API v224 + Bot v236 + Frontend `f18ab09`** — Sprint AUDIT-1 cerrado 🦁🔍 (20 mayo, sesión ~3h auditoría). 4 deudas técnicas reales cerradas + 5 confirmadas como falsos pendientes (ya hechas).
 **API v223 + Bot v230 + Frontend `fa61f4b`** — Sprint PII Review Multi-tenant (MP-1 a MP-4) CERRADO 🦁📋💎 (18 mayo, sesión maratón ~12h).
 **Sprint PII Review Multi-tenant + Match Rate Meta** (18 mayo ~12h): Pipeline completo de captura PII post-pago con revisión humana antes de enviar a Meta CAPI. **5 mega-patches deployados:**
@@ -777,6 +777,63 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Causa**: migración WABA del 6 mayo actualizó `config_pro` pero NUNCA tocó la env var del Lambda. El fallback default apuntaba al phone viejo durante 2 días sin que nadie lo notara (carrusel era el único feature que lo usaba en runtime).
 - **Fix**: Bot v120 — env var `PHONE_NUMBER_ID=1050792924791062`. Multi-tenant code de v119 sigue válido — esto solo arregla el fallback default.
 - **Lección 31**: tras migración de WABA (o cualquier integración externa con ID), auditar TODAS las env vars de TODAS las Lambdas. Las que apuntan al valor viejo siguen "funcionando" hasta que necesitan operación privilegiada (upload, template lookup) y revientan.
+### 23-24 mayo 2026 — Sprint Ads Pro v3 + Biblioteca + Wizard Video (sesión maratón 25h) 🦁🎬📚
+> 36h en total (madrugada + mañana + noche). 12 bugs/lecciones cerrados. Wizard Ads completamente reescrito.
+#### Bug #59 (OPERACIONAL 🟠) — Pillow layer Python runtime mismatch
+- **Síntoma**: `cannot import name '_imaging' from 'PIL'` en Lambda con runtime python3.14, layer pillow:1 era para 3.9-3.12.
+- **Fix**: rebuild layer con `pip --platform manylinux2014_x86_64 --python-version 3.14 --only-binary=:all: Pillow` + publish-layer-version con compatible-runtimes=python3.14. Layer pillow:2.
+- **Lección**: layers Python deben matchear runtime EXACTO. Verificar con `aws lambda get-layer-version --query CompatibleRuntimes` antes de asumir compat.
+#### Bug #60 (BUG NIVEL HTML 🤡) — curl -L de GitHub raw retornó HTML, no binario
+- **Síntoma**: `Inter-Bold.otf` 300KB descargado con curl, deploy a Lambda OK, pero `OSError: unknown file format` al cargar fuente. Texto overlay caía a fuente bitmap default 10px.
+- **Causa raíz**: `head -c 200 fonts/Inter-Bold.otf` reveló `<!DOCTYPE html><html lang="en"...` — era la página de GitHub renderizada, NO el archivo binario.
+- **Fix**: bajar TTF directo de Google Fonts URL pública. Validar con `head -c 16 archivo | od -c` (debe empezar con `\0\1\0\0` para TTF o `OTTO` para OTF).
+- **Lección 32**: `ls -lah` muestra tamaño aunque el archivo sea HTML basura. SOLO `head -c X | od -c` confirma binario válido. Bug que se demora horas si no haces el check correcto.
+#### Bug #61 (OPERACIONAL 🟠) — deploy_api.sh no incluía fonts/ al staging
+- **Síntoma**: tras deploy, `font_path=''` en logs aunque las fuentes estaban en pkg/fonts/.
+- **Causa**: el copy al staging copiaba solo lambda_function.py, no el directorio fonts/.
+- **Fix manual**: `mkdir /tmp/api/api && cp -r /tmp/api_pkg/pkg/fonts /tmp/api/api/ && cp lambda_function.py ...` antes de `~/.deploy_api.sh`.
+- **Lección 33**: scripts de deploy deben incluir TODOS los assets, no solo el .py. Validar con `unzip -l function.zip | grep fonts` antes de confiar en deploy OK.
+#### Bug #62 (PROMPT 🤖) — Sustantivos negativos activan tokens en Imagen 3
+- **Síntoma**: prompt outpainting con "DO NOT add walls, fences, buildings" → modelo dibujaba muros y edificios en los bordes.
+- **Causa**: en CFG Scale alto (21+), nombrar objetos negados los inyecta en el grafo de atención.
+- **Fix**: prompt sin sustantivos negativos. Usar "extend background environment, negative space, texture synthesis" + reglas positivas de continuidad.
+- **Lección 34**: prompts de difusión NO procesan negaciones como contratos legales. Estrategia correcta: silenciar lo prohibido + reforzar lo deseado positivamente.
+#### Bug #63 (LIMITACIÓN MODELO 🤖) — Vertex Imagen 3 outpainting no es 100% pixel-perfect
+- **Síntoma**: máscara con dilation=0.0 (estricta), modelo aún tocaba pixels del centro: cambiaba pantalón por shorts en vertical, inventaba muros en horizontal.
+- **Causa**: Imagen 3 tiene "bleed" de ~5% en máscaras binarias. La doc oficial promete pixel-perfect pero no lo es en práctica.
+- **Decisión arquitectónica**: abandonar outpainting con Vertex en producción. Usar Pillow crop puro desde imagen wide-composition de Gemini (filosofía "es más fácil cortar que agregar"). Vertex queda como helper futuro disponible.
+- **Lección 35**: documentación de modelos IA promete más de lo que entrega. Validar con tests reales antes de comprometer arquitectura.
+#### Bug #64 (FILOSOFÍA 🦁) — "Es más fácil cortar que agregar"
+- **Insight de Juan**: en vez de pelear con outpainting (Gemini regenera/alucina), generar imagen 1024×1024 con composición wide (sujeto en centro 50% + breathing room) → Pillow crop centro a vertical/horizontal → resize HD a 1080/1920.
+- **Resultado**: 0 alucinaciones, costo $0 extra, multi-tenant agnóstico, todos los formatos perfectos.
+- **Lección 36**: cuando un modelo no respeta input, no insistas con prompts. Cambia la estrategia: genera más grande y recorta, o genera nativo en cada aspect ratio. La mejor solución no siempre es la más "inteligente".
+#### Bug #65 (DIAGNÓSTICO 🔍) — bash `ls -lah` engaña con archivos HTML
+- Mencionado en Bug #60. La lección 32 aplica.
+#### Bug #66 (RACE FLUJO 🚨) — Doble flujo scheduling: Flow PII inmediato + chat AWAITING_LEAD_DETAILS
+- **Síntoma**: tras agendar cita, llegaba Flow PII al usuario INMEDIATO + 3 mensajes post_booking + "Por último necesito tus datos" (chat) — dos rutas paralelas pidiendo lo mismo.
+- **Causa raíz**: cuando se agregó Flow PII (Sprint MP-2 v222), no se desactivó la rama vieja de `_pending_lead_details` en async post_booking. Ambas rutas activas en producción durante 5 días sin detectar.
+- **Fix Bot v243**: PII Flow movido al FINAL del async post_booking (después de los 3 mensajes) + rama chat eliminada (era código muerto). Single + multi-persona unificados con Flow recursivo de `_trigger_pii_flow(asistente_num=N+1)`.
+- **Lección 37**: al agregar feature nueva que reemplaza una vieja, el viejo flujo debe DESACTIVARSE explícitamente, no quedar "por si acaso". Auditoría obligatoria: buscar todas las rutas que escriben el mismo flow_state.
+#### Bug #67 (FRONTEND React 🐛) — useEffect con array `[]` inline causa loop infinito
+- **Síntoma**: chat mobile lentísimo, botones tardaban en reaccionar, congelaba al hacer back. Desktop normal.
+- **Causa**: `useEffect(() => { fetch(/services); setServices(d.services) }, [servicesList, companyId])` con `servicesList` que el padre pasaba como `[]` inline → nuevo array cada render → effect dispara → setState → re-render → nuevo `[]` → loop. CPU mobile = peor.
+- **Fix (Juan)**: cambiar deps a `[companyId]` solamente + chequear `servicesList.length > 0` adentro + `eslint-disable-next-line react-hooks/exhaustive-deps` justificado en comentario.
+- **Lección 38**: NUNCA usar como dependencia de useEffect un array/objeto que el padre pueda pasar inline. Soluciones: useRef para "frozen" reference, o solo primitivos (companyId) en deps.
+#### Bug #68 (ROUTING) — `/register` capturaba `/ads/video/register`
+- **Síntoma**: endpoint nuevo POST /ads/video/register devolvía error "email y company_id son requeridos" (de handle_register).
+- **Causa**: el routing usaba `path.rstrip("/").endswith("/register")` que matchea cualquier URL terminando en `/register`. Como estaba ANTES de los routes /ads/* en el elif, ganaba siempre.
+- **Fix API v275**: cambiar a `path.rstrip("/") == "/register"` (match exacto).
+- **Lección 39**: NUNCA usar `endswith` en routing — usar match exacto o prefix. Pattern matching de path debe ser estricto.
+#### Bug #69 (HELPER MULTI-LAMBDA) — `get_config_pro` existe en Bot, NO en API
+- **Síntoma**: `_get_library_cap` retornaba siempre 50 (default starter) aunque JMC es enterprise/owner_lifetime.
+- **Causa**: helper `get_config_pro(client_id)` está definido en `WhatsApp_Typebot_Bridge` (Bot), NO en `SaaS_API_Handler` (API). Mi función llamaba algo inexistente → except silencioso → fallback default.
+- **Fix**: en API, leer DDB directo con projection limitada (`#p, plan_source`). NO asumir que helpers del Bot están en API.
+- **Lección 40**: helpers no son globales entre Lambdas. Si una función está definida en un Lambda, en otro hay que reimplementarla o auditar antes de llamarla. Cuando un valor "imposible" persiste, agregar `logger.info(f"DEBUG: ...")` con todas las variables temporales.
+#### Bug #70 (DEPLOY 📂) — Frontend: archivo correcto en directorio equivocado
+- **Síntoma**: tras commit, `/dashboard/ads/library/page.tsx` tenía código del WIZARD DE VIDEO. `/video-wizard/page.tsx` NO existía.
+- **Causa**: Juan pegó el contenido del archivo D (video-wizard) en el path del archivo C1 (library) por error de copy/paste.
+- **Fix**: PowerShell `mkdir video-wizard && move library/page.tsx video-wizard/` + crear library/page.tsx nuevo con código correcto.
+- **Lección 41**: SIEMPRE verificar el SHA del frontend después de commits grandes via `read_file(commit_sha=SHA, file_path=X)`. Si el archivo tiene contenido distinto al esperado, detectar antes de seguir.
 ### 8 mayo 2026 (tarde-noche) — Memoria source-aware + 6 bugs CRM masivos 🦁
 > Sesión ~3h. Empezamos con memoria source-aware (hito 88→90% checklist), terminamos cerrando 6 bugs CRM/Reportes que llevaban semanas latentes (Bug #9 reincidió x2). 8 deploys (Bot v136 + API v117-v122 + promote-cron v2). 615 entries de memoria limpiadas (97 CM + 518 candidatos).
 #### Memoria source-aware (Bot v136 + promote-cron v2)
