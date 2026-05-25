@@ -2,7 +2,66 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**API v275 + Bot v243 + Frontend `2a077ea`** — Sprint Ads Pro v3 + Biblioteca + Wizard Video CERRADO 🦁🎬📚 (23-24 mayo, sesión maratón ~25h efectivas en 36h — madrugada + mañana + noche). **5 bugs revenue-critical full-stack + 2 bugs históricos cerrados como bonus.** Bug #69 (copies 4 campos completos: headline+primary 400-600+description+cta_button enum 8 opciones) + Bug #70 (refs reales como inlineData a Gemini, multi-tenant agnostico, 100/10 visualmente) + Bug #71 (3 formatos Meta HD nativos: 1080×1080/1080×1920/1920×1080 vía Pillow crop wide-composition, costo $0 extra) + Bug #72 (wizard_launch acepta arrays paralelos image_urls_vertical/horizontal/video_urls + Meta Advantage+ asset_feed_spec) + Bug #73 (upload video manual MP4/MOV via presigned S3 + /ads/video/register persiste en biblioteca + video_data en campaigns/publish para Meta /advideos). Bug doble flujo scheduling cerrado: PII Flow movido al FINAL del async post_booking (Single + Multi unificados con Flow recursivo, eliminada rama AWAITING_LEAD_DETAILS/CAPTURING_ATTENDEES). Bug histórico /register routing usaba endswith capturando /ads/video/register. Frontend mobile lag (loop infinito useEffect en servicios). **Tabla AdsCreativeGenerations** creada (PK company_id, SK generation_id, GSIs campaign_id-generated_at + vertical-generated_at, PITR ✅, TTL 365d) — base Hypothesis Engine + Pattern Marketplace + Benchmark + Fatigue Prediction. **Vertex AI Imagen 3** configurado como helper futuro (Service Account + Secrets Manager + google-auth-layer:1) — disponible para outpainting con máscara cuando se necesite. **Pillow layer Python 3.14 reconstruido** + fuentes Inter Bold/Regular TTF reales (las .otf de GitHub eran HTML 4xx). **Memoria Lambda** API + Bot 512→1024MB (2x CPU, fix lag mobile). **Biblioteca creativos full-stack**: GET /ads/library?type=image|video|copy|winners + DELETE bulk + cap-aware persist multi-tenant via plan_features (starter=50, growth=500, agency/enterprise/owner_lifetime=-1) + frontend /dashboard/ads/library con 4 tabs (imágenes/videos/copies/ganadores) + multiselect + bulk delete + banner cap warning. **Wizard de Video standalone** /dashboard/ads/video-wizard 4 steps (tipo/brief/upload-o-biblioteca/textos+lanzar) con upload manual MP4/MOV + elegir de biblioteca + placeholders honestos "Generar IA / Avatar HeyGen → Próximamente". **Sidebar reorganizado**: 3 items bajo Ads (Anuncios IA / Biblioteca creativos / Wizard de Video). **Wizard imagen Step 8** UI: copies 4 campos editables (headline 40 + primary_text 400-600 con validador color + description 30 + cta_button select con 8 opciones Meta) + botón "📹 + Video" cuando overlay aplicado. business_vertical=escuela_tiro configurado en JMC (alimenta moat correctamente).
+**API v275 + Bot v246 + Frontend `2a077ea`** — Sprint Ads Pro v3 + Biblioteca + Video IA + Pricing + Publishing Engine 🦁🎬📚💰 (23-25 mayo, 3 sesiones ~30h efectivas).(23-24 mayo, sesión maratón ~25h efectivas en 36h — madrugada + mañana + noche). **5 bugs revenue-critical full-stack + 2 bugs históricos cerrados como bonus.** Bug #69 (copies 4 campos completos: headline+primary 400-600+description+cta_button enum 8 opciones) + Bug #70 (refs reales como inlineData a Gemini, multi-tenant agnostico, 100/10 visualmente) + Bug #71 (3 formatos Meta HD nativos: 1080×1080/1080×1920/1920×1080 vía Pillow crop wide-composition, costo $0 extra) + Bug #72 (wizard_launch acepta arrays paralelos image_urls_vertical/horizontal/video_urls + Meta Advantage+ asset_feed_spec) + Bug #73 (upload video manual MP4/MOV via presigned S3 + /ads/video/register persiste en biblioteca + video_data en campaigns/publish para Meta /advideos). Bug doble flujo scheduling cerrado: PII Flow movido al FINAL del async post_booking (Single + Multi unificados con Flow recursivo, eliminada rama AWAITING_LEAD_DETAILS/CAPTURING_ATTENDEES). Bug histórico /register routing usaba endswith capturando /ads/video/register. Frontend mobile lag (loop infinito useEffect en servicios). **Tabla AdsCreativeGenerations** creada (PK company_id, SK generation_id, GSIs campaign_id-generated_at + vertical-generated_at, PITR ✅, TTL 365d) — base Hypothesis Engine + Pattern Marketplace + Benchmark + Fatigue Prediction. **Vertex AI Imagen 3** configurado como helper futuro (Service Account + Secrets Manager + google-auth-layer:1) — disponible para outpainting con máscara cuando se necesite. **Pillow layer Python 3.14 reconstruido** + fuentes Inter Bold/Regular TTF reales (las .otf de GitHub eran HTML 4xx). **Memoria Lambda** API + Bot 512→1024MB (2x CPU, fix lag mobile). **Biblioteca creativos full-stack**: GET /ads/library?type=image|video|copy|winners + DELETE bulk + cap-aware persist multi-tenant via plan_features (starter=50, growth=500, agency/enterprise/owner_lifetime=-1) + frontend /dashboard/ads/library con 4 tabs (imágenes/videos/copies/ganadores) + multiselect + bulk delete + banner cap warning. **Wizard de Video standalone** /dashboard/ads/video-wizard 4 steps (tipo/brief/upload-o-biblioteca/textos+lanzar) con upload manual MP4/MOV + elegir de biblioteca + placeholders honestos "Generar IA / Avatar HeyGen → Próximamente". **Sidebar reorganizado**: 3 items bajo Ads (Anuncios IA / Biblioteca creativos / Wizard de Video). **Wizard imagen Step 8** UI: copies 4 campos editables (headline 40 + primary_text 400-600 con validador color + description 30 + cta_button select con 8 opciones Meta) + botón "📹 + Video" cuando overlay aplicado. business_vertical=escuela_tiro configurado en JMC (alimenta moat correctamente).
+### 24-25 mayo 2026 — Bug Wompi + Video IA Test + Pricing definitivo + Publishing Engine 🦁💰🎬
+**API v275 + Bot v246 + Frontend `2a077ea`** (sesión ~8h noche)
+**Bug Wompi pagos (CRÍTICO — cliente real Oscar perdido):**
+- ✅ **Raíz:** webhook Wompi llega con `payment_link_id` pero bot buscaba solo por `payment_reference` (que Wompi cambia) y `phone_number` (que no matchea si pagó con Nequi de 3ro — esposa/familiar)
+- ✅ **Fix Bot v244:** `WompiGateway.parse_webhook` devuelve `payment_link_id` + persistencia `wompi_payment_link_id` en `StudentPaymentState` al crear link + webhook cascada 3 niveles: reference → payment_link_id → phone
+- ✅ **Fix Bot v246:** completar `parse_webhook` que faltaba en patch anterior
+- ✅ **14 PENDING verificados vs Wompi API:** 0 pagos perdidos (todos abandonos legítimos)
+- ✅ **Cron reconciliación diaria:** `handle_cron_reconcile_payments` escanea PENDING 72h + consulta Wompi API + marca automático si APPROVED + EventBridge `payments-reconcile-daily` ENABLED 6 AM UTC
+- ✅ **Bug histórico `/register` routing:** `endswith("/register")` capturaba `/ads/video/register` → fix a match exacto `== "/register"` (API v275)
+**Video IA — Test exitoso Fal.ai:**
+- ✅ **Wan v2.7 (Video IA Pro):** 50s generación, $0.10/seg, 720p, audio ambiental incluido gratis, prompt español funciona
+- ✅ **Kling v3 Pro (Video IA Cinematic):** 111s generación, $0.112-$0.168/seg, ultra-realista (expresiones faciales, retroceso arma, física objetos), audio incluido
+- ✅ **Veredicto:** Kling Pro "diferencia brutal" vs Wan. Estrategia: Wan para Growth (Pro), Kling para Agency/Enterprise (Cinematic)
+- ✅ **Naming comercial:** "Video IA Pro" (Wan) + "Video IA Cinematic (Ultra-Realista)" (Kling)
+- ✅ **Arquitectura 15s:** 5s IA pura (gancho visual) + 10s FFmpeg (freeze + Ken Burns + chips dinámicos + CTA)
+- ✅ **Fal.ai API key configurada y testeada** (key en chat #22, NO en env vars aún — va en Secrets Manager)
+- ⏳ **Pendiente:** endpoint `/ads/video/generate` + SQS async + webhook Fal.ai + FFmpeg Lambda Layer + post-procesamiento 15s
+**Pricing DEFINITIVO actualizado en DDB (`plan_features`):**
+- ✅ **Starter $127/mes** ($457K COP, annual $1,219): Bot IA + CRM + Pagos + Citas + 2 agentes + 2 redes + 25 posts programados. SIN Ads, SIN Video, SIN Voz, SIN Multicanal avanzado.
+- ✅ **Growth $347/mes** ($1.25M COP, annual $3,331): TODO Starter + Ads Pro IA + 30 Videos IA Pro + 1 Video IA Cinematic GRATIS/mes (antojo) + CAPI + Voz 100min + Multicanal + 4 redes + 150 posts + Cross-post + Smart Repurpose AI™ + Autopost
+- ✅ **Agency $597/mes** ($2.15M COP, annual $5,731): TODO Growth + 60 Videos IA Cinematic + White-label + 6 redes + 750 posts + Sub-cuentas ilimitadas
+- ✅ **Enterprise $1,297/mes** ($4.67M COP, annual $12,451): TODO Agency + 150 Videos IA Cinematic + Voz 1000min fair-use + Content Queue AI + Growth Flywheel + Account manager
+- ✅ **Packs Cinematic upsell (Growth):** 5/$10 · 15/$25 · 50/$70 (Lemon Squeezy one-time)
+- ✅ **Afiliados ajustados:** Solo+Growth 40%/20% · Agency 30%/15% · Enterprise 0% (directo)
+**3 motores de producto definidos:**
+- ✅ **🎨 AI Content Engine** (genera, consume créditos): Imágenes IA (Gemini) + Video IA Pro (Wan) + Video IA Cinematic (Kling) + Copies IA + Variantes
+- ✅ **📡 Publishing Engine** (distribuye, soft limits): FB + IG + TikTok + Reels + WA + scheduling + cross-post + autopost + Smart Repurpose AI™
+- ✅ **🧠 Growth Engine** (moat futuro): Ads → Orgánico → Mide engagement → Orgánico ganador → Sugiere ad. Bidirectional content intelligence. Content Queue AI (detecta silencio, llena calendario automático)
+**Quotas Publishing Engine:**
+- Starter: 25 posts activos, 2 redes
+- Growth: 150 posts, 4 redes, cross-post, repurpose, autopost
+- Agency: 750 posts, 6 redes, todo incluido
+- Enterprise: ilimitado + Content Queue AI
+**features_ui actualizado para landing (sin "próximamente"):**
+- Starter: 24 items (17✅ + 7❌)
+- Growth: 31 items (todos ✅)
+- Agency: 23 items (todos ✅)
+- Enterprise: 15 items (todos ✅)
+**Lecciones nuevas:**
+- #42: Wompi `payment_link_id` es la ÚNICA llave estable para match (reference cambia, phone del pagador puede ser 3ro)
+- #43: Cron reconciliación como safety net — no confiar solo en webhooks para pagos
+- #44: Fal.ai `duration` debe ser integer no string (error 422 silencioso)
+- #45: Wan v2.7 genera audio ambiental gratis (antes era diferenciador de Kling — ya no)
+- #46: NO usar nombres de proveedores en pricing visible al cliente (Wan/Kling → Pro/Cinematic)
+- #47: Publicaciones orgánicas ≠ generación de contenido. Push cuesta ~$0, generación cuesta $$. Limitar generación, soft-limit publicación
+- #48: Smart Repurpose AI™ como producto estrella, no feature menor. "Más contenido sin más trabajo" vende más que "adapta formato"
+**Pendiente próximo sprint (Video IA infra):**
+1. Guardar Fal.ai API key en AWS Secrets Manager (NO en env vars)
+2. Compilar FFmpeg Lambda Layer para Python 3.14 x86_64
+3. Endpoint `POST /ads/video/generate` (orquestador: valida créditos → Gemini genera prompt movimiento → dispara Fal.ai async)
+4. Cola SQS `video-generation-queue` con DLQ
+5. Lambda Worker consume SQS → llama Fal.ai queue/submit con webhook_url
+6. Lambda Webhook recibe callback Fal.ai → descarga 5s clip → FFmpeg extiende a 15s (freeze + Ken Burns + chips + CTA + logo) → S3 → DDB `used += 1` → push FCM
+7. Frontend video-wizard conectado al endpoint real
+8. Packs Cinematic en Lemon Squeezy (cuando aprueben verificación)
+9. Actualizar landing con nuevos precios + features Video IA + Publishing Engine
+10. Settings card `business_profile`
+11. Limpiar código muerto AWAITING_LEAD_DETAILS + CAPTURING_ATTENDEES en Bot
+**Producción actual:** API v275 + Bot v246 + Frontend `2a077ea` + `423e1fa` (STATUS)
 **API v239 + Bot v242 + Frontend `99e72d2`** — Sprint Match Rate Meta + Mark-Paid-Manual + Ads Pro v3 fixes CERRADO 🦁🎯💯 (22-23 mayo, sesión maratón ~11h). Bug #45 raíz cerrado + bonus external_id sobreescritura + bonus country/region/zip CAPI + endpoint `/leads/sync-meta-leads` retroactivo + endpoint `/payments/mark-paid-manual` (asesor marca pagos externos efectivo/transferencia/QR) + apply-action 8 acciones + analyze MAX_TOKENS fix. **277 eventos CAPI con PII enriquecida** + payload validado en Graph Explorer (events_received:1, messages:[]).**API v228 + Bot v240 + Frontend `f18ab09`** — Sprint Fix Atribución ROAS CERRADO 🦁🎯 (21 mayo, sesión ~5h). Filtro CRM por campaña + Resolución ad_id→campaign_id Meta Graph + Backfill 9 purchases $2.38M + Fix release preserva flow_state mid-captura.
 **API v224 + Bot v236 + Frontend `f18ab09`** — Sprint AUDIT-1 cerrado 🦁🔍 (20 mayo, sesión ~3h auditoría). 4 deudas técnicas reales cerradas + 5 confirmadas como falsos pendientes (ya hechas).
 **API v223 + Bot v230 + Frontend `fa61f4b`** — Sprint PII Review Multi-tenant (MP-1 a MP-4) CERRADO 🦁📋💎 (18 mayo, sesión maratón ~12h).
