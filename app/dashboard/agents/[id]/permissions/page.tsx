@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../../providers';
+import { useAuth } from '../../../../providers';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
