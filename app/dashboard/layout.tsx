@@ -9,30 +9,30 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const menuItems = [
-  { href: '/dashboard', label: 'Metricas', icon: '📊', roles: ['owner', 'admin', 'agent', 'viewer'] },
-  { href: '/dashboard/crm', label: 'CRM / Leads', icon: '👥', roles: ['owner', 'admin', 'agent', 'viewer'] },
-  { href: '/dashboard/agents', label: 'Mi equipo', icon: '🧑‍💼', roles: ['owner', 'admin'] },
-  { href: '/dashboard/agents/performance', label: 'Ranking equipo', icon: '🏆', roles: ['owner', 'admin'] },
-  { href: '/dashboard/chat', label: 'Conversaciones', icon: '💬', roles: ['owner', 'admin', 'agent', 'viewer'] },
-  { href: '/dashboard/services', label: 'Catálogo', icon: '🛍️', roles: ['owner', 'admin', 'agent', 'viewer'] },
-  { href: '/dashboard/appointments', label: 'Citas', icon: '📅', roles: ['owner', 'admin', 'agent', 'viewer'] },
-  { href: '/dashboard/payments', label: 'Pagos', icon: '💳', roles: ['owner', 'admin', 'agent'] },
-  { href: '/dashboard/analytics', label: 'Reportes', icon: '📈', roles: ['owner', 'admin'] },
-  { href: '/dashboard/memory', label: 'Memoria IA', icon: '🧠', roles: ['owner', 'admin'] },
-  { href: '/dashboard/training', label: 'Entrenar Bot', icon: '🎓', roles: ['owner', 'admin'] },
-  { href: '/dashboard/templates', label: 'Personalidad Bot', icon: '📋', roles: ['owner', 'admin'] },
-  { href: '/dashboard/templates/manage', label: 'Mensajes oficiales', icon: '📝', roles: ['owner', 'admin'] },
-  { href: '/dashboard/marketing', label: 'Envío masivo', icon: '📣', roles: ['owner', 'admin'] },
-  { href: '/dashboard/gateway', label: 'Pasarela', icon: '🏦', roles: ['owner'] },
-  { href: '/dashboard/inventory', label: 'Inventario', icon: '📦', roles: ['owner', 'admin'] },
-  { href: '/dashboard/ads', label: 'Anuncios IA', icon: '🚀', roles: ['owner', 'admin'] },
-  { href: '/dashboard/ads/library', label: 'Biblioteca creativos', icon: '📚', roles: ['owner', 'admin'] },
-  { href: '/dashboard/ads/video-wizard', label: 'Wizard de Video', icon: '🎬', roles: ['owner', 'admin'] },
-  { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: '📱', roles: ['owner'] },
-  { href: '/dashboard/settings', label: 'Configuracion', icon: '⚙️', roles: ['owner'] },
-  { href: '/dashboard/billing', label: 'Suscripción', icon: '💎', roles: ['owner'] },
-  { href: '/dashboard/affiliate', label: 'Afiliados', icon: '🤝', roles: ['owner'] },
-  { href: '/dashboard/support-history', label: 'Soporte', icon: '🆘', roles: ['owner'] },
+  { href: '/dashboard', label: 'Metricas', icon: '📊', roles: ['owner', 'admin', 'agent', 'viewer'], permission: null },
+  { href: '/dashboard/crm', label: 'CRM / Leads', icon: '👥', roles: ['owner', 'admin', 'agent', 'viewer'], permission: 'view_crm' },
+  { href: '/dashboard/agents', label: 'Mi equipo', icon: '🧑‍💼', roles: ['owner', 'admin'], permission: 'manage_agents' },
+  { href: '/dashboard/agents/performance', label: 'Ranking equipo', icon: '🏆', roles: ['owner', 'admin'], permission: 'view_team_performance' },
+  { href: '/dashboard/chat', label: 'Conversaciones', icon: '💬', roles: ['owner', 'admin', 'agent', 'viewer'], permission: 'view_chat' },
+  { href: '/dashboard/services', label: 'Catálogo', icon: '🛍️', roles: ['owner', 'admin', 'agent', 'viewer'], permission: null },
+  { href: '/dashboard/appointments', label: 'Citas', icon: '📅', roles: ['owner', 'admin', 'agent', 'viewer'], permission: 'view_appointments' },
+  { href: '/dashboard/payments', label: 'Pagos', icon: '💳', roles: ['owner', 'admin', 'agent'], permission: 'view_payments' },
+  { href: '/dashboard/analytics', label: 'Reportes', icon: '📈', roles: ['owner', 'admin'], permission: 'view_analytics' },
+  { href: '/dashboard/memory', label: 'Memoria IA', icon: '🧠', roles: ['owner', 'admin'], permission: 'view_memory' },
+  { href: '/dashboard/training', label: 'Entrenar Bot', icon: '🎓', roles: ['owner', 'admin'], permission: 'edit_memory' },
+  { href: '/dashboard/templates', label: 'Personalidad Bot', icon: '📋', roles: ['owner', 'admin'], permission: 'edit_business_config' },
+  { href: '/dashboard/templates/manage', label: 'Mensajes oficiales', icon: '📝', roles: ['owner', 'admin'], permission: 'manage_templates' },
+  { href: '/dashboard/marketing', label: 'Envío masivo', icon: '📣', roles: ['owner', 'admin'], permission: 'manage_templates' },
+  { href: '/dashboard/gateway', label: 'Pasarela', icon: '🏦', roles: ['owner'], permission: 'edit_payment_gateways' },
+  { href: '/dashboard/inventory', label: 'Inventario', icon: '📦', roles: ['owner', 'admin'], permission: 'edit_services' },
+  { href: '/dashboard/ads', label: 'Anuncios IA', icon: '🚀', roles: ['owner', 'admin'], permission: 'view_ads' },
+  { href: '/dashboard/ads/library', label: 'Biblioteca creativos', icon: '📚', roles: ['owner', 'admin'], permission: 'view_ads' },
+  { href: '/dashboard/ads/video-wizard', label: 'Wizard de Video', icon: '🎬', roles: ['owner', 'admin'], permission: 'create_ads' },
+  { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: '📱', roles: ['owner'], permission: 'edit_business_config' },
+  { href: '/dashboard/settings', label: 'Configuracion', icon: '⚙️', roles: ['owner'], permission: 'edit_business_config' },
+  { href: '/dashboard/billing', label: 'Suscripción', icon: '💎', roles: ['owner'], permission: 'view_billing' },
+  { href: '/dashboard/affiliate', label: 'Afiliados', icon: '🤝', roles: ['owner'], permission: null },
+  { href: '/dashboard/support-history', label: 'Soporte', icon: '🆘', roles: ['owner'], permission: null },
 ];
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -44,7 +44,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [reminders, setReminders] = useState<any[]>([]);
   const [showReminders, setShowReminders] = useState(false);
   const [unreadChats, setUnreadChats] = useState(0);
-  const [piiPendingCount, setPiiPendingCount] = useState(0);
+ const [piiPendingCount, setPiiPendingCount] = useState(0);
+  const [userPermissions, setUserPermissions] = useState<{ [key: string]: boolean } | null>(null);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const [tokenWarning, setTokenWarning] = useState<{status: string, message: string, needs_reconnect: boolean, days_left?: number} | null>(null);
   const [trialInfo, setTrialInfo] = useState<{status: string, trial_ends_at: number, days_left: number} | null>(null);
   // E-7: estado del impersonate (banner rojo cuando hay ticket activo)
@@ -197,6 +199,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .then(res => res.json())
         .then(data => setPiiPendingCount((data.items || []).length))
         .catch(() => {});
+      // SPRINT B: cargar permisos efectivos del usuario logueado
+      // Owner/admin no necesitan check (siempre ven todo) — solo agent/viewer
+      if (user.role === 'agent' || user.role === 'viewer') {
+        // Necesitamos buscar el agent_id por email para llamar a /agents/{id}/permissions
+        fetch(`${API_URL}/agents`, { headers: { 'client-id': user.companyId } })
+          .then(res => res.json())
+          .then(data => {
+            const myAgent = (data.agents || []).find((a: any) =>
+              (a.email || '').toLowerCase() === (user.email || '').toLowerCase()
+            );
+            if (myAgent?.agent_id) {
+              return fetch(`${API_URL}/agents/${myAgent.agent_id}/permissions`, {
+                headers: { 'client-id': user.companyId },
+              }).then(r => r.json());
+            }
+            return null;
+          })
+          .then(permData => {
+            if (permData?.permissions_effective) {
+              setUserPermissions(permData.permissions_effective);
+            }
+            setPermissionsLoaded(true);
+          })
+          .catch(() => setPermissionsLoaded(true));
+      } else {
+        // owner/admin → ven todo
+        setPermissionsLoaded(true);
+      }
     }
     const interval = setInterval(() => {
       if (user?.companyId) {
@@ -221,6 +251,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }, 60000);
     return () => clearInterval(interval);
   }, [user, loading, router]);
+  // SPRINT B: filtrar menú por permisos efectivos (no solo rol)
+  const canSeeMenuItem = (item: typeof menuItems[number]): boolean => {
+    // 1. Filtro por rol (legacy, sigue activo)
+    if (user?.role && !item.roles.includes(user.role)) return false;
+    // 2. Owner y admin ven todo (ya cubierto por roles, pero double-check)
+    if (user?.role === 'owner' || user?.role === 'admin') return true;
+    // 3. Si el item no requiere permiso específico, mostrar
+    if (!item.permission) return true;
+    // 4. Si aún no cargamos permisos, mostrar (loading state — se filtra al cargar)
+    if (!permissionsLoaded) return true;
+    // 5. Si no hay permissions_effective, usar defaults del rol (mostrar)
+    if (!userPermissions) return true;
+    // 6. Validar permiso específico
+    return !!userPermissions[item.permission];
+  };
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center">
@@ -240,7 +285,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         {/* Menu */}
         <nav className="flex-1 overflow-y-auto py-4 px-3">
-          {menuItems.filter(item => !user?.role || item.roles.includes(user.role)).map((item) => (
+          {menuItems.filter(canSeeMenuItem).map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -294,7 +339,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button onClick={() => setSidebarOpen(false)} className="text-gray-400 text-2xl">×</button>
             </div>
             <nav className="flex-1 overflow-y-auto py-4 px-3">
-              {menuItems.filter(item => !user?.role || item.roles.includes(user.role)).map((item) => (
+              {menuItems.filter(canSeeMenuItem).map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
