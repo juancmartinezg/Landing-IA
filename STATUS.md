@@ -3,6 +3,155 @@
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
 **API v275 + Bot v246 + Frontend `2a077ea`** — Sprint Ads Pro v3 + Biblioteca + Video IA + Pricing + Publishing Engine 🦁🎬📚💰 (23-25 mayo, 3 sesiones ~30h efectivas).(23-24 mayo, sesión maratón ~25h efectivas en 36h — madrugada + mañana + noche). **5 bugs revenue-critical full-stack + 2 bugs históricos cerrados como bonus.** Bug #69 (copies 4 campos completos: headline+primary 400-600+description+cta_button enum 8 opciones) + Bug #70 (refs reales como inlineData a Gemini, multi-tenant agnostico, 100/10 visualmente) + Bug #71 (3 formatos Meta HD nativos: 1080×1080/1080×1920/1920×1080 vía Pillow crop wide-composition, costo $0 extra) + Bug #72 (wizard_launch acepta arrays paralelos image_urls_vertical/horizontal/video_urls + Meta Advantage+ asset_feed_spec) + Bug #73 (upload video manual MP4/MOV via presigned S3 + /ads/video/register persiste en biblioteca + video_data en campaigns/publish para Meta /advideos). Bug doble flujo scheduling cerrado: PII Flow movido al FINAL del async post_booking (Single + Multi unificados con Flow recursivo, eliminada rama AWAITING_LEAD_DETAILS/CAPTURING_ATTENDEES). Bug histórico /register routing usaba endswith capturando /ads/video/register. Frontend mobile lag (loop infinito useEffect en servicios). **Tabla AdsCreativeGenerations** creada (PK company_id, SK generation_id, GSIs campaign_id-generated_at + vertical-generated_at, PITR ✅, TTL 365d) — base Hypothesis Engine + Pattern Marketplace + Benchmark + Fatigue Prediction. **Vertex AI Imagen 3** configurado como helper futuro (Service Account + Secrets Manager + google-auth-layer:1) — disponible para outpainting con máscara cuando se necesite. **Pillow layer Python 3.14 reconstruido** + fuentes Inter Bold/Regular TTF reales (las .otf de GitHub eran HTML 4xx). **Memoria Lambda** API + Bot 512→1024MB (2x CPU, fix lag mobile). **Biblioteca creativos full-stack**: GET /ads/library?type=image|video|copy|winners + DELETE bulk + cap-aware persist multi-tenant via plan_features (starter=50, growth=500, agency/enterprise/owner_lifetime=-1) + frontend /dashboard/ads/library con 4 tabs (imágenes/videos/copies/ganadores) + multiselect + bulk delete + banner cap warning. **Wizard de Video standalone** /dashboard/ads/video-wizard 4 steps (tipo/brief/upload-o-biblioteca/textos+lanzar) con upload manual MP4/MOV + elegir de biblioteca + placeholders honestos "Generar IA / Avatar HeyGen → Próximamente". **Sidebar reorganizado**: 3 items bajo Ads (Anuncios IA / Biblioteca creativos / Wizard de Video). **Wizard imagen Step 8** UI: copies 4 campos editables (headline 40 + primary_text 400-600 con validador color + description 30 + cta_button select con 8 opciones Meta) + botón "📹 + Video" cuando overlay aplicado. business_vertical=escuela_tiro configurado en JMC (alimenta moat correctamente).
+### 2 jun 2026 — Sesión MARATÓN (~20h efectivas) 🦁💪
+**API v278 + Bot v268 + Frontend `32d2cf0`** — Cost Foundations + arm64 + UX-Contexto + Permisos Granulares + Pending-Schedule Reminders.
+#### 🏗️ SPRINT 1: Cost Foundations Fase 1 — CERRADO
+**Sin tocar código de aplicación** (solo infra). Ahorro proyectado a 1M clientes: **~$19,010/mes (~$228K/año)**.
+- ✅ **CloudWatch Logs retention 7d** en 4 Lambdas (antes never expire — bomba silenciosa)
+- ✅ **S3 Lifecycle + Intelligent-Tiering:**
+  - `clientes-bot-media`: IT auto-tier + 90d→Glacier IR + 365d→Deep Archive
+  - `clientes-bot-backups`: 30d→Glacier IR + 120d→Deep Archive
+  - `certificados-jmc`: 🚫 intacto (regla #10)
+- ✅ **DDB PITR audit:** desactivado en 8 tablas regenerables/TTL, mantenido en 7 críticas + 10 snapshots defensivos on-demand
+- ✅ **Cleanup tablas legacy:** `TypebotSessions` v1, `WhatsApp_Sessions`, `saas_clients`, `saas_products` (luego restaurada por bug #51)
+- ✅ **Bucket `atalogo-saas-imagenes` borrado y restaurado** (10 archivos legacy)
+#### 🦾 SPRINT 2: Graviton arm64 Migration — CERRADO
+Las 4 Lambdas migradas. Layers nuevos arm64 publicados:
+- ✅ `promote-memory-candidates` → arm64
+- ✅ `WhatsApp_Remarketing` → arm64 (+ fix bug #54: timeout 3s→30s, mem 128→256MB)
+- ✅ `SaaS_API_Handler` → arm64 + 3 layers nuevos
+- ✅ `WhatsApp_Typebot_Bridge` → arm64 + 2 layers nuevos
+- Layers arm64 publicados: `pillow-arm64:1`, `google-auth-arm64:2`, `cryptography-arm64:1`
+- `tenacity-library:1` reutilizable (Python puro)
+- Ahorro proyectado: -20% Lambda compute permanente
+#### 🐛 SPRINT 3: UX-Contexto — Bugs revenue-critical de buyers
+Detectado por audit de leads reales (Jader 573163174755, Juan Carlos 573135733186): bot trataba buyers post-pago como leads nuevos, remarketing disparándose a compradores, reagendamiento ignorado, etc.
+**Bot v261-v265 (BUYER_GUARD completo + reagendamiento + welcome menu):**
+- ✅ **FIX 1** (Remarketing v9): Cron skipea buyers via cross-check `is_buyer` + `status=PAGADO`. Auto-cierra `remarketing_pending` cuando detecta buyer
+- ✅ **FIX 2-tris** (Bot v258): `payment_status=PAGADO` → `is_buyer=True` (fuente de verdad cuando CRM inconsistente)
+- ✅ **FIX 2-quad** (Bot v259): BUYER_GUARD intercepta `catalog/booking/payment/greeting` para buyer con cita activa
+- ✅ **FIX 2-sexies** (Bot v261): Cuando buyer dice "necesito mover", "reagendar" → dispara `_trigger_scheduling_flow` directo con calendar picker
+- ✅ **FIX 3** (Bot v261): `GUARD_ALREADY_PAID` silencioso (no más "Tu pago ya está confirmado..." en cada respuesta)
+- ✅ **FIX 4** (Bot v261): `_reagendar_words` ampliado con variantes naturales ("moverla", "no voy a poder", "se me cruzo", "necesito mover") + regex
+- ✅ **FIX 5** (Bot v265): Welcome menu solo en **sesión nueva** (no en CHAT_MODE con history)
+- ✅ **FIX 6** (DDB `JMC/config_pro`): Prompt Gemini ajustado — `"hola"` solo → `intent=greeting` (no `catalog`)
+- ✅ **FIX 60** (Bot v266): pax_count acepta palabras ("una persona" → 1, "pareja" → 2, etc) + dígitos
+**Validado E2E con buyer test (tu número 573003723786 + Juan Carlos real):**
+- "hola" → bot responde personalizado SIN catálogo a buyer activo
+- "cuándo es mi cita" → fecha directa
+- "necesito mover mi cita" → flow scheduling con calendar picker ✅
+#### 🔧 SPRINT 4: Bug #21 Reincidencia — Cache stale post-reconnect WABA
+**Síntoma:** Tras desconectar/reconectar WhatsApp del dashboard, bot deja de responder ~5min con `"Webhook sin tenant resuelto"`. Solo se recupera con cold start manual.
+- ✅ **Bot v267:** `resolve_company()` NO cachea `DEFAULT_COMPANY_ID` en no-match. Solo matches reales se guardan. Performance no afectado, auto-corrección inmediata al siguiente webhook.
+#### 🔒 SPRINT 5: Permisos Granulares por Agente — CERRADO
+Sistema multi-tenant de permisos para que owner cree roles personalizados con checklist visual.
+**Backend (SaaS_API_Handler v278):**
+- ✅ Helper `get_agent_full()` lee rol REAL desde DDB Agents (no del header — antes era falseable desde DevTools)
+- ✅ Helper `can(agent, permission)` con matriz defaults por rol
+- ✅ Helper `require_permission()` para guards en endpoints
+- ✅ `PERMISSIONS_CATALOG`: 10 categorías, ~35 permisos
+- ✅ `ROLE_PRESETS`: Asesor de Ventas / Manager / Supervisor (solo lectura)
+- ✅ 4 endpoints CRUD:
+  - `GET /agents/permissions-catalog`
+  - `GET /agents/permission-presets`
+  - `GET /agents/{id}/permissions`
+  - `PUT /agents/{id}/permissions` (owner only)
+- ✅ 6 endpoints sensibles blindados:
+  - `GET /payments` (`view_payments`)
+  - `GET /analytics` (`view_analytics`)
+  - `POST /payments/mark-paid-manual` (`mark_paid_manual`)
+  - `POST /leads/bulk-import-purchases` (`bulk_import_leads`)
+  - `GET /ads/dashboard` (`view_ads`)
+  - `GET /billing/me` (`view_billing`)
+- ✅ Audit log automático en cambios de permisos
+- ✅ Cache 60s para performance
+- ✅ Fix `permissions` reserved keyword DDB (`ExpressionAttributeNames` con alias `#perms`)
+**Frontend (`32d2cf0`):**
+- ✅ Botón "🔒 Permisos" en lista de agentes (solo si role !== 'owner')
+- ✅ Página `/dashboard/agents/[id]/permissions` con checklist visual
+- ✅ 3 presets aplicables con 1 click
+- ✅ Custom role name input
+- ✅ Contador "X de N permisos habilitados"
+- ✅ Botón sticky guardar
+- ✅ Test E2E validado con agente real Andrés Felipe Pérez
+#### 📅 SPRINT 6: Pending-Schedule Reminders — NUEVO FEATURE
+Detectado por observación: muchos clientes pagaban pero no veían/tocaban el botón Agendar del Flow, asumiendo silencio.
+**Bot v268 + EventBridge:**
+- ✅ `_trigger_scheduling_flow` registra `scheduling_flow_sent_at` en `StudentPaymentState`
+- ✅ Nueva función `handle_cron_pending_schedule()`:
+  - Escanea `PAGADO + schedule_status != AGENDADO + scheduling_flow_sent_at` existente
+  - Reminder 1 (a los 30 min): mensaje + re-dispara `_trigger_scheduling_flow`
+  - Reminder 2 (a los 90 min): ofrece ayuda manual escribiendo el día preferido
+  - Idempotente con counter `pending_reminders_sent` (máx 2)
+- ✅ Routing `POST /cron/pending-schedule` + `_internal_action=cron_pending_schedule`
+- ✅ EventBridge `pending-schedule-reminders` ENABLED (rate 30 min)
+- ✅ Multi-tenant safe (lee `config_pro` del tenant)
+- ✅ Test E2E validado: pago test con `flow_sent_at` -35 min → procesado 1/0 → reminder enviado correctamente
+#### 🧹 Bonus / fixes menores del día
+- ✅ Fix #53 carrusel redundancia (Bot v247): pre-mensaje corto en lugar de reply Gemini fragmentado antes del template
+- ✅ Cleanup lead Jader (rastro de tests previos): scheduled_date actualizado manualmente a jueves 4 jun
+- ✅ Limpieza buckets/tablas legacy con backup defensivo + restore validado
+#### 📌 Lecciones nuevas
+- **#48:** AWS S3 Lifecycle exige mínimo 90d entre Glacier IR → Deep Archive (no 30→90, sino 30→120)
+- **#49:** PITR ≠ Snapshot on-demand. PITR continuo $0.20/GB-mo. Snapshot $0.10/GB una vez. Para tablas TTL/regenerables, snapshot defensivo es mejor ratio
+- **#50:** `aws s3 rm` NO acepta `--no-progress` (solo `sync`/`cp`)
+- **#51:** Cleanup buckets/tablas requiere audit no solo de `grep` sobre código sino también URLs/refs en `KnowledgeBase config_pro` y datos dinámicos. Bucket `atalogo-saas-imagenes` se borró por falsa-negativa, restaurado en 5min
+- **#52:** AWS CLI v2.34: `update-function-configuration --architectures arm64` falla con "Unknown options". Workaround: `update-function-code --architectures arm64` (re-deploy zip)
+- **#53:** Templates Meta carousel traen su propio BODY component. Mandar reply Gemini ANTES duplica info
+- **#54:** Lambda timeout 3s en `WhatsApp_Remarketing` ocultaba bug #15 desde meses. Subir timeout NO cuesta más (Lambda cobra por ms ejecutados, no por timeout configurado)
+- **#55:** `StudentPaymentState` es FUENTE DE VERDAD para "es buyer?" — más confiable que `Leads_CRM_v2.is_buyer` (cleanup de lead deja inconsistencia)
+- **#56:** Pre-Gemini context inject NO basta — Gemini ignora reglas si tiene patrones más fuertes. Necesario guard en `process_ai_response` post-Gemini
+- **#57:** `try/except Exception` silencia errores reales del helper. Logs de diagnóstico (BUYER_CHECK_START / ctx) son obligatorios al iterar fixes
+- **#58:** Lista de intents que devuelve Gemini incluye `"schedule"` y `"reschedule"`. Agregar siempre al GUARD junto con catalog/booking/payment
+- **#59:** Cleanup mal hecho de un lead deja inconsistencia entre tablas (lead recreado sin `is_buyer` pero pago original sigue)
+- **#60:** El prompt de Gemini en `config_pro` puede CONTRADECIR los guards del código. Si el bot responde mal a algo, **primero leer el prompt** antes de tocar lógica del handler. El prompt es declarativo y manda más fuerte que código defensivo
+- **#61:** `resolve_company` no debe cachear `DEFAULT_COMPANY_ID` cuando GSI no encuentra match. Cache distribuido en containers Lambda es imposible de invalidar atomically — la solución es **no cachear fallbacks/errores**
+- **#62:** `get_agent_context` leía del HEADER (falseable desde DevTools). Vulnerabilidad de seguridad cerrada — ahora lee del JWT Cognito (firmado, no falseable) + valida contra DDB
+- **#63:** `permissions` es palabra reservada en DynamoDB. Sumar a la lista de regla #5 junto con `status` y `source`. Siempre usar `ExpressionAttributeNames` con alias `#perms`
+- **#64:** Próxima migración pendiente: bug latente `leads_table` referenciada como global en L50, L1431, L1608 del Bot sin declarar. Falla silenciosa en paths donde corre
+#### 📊 Métricas del día
+- **Lambdas en producción:** 4 (todas arm64)
+- **Versiones publicadas:** Bot v247 → v268 (21 versiones), API v275 → v278 (3 versiones), Remarketing v6 → v9
+- **EventBridge rules nuevas:** 1 (`pending-schedule-reminders` rate 30 min)
+- **Bugs cerrados:** ~12 críticos + 6 menores
+- **Features nuevas:** Permisos granulares + Cron pending-schedule
+- **Líneas de código modificadas:** ~800 (Backend + Frontend)
+- **Snapshots defensivos DDB:** 10 creados (35d retención)
+- **Backups defensivos S3:** ~13 archivos + 3 JSONs (35d retención)
+#### ⏳ Pendientes próximo sprint
+1. **Sidebar dinámico frontend** — ocultar items según `permissions` del agente logueado (cierra UX permisos)
+2. **Bug #58 race conditions paralelas** — 2 mensajes seguidos del cliente → 2 threads procesando. Requiere refactor del debounce con lock atómico DDB
+3. **Bug #66 dedup send_text** — vinculado a #58 (mismo bug arquitectural)
+4. **Sprint Video IA pipeline** (sprint original — pospuesto):
+   - Secrets Manager (Fal.ai key)
+   - FFmpeg arm64 layer
+   - SQS queue + DLQ
+   - `Fal_Webhook_Handler` Lambda nueva arm64
+   - Endpoint `/ads/video/generate`
+5. **Cost Foundations Fase 2** (cuando lleguemos a ~10K clientes):
+   - CloudFront CDN delante S3
+   - DAX cache para `KnowledgeBase config_pro`
+   - DDB PROVISIONED + auto-scaling
+6. **Cost Foundations Fase 3** (cuando lleguemos a ~100K clientes):
+   - Lambda → Fargate Spot para alto tráfico
+   - Cognito → auth propio (Better Auth)
+   - Cloudflare R2 reemplaza S3
+7. **Migración manual:** 91 leads `Leads_CRM` v1 → v2 (tabla kept_alive desde hace meses)
+8. **Frontend campo `catalog_pre_message`** editable desde `/dashboard/settings`
+#### 🛡️ Recursos defensivos retenidos
+- **DynamoDB snapshots** 35 días: `cost-foundations-step3-20260528-223754-*` (10 tablas)
+- **S3 backups** indefinido: `s3://clientes-bot-backups-235565749479/cost-foundations-cleanup/20260528-220858/`
+- **Lambda versions** rollback:
+  - `WhatsApp_Typebot_Bridge:251` (pre-arm64)
+  - `WhatsApp_Typebot_Bridge:267` (pre-pending-schedule)
+  - `SaaS_API_Handler:275` (pre-arm64)
+  - `SaaS_API_Handler:276` (pre-permissions)
+#### 🏆 Producción actual
+**API v278 + Bot v268 + Remarketing v9 + Frontend `32d2cf0`**
+Todas las Lambdas en **arm64 Python 3.14** con layers nuevos.
+JMC corriendo sin downtime durante toda la sesión maratón.
+
+
 ### 24-25 mayo 2026 — Bug Wompi + Video IA Test + Pricing definitivo + Publishing Engine 🦁💰🎬
 **API v275 + Bot v246 + Frontend `2a077ea`** (sesión ~8h noche)
 **Bug Wompi pagos (CRÍTICO — cliente real Oscar perdido):**
