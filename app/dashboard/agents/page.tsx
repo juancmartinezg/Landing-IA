@@ -145,6 +145,11 @@ export default function AgentsPage() {
                   <button onClick={() => openEdit(a)} className="text-[9px] px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all">
                     ✏️ Editar
                   </button>
+                  {a.role !== 'owner' && (
+                    <Link href={`/dashboard/agents/${a.agent_id}/permissions`} className="text-[9px] px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 font-bold transition-all">
+                      🔒 Permisos
+                    </Link>
+                  )}
                   <button onClick={() => handleDelete(a)} className="text-[9px] px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 font-bold transition-all">
                     🗑️
                   </button>
