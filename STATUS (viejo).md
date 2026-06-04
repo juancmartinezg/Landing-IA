@@ -2,70 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**API $LATEST (backup v281) + Bot $LATEST (backup v279) + Remarketing v9 + Frontend `98861f6`** — Meta CAPI anti-doble-conteo + Conversiones de chat CTWA (4 jun 2026)
-### 4 jun 2026 — Meta CAPI: anti-doble-conteo + Conversiones de chat CTWA 🦁📈
-**API $LATEST (backup v281) + Bot $LATEST (backup v279) + Frontend `98861f6`**
-
-#### 📊 SPRINT 8: CAPI Quality — Diagnóstico + fixes de Match Quality
-- [x] **Diagnóstico CAPI completo** (8 problemas detectados): `action_source` incorrecto, value=anticipo, PII incompleta, dataset no configurado
-- [x] **Fix `action_source=chat`** para flujos de WhatsApp (antes mandaba `website` — Match Quality Score degradado)
-- [x] **`business_messaging` routing**: leads con `ctwa_clid` van al dataset de mensajería `777664744587669` (Página asociada) → mejor atribución CTWA
-- [x] **Config JMC activada**: `capi_messaging_dataset_id=777664744587669` + `capi_business_messaging=true` en `config_pro`
-- [x] **Fix value=regular_price** en botón Sincronizar con Meta (`/leads/sync-meta`) — antes enviaba anticipo
-
-#### 🔗 SPRINT 9: Event_id canónico — Anti-doble-conteo cross-path
-Bot en vivo + 3 caminos API ahora calculan el **mismo `event_id` canónico** para la misma venta: `purchase_{payment_reference}_{doc4}`.
-- [x] **`_canonical_purchase_eid(payment_ref, phone, doc)`** — helper idéntico en bot + API. Ancla: `payment_reference` (estable, no fecha). `doc` diferencia multi-pax
-- [x] **4 caminos unificados:** bot M24, `/leads/sync-meta`, `/leads/bulk-import-purchases`, `/leads/report-purchase`
-- [x] **Dedup real via `MetaEventsLog`**: bot envía + registra → Sincronizar consulta → mismo event_id → omite duplicado
-- [x] **`business_messaging` routing en API**: 3 caminos del API envían al dataset de mensajería si lead tiene `ctwa_clid` + flag activo
-- [x] **Fix value en report-purchase**: leía clave equivocada (`price` → 0); ahora usa `regular_price` del catálogo
-
-#### ⚡ SPRINT 10: Botón "Activar conversiones de chat" — Multi-tenant autodiscovery
-- [x] **Endpoint `POST /meta/enable-chat-conversions`**: autodescubre dataset de mensajería del tenant probando cada dataset con `business_messaging` + `ctwa_clid` real. Solo el dataset con Página asociada acepta (HTTP 200). Cero pasos manuales en Meta
-  - Reúne candidatos de: `/{waba}/dataset` + `/{waba}?fields=owner_business_info` → `/{biz}/adspixels` (clave: dueño real del WABA puede diferir del `business_id` de config si hay agencia)
-  - Estados: `activated` | `already_active` | `no_clid` | `not_eligible` | `missing_config`
-- [x] **Botón frontend** en Dashboard → Conectar WhatsApp (`98861f6`): tarjeta "Conversiones de chat" con badge Activas/Inactivas + botón "⚡ Activar" o "🔄 Volver a verificar"
-- [x] Validado contra cuenta JMC real: de 3 candidatos, detectó `777664744587669` correctamente
-
-#### 🔑 Diagnóstico token `page_events`
-- Investigado: la App no tenía `page_events` disponible en ningún "Caso de uso"
-- **No fue necesario**: dataset del WABA ya tiene Página asociada automáticamente. `business_messaging` funciona sin `page_events`
-
-#### 🛡 Recursos defensivos
-- **Lambda backups** rollback en 1 comando:
-  - `WhatsApp_Typebot_Bridge:278` (pre business_messaging), `:279` (pre canonical_eid)
-  - `SaaS_API_Handler:279` (pre sync-meta value fix), `:280` (pre canonical_eid), `:281` (pre enable-chat-conversions)
-
-#### 🏆 Producción actual
-**API $LATEST (backup v281) + Bot $LATEST (backup v279) + Remarketing v9 + Frontend `98861f6`**
-CAPI anti-doble-conteo activo. Conversiones de chat activadas para JMC.
-
-### 3 jun 2026 — Sprint SQS FIFO Nivel 4 + Sidebar dinámico 🦁⚡
-**API v278 + Bot v277 + Remarketing v9 + Frontend `6599ea7`**
-#### 🔒 Sidebar dinámico por permisos (Frontend `6599ea7`)
-- ✅ Helper `canSeeMenuItem()` filtra items del sidebar por `permissions_effective` del agente
-- ✅ Fetch de permisos al montar layout (solo si role=agent/viewer)
-- ✅ Owner/admin ven TODO (corto-circuito)
-- ✅ Campo `permission` en cada menuItem (24 items mapeados)
-- ✅ Ambos sidebars (desktop + mobile) usan el mismo filtro
-#### 🚀 SPRINT 7: SQS FIFO Nivel 4 — Race conditions eliminadas
-Refactor arquitectural del debounce: de invoke async con sleep 5s → SQS FIFO con sliding window.
-**Infra (FASE 1):**
-- ✅ Cola `bot-messages.fifo` (ContentBasedDeduplication ON, VisibilityTimeout 60s, retention 4d)
-- ✅ DLQ `bot-messages-dlq.fifo` (retention 14d, maxReceiveCount 3)
-- ✅ IAM Policy `SQSBotMessagesAccess` en role del bot
-- ✅ Env vars `BOT_MESSAGES_QUEUE_URL` + `DEBOUNCE_MODE`
-- ✅ Event source mapping `adbb7d8c-4684-4727-93da-2ac9df6553d6` (SQS→Lambda)
-**Código (PASOS 1-5 + fixes):**
-- ✅ **PASO 1** (Bot v272): Refactor `_process_consolidated_message()` extraída de `debounce_execute` — función pura reutilizable sin recursión
-- ✅ **PASO 2** (Bot v273): Handler `_handle_sqs_batch()` + detector `eventSource=aws:sqs` al inicio de `lambda_handler`
-- ✅ **PASO 3** (Bot v274): Feature flag `DEBOUNCE_MODE` en entry-point — branch `legacy` vs `sqs_fifo` con fallback automático
-- ✅ **PASO 4**: Event source mapping creado (Disabled → Enabled)
-- ✅ **PASO 5** (Bot v276): Toggle `DEBOUNCE_MODE=sqs_fifo` + fix `debounce_processed` limpiado pre-SQS
-- ✅ **Bot v277**: Sliding window — buffer DDB + flush async 5s. Consolida ráfagas ("hola" + "quiero info" + "del seminario" → 1 respuesta)
-**Resultado validado E2E:**
-
+**API v275 + Bot v246 + Frontend `2a077ea`** — Sprint Ads Pro v3 + Biblioteca + Video IA + Pricing + Publishing Engine 🦁🎬📚💰 (23-25 mayo, 3 sesiones ~30h efectivas).(23-24 mayo, sesión maratón ~25h efectivas en 36h — madrugada + mañana + noche). **5 bugs revenue-critical full-stack + 2 bugs históricos cerrados como bonus.** Bug #69 (copies 4 campos completos: headline+primary 400-600+description+cta_button enum 8 opciones) + Bug #70 (refs reales como inlineData a Gemini, multi-tenant agnostico, 100/10 visualmente) + Bug #71 (3 formatos Meta HD nativos: 1080×1080/1080×1920/1920×1080 vía Pillow crop wide-composition, costo $0 extra) + Bug #72 (wizard_launch acepta arrays paralelos image_urls_vertical/horizontal/video_urls + Meta Advantage+ asset_feed_spec) + Bug #73 (upload video manual MP4/MOV via presigned S3 + /ads/video/register persiste en biblioteca + video_data en campaigns/publish para Meta /advideos). Bug doble flujo scheduling cerrado: PII Flow movido al FINAL del async post_booking (Single + Multi unificados con Flow recursivo, eliminada rama AWAITING_LEAD_DETAILS/CAPTURING_ATTENDEES). Bug histórico /register routing usaba endswith capturando /ads/video/register. Frontend mobile lag (loop infinito useEffect en servicios). **Tabla AdsCreativeGenerations** creada (PK company_id, SK generation_id, GSIs campaign_id-generated_at + vertical-generated_at, PITR ✅, TTL 365d) — base Hypothesis Engine + Pattern Marketplace + Benchmark + Fatigue Prediction. **Vertex AI Imagen 3** configurado como helper futuro (Service Account + Secrets Manager + google-auth-layer:1) — disponible para outpainting con máscara cuando se necesite. **Pillow layer Python 3.14 reconstruido** + fuentes Inter Bold/Regular TTF reales (las .otf de GitHub eran HTML 4xx). **Memoria Lambda** API + Bot 512→1024MB (2x CPU, fix lag mobile). **Biblioteca creativos full-stack**: GET /ads/library?type=image|video|copy|winners + DELETE bulk + cap-aware persist multi-tenant via plan_features (starter=50, growth=500, agency/enterprise/owner_lifetime=-1) + frontend /dashboard/ads/library con 4 tabs (imágenes/videos/copies/ganadores) + multiselect + bulk delete + banner cap warning. **Wizard de Video standalone** /dashboard/ads/video-wizard 4 steps (tipo/brief/upload-o-biblioteca/textos+lanzar) con upload manual MP4/MOV + elegir de biblioteca + placeholders honestos "Generar IA / Avatar HeyGen → Próximamente". **Sidebar reorganizado**: 3 items bajo Ads (Anuncios IA / Biblioteca creativos / Wizard de Video). **Wizard imagen Step 8** UI: copies 4 campos editables (headline 40 + primary_text 400-600 con validador color + description 30 + cta_button select con 8 opciones Meta) + botón "📹 + Video" cuando overlay aplicado. business_vertical=escuela_tiro configurado en JMC (alimenta moat correctamente).
 ### 2 jun 2026 — Sesión MARATÓN (~20h efectivas) 🦁💪
 **API v278 + Bot v268 + Frontend `32d2cf0`** — Cost Foundations + arm64 + UX-Contexto + Permisos Granulares + Pending-Schedule Reminders.
 #### 🏗️ SPRINT 1: Cost Foundations Fase 1 — CERRADO
@@ -193,6 +130,31 @@ Detectado por observación: muchos clientes pagaban pero no veían/tocaban el bo
 **API v278 + Bot v268 + Remarketing v9 + Frontend `32d2cf0`**
 Todas las Lambdas en **arm64 Python 3.14** con layers nuevos.
 JMC corriendo sin downtime durante toda la sesión maratón.
+
+### 3 jun 2026 — Sprint SQS FIFO Nivel 4 + Sidebar dinámico 🦁⚡
+**API v278 + Bot v277 + Remarketing v9 + Frontend `6599ea7`**
+#### 🔒 Sidebar dinámico por permisos (Frontend `6599ea7`)
+- ✅ Helper `canSeeMenuItem()` filtra items del sidebar por `permissions_effective` del agente
+- ✅ Fetch de permisos al montar layout (solo si role=agent/viewer)
+- ✅ Owner/admin ven TODO (corto-circuito)
+- ✅ Campo `permission` en cada menuItem (24 items mapeados)
+- ✅ Ambos sidebars (desktop + mobile) usan el mismo filtro
+#### 🚀 SPRINT 7: SQS FIFO Nivel 4 — Race conditions eliminadas
+Refactor arquitectural del debounce: de invoke async con sleep 5s → SQS FIFO con sliding window.
+**Infra (FASE 1):**
+- ✅ Cola `bot-messages.fifo` (ContentBasedDeduplication ON, VisibilityTimeout 60s, retention 4d)
+- ✅ DLQ `bot-messages-dlq.fifo` (retention 14d, maxReceiveCount 3)
+- ✅ IAM Policy `SQSBotMessagesAccess` en role del bot
+- ✅ Env vars `BOT_MESSAGES_QUEUE_URL` + `DEBOUNCE_MODE`
+- ✅ Event source mapping `adbb7d8c-4684-4727-93da-2ac9df6553d6` (SQS→Lambda)
+**Código (PASOS 1-5 + fixes):**
+- ✅ **PASO 1** (Bot v272): Refactor `_process_consolidated_message()` extraída de `debounce_execute` — función pura reutilizable sin recursión
+- ✅ **PASO 2** (Bot v273): Handler `_handle_sqs_batch()` + detector `eventSource=aws:sqs` al inicio de `lambda_handler`
+- ✅ **PASO 3** (Bot v274): Feature flag `DEBOUNCE_MODE` en entry-point — branch `legacy` vs `sqs_fifo` con fallback automático
+- ✅ **PASO 4**: Event source mapping creado (Disabled → Enabled)
+- ✅ **PASO 5** (Bot v276): Toggle `DEBOUNCE_MODE=sqs_fifo` + fix `debounce_processed` limpiado pre-SQS
+- ✅ **Bot v277**: Sliding window — buffer DDB + flush async 5s. Consolida ráfagas ("hola" + "quiero info" + "del seminario" → 1 respuesta)
+**Resultado validado E2E:**
 
 ### 24-25 mayo 2026 — Bug Wompi + Video IA Test + Pricing definitivo + Publishing Engine 🦁💰🎬
 **API v278 + Bot v277 + Frontend `6599ea7`**(sesión ~8h noche)
@@ -686,12 +648,6 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 #### Pixel por tenant
 - [x] **M17** Embedded Signup crea Pixel automático si tenant nuevo no tiene (Meta Business API en `handle_meta_exchange`) (API v48) ✅
 - [x] **M18** `config_pro.meta_pixel_id` por tenant — `_send_meta_event` lee del config, todos los eventos al pixel del tenant ✅ (implícito por M1)
-#### Dedup + CTWA Attribution (Sesión 4 jun 2026)
-- [x] **M22** `action_source=chat` para flujos WhatsApp + `business_messaging` routing al dataset de mensajería con Página asociada (Bot + API) ✅
-- [x] **M23** `_canonical_purchase_eid(payment_ref, phone, doc)` — event_id canónico cross-path (bot + 3 API paths). Ancla `payment_reference`, dedup via MetaEventsLog ✅
-- [x] **M24** Endpoint `POST /meta/enable-chat-conversions` — autodescubre dataset de mensajería multi-tenant + botón frontend "Activar conversiones de chat" ✅
-- [x] **M25** Fix `value=regular_price` en Sincronizar y CRM manual (antes mandaba anticipo o 0) ✅
-
 #### Validación + observabilidad
 - [ ] **M19** Test event code mode — validar primeros 5 eventos antes de producción
 - [ ] **M20** Dashboard "Match Rate" por tenant en `/admin/tenants/{id}` — qué % de hashes matchearon usuarios reales en Meta
