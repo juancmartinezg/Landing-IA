@@ -20,7 +20,11 @@ export default function WizardPage() {
   const [newBenefit, setNewBenefit] = useState('');
   const [brandAssets, setBrandAssets] = useState<any[]>([]);
   const [selectedRefs, setSelectedRefs] = useState<string[]>([]);
-  const [refMode, setRefMode] = useState<'real' | 'logo' | 'generic'>('real');
+  const [refMode, setRefMode] = useState<'real' | 'logo' | 'generic' | 'own'>('real');
+  // Modo "usar mis propias imágenes": biblioteca IA + brand-assets + subir desde PC
+  const [ownLibrary, setOwnLibrary] = useState<any[]>([]);
+  const [ownLibLoaded, setOwnLibLoaded] = useState(false);
+  const [uploadingOwn, setUploadingOwn] = useState(false);
   const [plan, setPlan] = useState<any>(null);
   const [previewImages, setPreviewImages] = useState<any[]>([]);
   const [selectedImages, setSelectedImages] = useState<number[]>([]);
@@ -110,6 +114,49 @@ export default function WizardPage() {
   const addBenefit = () => { if (newBenefit.trim() && benefits.length < 10) { setBenefits([...benefits, newBenefit.trim()]); setNewBenefit(''); } };
   const toggleRef = (url: string) => setSelectedRefs(prev => prev.includes(url) ? prev.filter(u => u !== url) : prev.length < 5 ? [...prev, url] : prev);
   const toggleImage = (idx: number) => setSelectedImages(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : prev.length < 3 ? [...prev, idx] : prev);
+  // ── Modo "usar mis propias imágenes" (refMode === 'own') ──────────────
+  // Carga las imágenes generadas antes por IA (biblioteca del tenant)
+  const loadOwnLibrary = async () => {
+    if (ownLibLoaded) return;
+    try {
+      const r = await fetch(`${API_URL}/ads/library?type=image`, { headers: h });
+      const d = await r.json();
+      if (d.ok) setOwnLibrary(d.items || []);
+    } catch {}
+    setOwnLibLoaded(true);
+  };
+  // Agrega una URL (de biblioteca o brand-asset) a previewImages como creativo final
+  const addOwnImage = (url: string) => {
+    if (!url) return;
+    setPreviewImages(prev => {
+      if (prev.some((i: any) => i.image_url === url)) return prev; // ya agregada
+      const nextIdx = prev.length ? Math.max(...prev.map((i: any) => i.index ?? 0)) + 1 : 0;
+      return [...prev, { index: nextIdx, image_url: url, ok: true, own: true }];
+    });
+  };
+  const isOwnAdded = (url: string) => previewImages.some((i: any) => i.image_url === url);
+  // Sube una imagen desde el PC: presigned → PUT S3 → registra en biblioteca (reusable)
+  const handleOwnUpload = async (file: File) => {
+    if (!file) return;
+    setUploadingOwn(true);
+    try {
+      const up = await fetch(`${API_URL}/brand-assets/upload-url?file_name=${encodeURIComponent(file.name)}&type=product`, { headers: h });
+      const ud = await up.json();
+      if (!ud.upload_url) { showToast('❌ ' + (ud.error || 'No se pudo iniciar la subida')); setUploadingOwn(false); return; }
+      const put = await fetch(ud.upload_url, { method: 'PUT', headers: { 'Content-Type': ud.content_type || file.type }, body: file });
+      if (!put.ok) { showToast('❌ Error subiendo la imagen'); setUploadingOwn(false); return; }
+      // Registrar en biblioteca para reusarla después
+      try {
+        const reg = await fetch(`${API_URL}/brand-assets`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ asset_type: 'product', name: file.name.slice(0, 80), s3_url: ud.public_url, tags: ['wizard'] }) });
+        const rd = await reg.json();
+        if (rd.ok && rd.asset) setBrandAssets(prev => [rd.asset, ...prev]);
+      } catch {}
+      addOwnImage(ud.public_url);
+      showToast('✅ Imagen subida y agregada');
+    } catch { showToast('Error de conexión'); }
+    setUploadingOwn(false);
+  };
+
   const generateMoreImages = async () => {
     if (!plan) { showToast('⚠️ Primero genera la estrategia'); return; }
     if (previewImages.length >= maxImagesCap) { showToast(`⚠️ Cap alcanzado (${maxImagesCap} imágenes máx)`); return; }
@@ -385,9 +432,9 @@ export default function WizardPage() {
             <div>
               <h2 className="text-lg font-bold mb-2">Referencias visuales</h2>
               <p className="text-xs text-gray-400 mb-4">¿Tienes fotos reales de tu negocio?</p>
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {[{id:'real' as const,l:'🟢 Sí, tengo fotos',d:'Recomendado +400% CTR'},{id:'logo' as const,l:'🟡 Solo mi logo',d:'IA inventa + tu logo'},{id:'generic' as const,l:'🔴 No tengo nada',d:'IA inventa todo (genérico)'}].map(o => (
-                  <button key={o.id} onClick={() => setRefMode(o.id)}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                {[{id:'real' as const,l:'🟢 Sí, tengo fotos',d:'Recomendado +400% CTR'},{id:'logo' as const,l:'🟡 Solo mi logo',d:'IA inventa + tu logo'},{id:'generic' as const,l:'🔴 No tengo nada',d:'IA inventa todo (genérico)'},{id:'own' as const,l:'🖼️ Usar mis imágenes',d:'Subir o elegir de biblioteca'}].map(o => (
+                  <button key={o.id} onClick={() => { setRefMode(o.id); if (o.id === 'own') loadOwnLibrary(); }}
                     className={`p-3 rounded-xl text-center border ${refMode === o.id ? 'border-purple-500 bg-purple-600/10' : 'border-white/5 bg-white/[0.02]'}`}>
                     <p className="text-xs font-bold">{o.l}</p>
                     <p className="text-[9px] text-gray-500">{o.d}</p>
@@ -419,18 +466,74 @@ export default function WizardPage() {
                   <p className="text-[10px] text-red-400">⚠️ Sin fotos reales tu anuncio será más genérico (CTR estimado -40%). ¿Seguro que no puedes subir al menos 1 foto?</p>
                 </div>
               )}
+              {refMode === 'own' && (
+                <div className="mb-4 space-y-4">
+                  <p className="text-xs text-gray-400">Estas imágenes se usarán <b>tal cual</b> como el anuncio (la IA no genera nada). Elige de tu biblioteca o sube desde tu PC.</p>
+                  {/* Subir desde PC */}
+                  <div>
+                    <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer ${uploadingOwn ? 'bg-white/5 opacity-50' : 'bg-purple-600 hover:bg-purple-500'}`}>
+                      {uploadingOwn ? '⏳ Subiendo...' : '📁 Subir desde mi PC'}
+                      <input type="file" accept="image/*" className="hidden" disabled={uploadingOwn}
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOwnUpload(f); e.target.value = ''; }} />
+                    </label>
+                    <p className="text-[9px] text-gray-500 mt-1">Se guarda en tu biblioteca para reusarla después.</p>
+                  </div>
+                  {/* Imágenes generadas antes por IA (biblioteca) */}
+                  {ownLibrary.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-gray-300 mb-2">📚 Generadas antes ({ownLibrary.length})</p>
+                      <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                        {ownLibrary.filter((it: any) => it.s3_url).map((it: any) => (
+                          <button key={it.generation_id || it.s3_url} onClick={() => addOwnImage(it.s3_url)}
+                            className={`relative rounded-lg overflow-hidden border-2 transition-all ${isOwnAdded(it.s3_url) ? 'border-purple-500 ring-2 ring-purple-500/50' : 'border-transparent hover:border-white/20'}`}>
+                            <img src={it.s3_url} alt="" className="w-full aspect-square object-cover" loading="lazy" />
+                            {isOwnAdded(it.s3_url) && <div className="absolute inset-0 bg-purple-600/30 flex items-center justify-center"><span className="text-white text-lg font-bold">✓</span></div>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Brand-assets (fotos del negocio) */}
+                  {brandAssets.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-gray-300 mb-2">🏢 Mis fotos del negocio ({brandAssets.length})</p>
+                      <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                        {brandAssets.map((a: any) => (
+                          <button key={a.asset_id} onClick={() => addOwnImage(a.s3_url)}
+                            className={`relative rounded-lg overflow-hidden border-2 transition-all ${isOwnAdded(a.s3_url) ? 'border-purple-500 ring-2 ring-purple-500/50' : 'border-transparent hover:border-white/20'}`}>
+                            <img src={a.thumbnail_url || a.s3_url} alt={a.name} className="w-full aspect-square object-cover" loading="lazy" />
+                            {isOwnAdded(a.s3_url) && <div className="absolute inset-0 bg-purple-600/30 flex items-center justify-center"><span className="text-white text-lg font-bold">✓</span></div>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {ownLibrary.length === 0 && brandAssets.length === 0 && (
+                    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-3">
+                      <p className="text-[10px] text-gray-400">Aún no tienes imágenes en biblioteca. Sube una desde tu PC para empezar 👆</p>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-purple-300 font-bold">{previewImages.length} imagen{previewImages.length === 1 ? '' : 'es'} lista{previewImages.length === 1 ? '' : 's'} — en el siguiente paso eliges hasta 3.</p>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button onClick={() => setStep(5)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
-                <button onClick={() => { setStep(7); generatePlanAndImages(); }} disabled={generatingImages} className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
-                  {generatingImages ? '⏳ Generando...' : '🎨 Generar imágenes →'}
-                </button>
+                {refMode === 'own' ? (
+                  <button onClick={() => setStep(7)} disabled={previewImages.length === 0} className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
+                    Continuar con mis imágenes →
+                  </button>
+                ) : (
+                  <button onClick={() => { setStep(7); generatePlanAndImages(); }} disabled={generatingImages} className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
+                    {generatingImages ? '⏳ Generando...' : '🎨 Generar imágenes →'}
+                  </button>
+                )}
               </div>
             </div>
           )}
           {step === 7 && (
             <div>
               <h2 className="text-lg font-bold mb-2">Elige tus imágenes</h2>
-              <p className="text-xs text-gray-400 mb-4">Selecciona hasta 3 imágenes para tu campaña. La IA las generó según tu marca y producto.</p>
+              <p className="text-xs text-gray-400 mb-4">Selecciona hasta 3 imágenes para tu campaña.{refMode === 'own' ? ' Son las que tú subiste o elegiste de tu biblioteca.' : ' La IA las generó según tu marca y producto.'}</p>
               {generatingImages || generatingPlan ? (
                 <div className="flex flex-col items-center py-16">
                   <div className="w-12 h-12 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mb-4" />
@@ -457,8 +560,8 @@ export default function WizardPage() {
                     ))}
                   </div>
                   <div className="flex items-center justify-between mb-4">
-                    <p className="text-[10px] text-gray-500">{selectedImages.length}/3 seleccionadas — total generadas: {previewImages.filter((p: any) => p.ok).length}/{maxImagesCap}</p>
-                    {previewImages.length < maxImagesCap && (
+                    <p className="text-[10px] text-gray-500">{selectedImages.length}/3 seleccionadas — total {refMode === 'own' ? 'disponibles' : 'generadas'}: {previewImages.filter((p: any) => p.ok).length}{refMode === 'own' ? '' : `/${maxImagesCap}`}</p>
+                    {refMode !== 'own' && previewImages.length < maxImagesCap && (
                       <div className="flex items-center gap-2">
                         <label className="text-[10px] text-gray-500">Generar</label>
                         <select value={imagesPerRound} onChange={(e) => setImagesPerRound(parseInt(e.target.value))}
@@ -477,7 +580,9 @@ export default function WizardPage() {
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <button onClick={() => setStep(6)} className="flex-1 min-w-[100px] border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
-                    <button onClick={() => { if (confirm('Esto borra TODAS las imágenes actuales y genera nuevas (descuenta 1 wizard). ¿Continuar?')) { setPreviewImages([]); setSelectedImages([]); generatePlanAndImages(); } }} className="border border-white/10 px-4 py-3 rounded-xl text-xs font-bold hover:bg-white/5" title="Borra todas y empieza de cero">🔄 Regenerar todo</button>
+                    {refMode !== 'own' && (
+                      <button onClick={() => { if (confirm('Esto borra TODAS las imágenes actuales y genera nuevas (descuenta 1 wizard). ¿Continuar?')) { setPreviewImages([]); setSelectedImages([]); generatePlanAndImages(); } }} className="border border-white/10 px-4 py-3 rounded-xl text-xs font-bold hover:bg-white/5" title="Borra todas y empieza de cero">🔄 Regenerar todo</button>
+                    )}
                     <button onClick={() => { setStep(8); generateCopies(); }} disabled={selectedImages.length === 0 || generatingCopies} className="flex-1 min-w-[200px] bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
                       {generatingCopies ? '⏳...' : `📝 Generar textos (${selectedImages.length} img) →`}
                     </button>
