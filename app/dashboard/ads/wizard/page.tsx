@@ -733,8 +733,50 @@ export default function WizardPage() {
                   <div className="flex gap-2 flex-wrap">
                     <button onClick={() => setStep(7)} className="flex-1 min-w-[100px] border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
                     {(() => {
-                      const allOverlaid = selectedImages.length > 0 && selectedImages.every((idx) => previewImages.find((i: any) => i.index === idx)?.overlay_applied);
+                      // Modo "own": las imágenes ya tienen los 3 formatos cuando image_vertical existe.
+                      const ownReady = refMode === 'own' && selectedImages.length > 0 &&
+                        selectedImages.every((idx) => { const im = previewImages.find((i: any) => i.index === idx); return im?.image_vertical; });
+                      const allOverlaid = refMode === 'own'
+                        ? ownReady
+                        : (selectedImages.length > 0 && selectedImages.every((idx) => previewImages.find((i: any) => i.index === idx)?.overlay_applied));
                       const someOverlaid = selectedImages.some((idx) => previewImages.find((i: any) => i.index === idx)?.overlay_applied);
+                      // Resize mecánico Pillow (sin texto, sin IA) para generar vertical/horizontal de imágenes propias
+                      const doResizeOnly = async () => {
+                        if (selectedImages.length === 0) return;
+                        setOverlayInProgress(true);
+                        showToast(`⏳ Preparando ${selectedImages.length} imagen${selectedImages.length > 1 ? 'es' : ''} en 3 formatos...`);
+                        let success = 0;
+                        for (let i = 0; i < selectedImages.length; i++) {
+                          const imgIdx = selectedImages[i];
+                          const img = previewImages.find((im: any) => im.index === imgIdx);
+                          if (!img?.image_url) continue;
+                          try {
+                            const ovRes = await fetch(`${API_URL}/ads/overlay-and-resize`, {
+                              method: 'POST',
+                              headers: { ...h, 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                image_url: img.image_url,
+                                include_overlay: false,  // imagen del cliente intacta, solo resize Pillow
+                                service_slug: selectedSlug,
+                              }),
+                            });
+                            const ovData = await ovRes.json();
+                            if (ovData.ok && ovData.square) {
+                              setPreviewImages((prev: any[]) => prev.map((p: any) => p.index === imgIdx ? {
+                                ...p,
+                                image_url: ovData.square,
+                                image_vertical: ovData.vertical || '',
+                                image_horizontal: ovData.horizontal || '',
+                              } : p));
+                              success++;
+                            }
+                          } catch {}
+                        }
+                        setOverlayInProgress(false);
+                        if (success === selectedImages.length) showToast(`✅ ${success} imagen${success > 1 ? 'es' : ''} lista${success > 1 ? 's' : ''} para lanzar.`);
+                        else if (success > 0) showToast(`⚠️ ${success}/${selectedImages.length} listas. Reintenta para completar.`);
+                        else showToast('❌ No se pudieron preparar las imágenes');
+                      };
                       const doOverlay = async () => {
                         if (copies.length === 0 || selectedImages.length === 0) return;
                         setOverlayInProgress(true);
@@ -779,6 +821,15 @@ export default function WizardPage() {
                         else showToast('❌ No se pudo incrustar el texto');
                       };
                       if (!allOverlaid) {
+                        // Modo "own": botón de resize sin texto (imagen intacta). Resto: incrustar texto.
+                        if (refMode === 'own') {
+                          return (
+                            <button onClick={doResizeOnly} disabled={launching || overlayInProgress || selectedImages.length === 0}
+                              className="flex-1 min-w-[200px] bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50">
+                              {overlayInProgress ? '⏳ Preparando...' : '📐 Preparar mis imágenes para lanzar'}
+                            </button>
+                          );
+                        }
                         return (
                           <button onClick={doOverlay} disabled={launching || overlayInProgress || copies.length === 0 || selectedImages.length === 0}
                             className="flex-1 min-w-[200px] bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50">
