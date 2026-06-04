@@ -434,7 +434,7 @@ export default function WizardPage() {
               <p className="text-xs text-gray-400 mb-4">¿Tienes fotos reales de tu negocio?</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                 {[{id:'real' as const,l:'🟢 Sí, tengo fotos',d:'Recomendado +400% CTR'},{id:'logo' as const,l:'🟡 Solo mi logo',d:'IA inventa + tu logo'},{id:'generic' as const,l:'🔴 No tengo nada',d:'IA inventa todo (genérico)'},{id:'own' as const,l:'🖼️ Usar mis imágenes',d:'Subir o elegir de biblioteca'}].map(o => (
-                  <button key={o.id} onClick={() => { setRefMode(o.id); if (o.id === 'own') loadOwnLibrary(); }}
+                  <button key={o.id} onClick={() => { setRefMode(o.id); if (o.id === 'own') { setPreviewImages([]); setSelectedImages([]); loadOwnLibrary(); } }}
                     className={`p-3 rounded-xl text-center border ${refMode === o.id ? 'border-purple-500 bg-purple-600/10' : 'border-white/5 bg-white/[0.02]'}`}>
                     <p className="text-xs font-bold">{o.l}</p>
                     <p className="text-[9px] text-gray-500">{o.d}</p>
@@ -539,10 +539,14 @@ export default function WizardPage() {
                   <div className="w-12 h-12 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mb-4" />
                   <p className="text-sm text-gray-400">{generatingPlan ? 'Creando estrategia con IA...' : 'Generando imágenes con IA (~20s)...'}</p>
                 </div>
-              ) : previewImages.length === 0 ? (
+               ) : previewImages.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-500 text-sm mb-4">No se generaron imágenes. Intenta de nuevo.</p>
-                  <button onClick={generatePlanAndImages} className="bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded-xl text-sm font-bold">🔄 Reintentar</button>
+                  <p className="text-gray-500 text-sm mb-4">{refMode === 'own' ? 'No has elegido imágenes. Vuelve atrás para subir o seleccionar.' : 'No se generaron imágenes. Intenta de nuevo.'}</p>
+                  {refMode === 'own' ? (
+                    <button onClick={() => setStep(6)} className="bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded-xl text-sm font-bold">← Volver a elegir</button>
+                  ) : (
+                    <button onClick={generatePlanAndImages} className="bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded-xl text-sm font-bold">🔄 Reintentar</button>
+                  )}
                 </div>
               ) : (
                 <>
@@ -839,10 +843,12 @@ export default function WizardPage() {
                       }
                       return (
                         <>
-                          <button onClick={doOverlay} disabled={launching || overlayInProgress}
-                            className="border border-white/10 px-4 py-3 rounded-xl text-xs font-bold hover:bg-white/5 disabled:opacity-50" title="Re-incrustar con copies actualizados">
-                            🔄 Re-incrustar
-                          </button>
+                          {refMode !== 'own' && (
+                            <button onClick={doOverlay} disabled={launching || overlayInProgress}
+                              className="border border-white/10 px-4 py-3 rounded-xl text-xs font-bold hover:bg-white/5 disabled:opacity-50" title="Re-incrustar con copies actualizados">
+                              🔄 Re-incrustar
+                            </button>
+                          )}
                           <Link href="/dashboard/ads/video-wizard"
                             className="border border-purple-500/30 px-4 py-3 rounded-xl text-xs font-bold hover:bg-purple-600/10 text-purple-300 whitespace-nowrap"
                             title="Lanzar también una campaña de video">
