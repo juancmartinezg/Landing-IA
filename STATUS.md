@@ -118,26 +118,6 @@ Detectado por observación: muchos clientes pagaban pero no veían/tocaban el bo
 - **Líneas de código modificadas:** ~800 (Backend + Frontend)
 - **Snapshots defensivos DDB:** 10 creados (35d retención)
 - **Backups defensivos S3:** ~13 archivos + 3 JSONs (35d retención)
-#### ⏳ Pendientes próximo sprint
-1. **Sidebar dinámico frontend** — ocultar items según `permissions` del agente logueado (cierra UX permisos)
-2. **Bug #58 race conditions paralelas** — 2 mensajes seguidos del cliente → 2 threads procesando. Requiere refactor del debounce con lock atómico DDB
-3. **Bug #66 dedup send_text** — vinculado a #58 (mismo bug arquitectural)
-4. **Sprint Video IA pipeline** (sprint original — pospuesto):
-   - Secrets Manager (Fal.ai key)
-   - FFmpeg arm64 layer
-   - SQS queue + DLQ
-   - `Fal_Webhook_Handler` Lambda nueva arm64
-   - Endpoint `/ads/video/generate`
-5. **Cost Foundations Fase 2** (cuando lleguemos a ~10K clientes):
-   - CloudFront CDN delante S3
-   - DAX cache para `KnowledgeBase config_pro`
-   - DDB PROVISIONED + auto-scaling
-6. **Cost Foundations Fase 3** (cuando lleguemos a ~100K clientes):
-   - Lambda → Fargate Spot para alto tráfico
-   - Cognito → auth propio (Better Auth)
-   - Cloudflare R2 reemplaza S3
-7. **Migración manual:** 91 leads `Leads_CRM` v1 → v2 (tabla kept_alive desde hace meses)
-8. **Frontend campo `catalog_pre_message`** editable desde `/dashboard/settings`
 #### 🛡️ Recursos defensivos retenidos
 - **DynamoDB snapshots** 35 días: `cost-foundations-step3-20260528-223754-*` (10 tablas)
 - **S3 backups** indefinido: `s3://clientes-bot-backups-235565749479/cost-foundations-cleanup/20260528-220858/`
@@ -151,9 +131,33 @@ Detectado por observación: muchos clientes pagaban pero no veían/tocaban el bo
 Todas las Lambdas en **arm64 Python 3.14** con layers nuevos.
 JMC corriendo sin downtime durante toda la sesión maratón.
 
+### 3 jun 2026 — Sprint SQS FIFO Nivel 4 + Sidebar dinámico 🦁⚡
+**API v278 + Bot v277 + Remarketing v9 + Frontend `6599ea7`**
+#### 🔒 Sidebar dinámico por permisos (Frontend `6599ea7`)
+- ✅ Helper `canSeeMenuItem()` filtra items del sidebar por `permissions_effective` del agente
+- ✅ Fetch de permisos al montar layout (solo si role=agent/viewer)
+- ✅ Owner/admin ven TODO (corto-circuito)
+- ✅ Campo `permission` en cada menuItem (24 items mapeados)
+- ✅ Ambos sidebars (desktop + mobile) usan el mismo filtro
+#### 🚀 SPRINT 7: SQS FIFO Nivel 4 — Race conditions eliminadas
+Refactor arquitectural del debounce: de invoke async con sleep 5s → SQS FIFO con sliding window.
+**Infra (FASE 1):**
+- ✅ Cola `bot-messages.fifo` (ContentBasedDeduplication ON, VisibilityTimeout 60s, retention 4d)
+- ✅ DLQ `bot-messages-dlq.fifo` (retention 14d, maxReceiveCount 3)
+- ✅ IAM Policy `SQSBotMessagesAccess` en role del bot
+- ✅ Env vars `BOT_MESSAGES_QUEUE_URL` + `DEBOUNCE_MODE`
+- ✅ Event source mapping `adbb7d8c-4684-4727-93da-2ac9df6553d6` (SQS→Lambda)
+**Código (PASOS 1-5 + fixes):**
+- ✅ **PASO 1** (Bot v272): Refactor `_process_consolidated_message()` extraída de `debounce_execute` — función pura reutilizable sin recursión
+- ✅ **PASO 2** (Bot v273): Handler `_handle_sqs_batch()` + detector `eventSource=aws:sqs` al inicio de `lambda_handler`
+- ✅ **PASO 3** (Bot v274): Feature flag `DEBOUNCE_MODE` en entry-point — branch `legacy` vs `sqs_fifo` con fallback automático
+- ✅ **PASO 4**: Event source mapping creado (Disabled → Enabled)
+- ✅ **PASO 5** (Bot v276): Toggle `DEBOUNCE_MODE=sqs_fifo` + fix `debounce_processed` limpiado pre-SQS
+- ✅ **Bot v277**: Sliding window — buffer DDB + flush async 5s. Consolida ráfagas ("hola" + "quiero info" + "del seminario" → 1 respuesta)
+**Resultado validado E2E:**
 
 ### 24-25 mayo 2026 — Bug Wompi + Video IA Test + Pricing definitivo + Publishing Engine 🦁💰🎬
-**API v275 + Bot v246 + Frontend `2a077ea`** (sesión ~8h noche)
+**API v278 + Bot v277 + Frontend `6599ea7`**(sesión ~8h noche)
 **Bug Wompi pagos (CRÍTICO — cliente real Oscar perdido):**
 - ✅ **Raíz:** webhook Wompi llega con `payment_link_id` pero bot buscaba solo por `payment_reference` (que Wompi cambia) y `phone_number` (que no matchea si pagó con Nequi de 3ro — esposa/familiar)
 - ✅ **Fix Bot v244:** `WompiGateway.parse_webhook` devuelve `payment_link_id` + persistencia `wompi_payment_link_id` en `StudentPaymentState` al crear link + webhook cascada 3 niveles: reference → payment_link_id → phone
