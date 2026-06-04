@@ -15,6 +15,8 @@ export default function WhatsAppPage() {
   const [pinState, setPinState] = useState<{ required: boolean; phoneNumberId: string }>({ required: false, phoneNumberId: '' });
   const [pin, setPin] = useState('');
   const [submittingPin, setSubmittingPin] = useState(false);
+  const [enablingChat, setEnablingChat] = useState(false);
+  const [chatConvMsg, setChatConvMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const sessionData = useRef<any>(null);
   const showToast = (msg: string) => {
     setToast(msg);
@@ -163,6 +165,26 @@ export default function WhatsAppPage() {
       showToast('Error desconectando');
     }
   };
+  // Activar conversiones de chat (CTWA): autodescubre el dataset de mensajeria
+  const handleEnableChatConversions = async () => {
+    setEnablingChat(true);
+    setChatConvMsg(null);
+    try {
+      const res = await fetch(`${API_URL}/meta/enable-chat-conversions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      setChatConvMsg({ ok: !!data.ok, text: data.message || (data.ok ? 'Activado' : 'No se pudo activar') });
+      if (data.ok && data.dataset_id) {
+        setConfig((c: any) => ({ ...c, capi_business_messaging: true, capi_messaging_dataset_id: data.dataset_id }));
+      }
+    } catch {
+      setChatConvMsg({ ok: false, text: 'Error de conexión.' });
+    }
+    setEnablingChat(false);
+  };
   if (loading) return <div className="text-center py-12 text-gray-500">Cargando...</div>;
   return (
     <div>
@@ -251,6 +273,48 @@ export default function WhatsAppPage() {
               className="mt-6 text-xs text-red-400 hover:text-red-300 font-bold">
               Desconectar WhatsApp
             </button>
+          </div>
+          {/* Conversiones de chat (CTWA) — atribución de ventas por anuncios de WhatsApp */}
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 mb-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-blue-500/15 rounded-full flex items-center justify-center shrink-0">
+                <span className="text-2xl">📈</span>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg font-bold">Conversiones de chat</h2>
+                  {config?.capi_business_messaging && config?.capi_messaging_dataset_id ? (
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full">Activas</span>
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-gray-500/15 text-gray-400 px-2 py-0.5 rounded-full">Inactivas</span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-400 mt-1">
+                  Atribuye automáticamente las ventas que llegan por anuncios de Click-to-WhatsApp a la campaña que las originó, para que Meta optimice mejor tu inversión. Sin tocar el Administrador de eventos.
+                </p>
+                {config?.capi_business_messaging && config?.capi_messaging_dataset_id ? (
+                  <div className="mt-4">
+                    <p className="text-xs text-gray-500">
+                      Conjunto de datos: <span className="font-mono text-gray-300">{config.capi_messaging_dataset_id}</span>
+                    </p>
+                    <button onClick={handleEnableChatConversions} disabled={enablingChat}
+                      className="mt-3 bg-white/5 border border-white/10 hover:bg-white/10 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+                      {enablingChat ? '⏳ Verificando...' : '🔄 Volver a verificar'}
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={handleEnableChatConversions} disabled={enablingChat}
+                    className="mt-4 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50">
+                    {enablingChat ? '⏳ Activando...' : '⚡ Activar conversiones de chat'}
+                  </button>
+                )}
+                {chatConvMsg && (
+                  <p className={`mt-3 text-xs font-medium ${chatConvMsg.ok ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {chatConvMsg.ok ? '✓ ' : '⚠️ '}{chatConvMsg.text}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
           <h3 className="font-bold mb-4">Acciones rápidas</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
