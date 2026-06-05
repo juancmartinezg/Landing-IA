@@ -205,18 +205,40 @@ export default function WizardPage() {
     setGeneratingImages(false); setGeneratingPlan(false);
   };
   const generateCopies = async () => {
-    if (!plan) return; setGeneratingCopies(true);
+    setGeneratingCopies(true);
+    // Modo "own": no se generó plan (nos saltamos generatePlanAndImages).
+    // Generar un plan mínimo con generate-strategy para tener copy_angles/cta/tone.
+    let p = plan;
+    if (!p) {
+      try {
+        const sr = await fetch(`${API_URL}/ads/wizard/generate-strategy`, {
+          method: 'POST',
+          headers: { ...h, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ strategy, channels, language, product_slug: selectedSlug, benefits, use_brand_dna: true }),
+        });
+        const sd = await sr.json();
+        if (sd.ok && sd.plan) {
+          p = sd.plan;
+          setPlan(p);
+        }
+      } catch {}
+      if (!p) {
+        showToast('❌ No se pudo preparar la estrategia para los textos');
+        setGeneratingCopies(false);
+        return;
+      }
+    }
     try {
       const svc = services.find((s: any) => s.slug === selectedSlug);
       const r = await fetch(`${API_URL}/ads/wizard/generate-copies`, {
         method: 'POST',
         headers: { ...h, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          copy_angles: plan.copy_angles || [],
+          copy_angles: p.copy_angles || [],
           product_name: svc?.name || selectedSlug || 'Mi producto',
           service_slug: selectedSlug,  // enriquece prompt con precio + descripcion del catalogo
-          cta_text: plan.cta_text || 'Reserva ahora',
-          tone: plan.tone || 'profesional',
+          cta_text: p.cta_text || 'Reserva ahora',
+          tone: p.tone || 'profesional',
           language,
           channel: channels.includes('instagram') ? 'instagram' : 'facebook',
           benefits,
