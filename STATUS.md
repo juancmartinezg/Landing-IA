@@ -2,10 +2,43 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**API $LATEST (backup v281) + Bot $LATEST (backup v279) + Remarketing v9 + Frontend `98861f6`** — Meta CAPI anti-doble-conteo + Conversiones de chat CTWA (4 jun 2026)
+**API v291 + Bot $LATEST (backup v279) + Remarketing v9 + Frontend `c479bdb`** — Ads Pro: Auditoría + 7 fixes revenue-critical (5 jun 2026)
+### 5 jun 2026 — Sprint Ads Pro: Auditoría externa + 7 fixes 🦁📢
+**API v286→v291 + Frontend `c479bdb`**
+Auditoría profunda del módulo Ads (4 auditores externos + código real) → confirmados bugs reales, descartadas falsas alarmas, detectado código muerto. 6 bugs cerrados + 1 feature nueva.
+#### 🔴 SPRINT A1: Efecto COP (CRÍTICO multi-tenant) — API v286
+- ✅ **Umbrales de gasto/CPM agnósticos a moneda** en 3 sitios (`handle_ads_analyze` L14933 `spend>15` + L14949 `cpm>15`, `handle_ads_dashboard` L18470 `c_spend>15`). En COP cualquier campaña superaba $15 al instante → falsas alarmas masivas de "PAUSAR" para todo cliente LATAM. Fix: usar señal real (impresiones+leads+CTR), sin número mágico de dinero.
+- ✅ Validado E2E con JMC: campañas $0 ya NO disparan falsa alarma; solo alerta correcta de "oportunidad CPL bajo".
+#### 🟡 SPRINT A2: 4 bugs de robustez — API v287
+- ✅ **budget_daily sin guard** (`handle_wizard_launch` L48): `try/except` → no más 500 con input no numérico
+- ✅ **age_min > age_max** sin validar: swap automático + clamp a rango Meta 13-65
+- ✅ **clamp bruto primary_text** rompía palabras/CTA: ahora corta en espacio
+- ✅ **min(1.2, 1.3) redundante** en escalado (el 1.3 nunca aplicaba): limpiado a `int(current*1.2)`
+#### ✏️ SPRINT A3: Copies profesionales — API v288 + v291
+- ✅ **Copies truncados** (v288): `maxOutputTokens` 6000→16000 en `generate-copies` (5 variantes ricas en español no cabían en 6000 → cortaba la variante 5 a media palabra)
+- ✅ **Copies pobres** (v291): `primary_text` 600→1300 chars (Meta permite ~2200; 600 era absurdo para precio+incluye+ubicación+CTA) + **formato dinámico** (prompt pide saltos de línea + emojis de lista ✅⏰📍💰🎯) + **clamp en frase completa** (corta en último `.`/`!`/`?`, no a media idea) + **headline estricto** (prompt fuerza ≤40 chars completo, como pedir a una IA "máx 40")
+- ✅ Validado E2E: 5 variantes 657-797 chars, con emojis estructurados, saltos de línea y CTA completo. De párrafo plano cortado → publicidad profesional.
+#### 🖼️ SPRINT A4: Refs de imágenes fantasma — API v290 + Frontend `c479bdb`
+- ✅ **Bug "instructor fantasma"**: el wizard ignoraba las refs seleccionadas por el usuario. `select_relevant_refs` auto-elegía `items[0]` de cada tipo de la galería completa; las `brand_asset_urls` del body solo se usaban como fallback si refs estaba vacío (nunca lo estaba). Fix: **priorizar la selección del usuario** sobre el auto-select (preview L2355 + final L2466). Validado: `types=['location','location','location']` (las 3 que elegiste) en vez de `['location','team']`.
+- ✅ **Feature "♻️ Regenerar no marcadas"** (Frontend `c479bdb`): conserva las imágenes que te gustaron, regenera solo el resto (antes "Regenerar todo" borraba TODO, incluidas las buenas).
+#### ❌ Falsas alarmas de auditoría (NO tocadas — verificadas en código real)
+- `gemini-3.1-flash-image-preview` "da 404": FALSO, funciona (API correcta de Gemini con `responseModalities`, genera imágenes en prod)
+- "Falta Learning Engine / Atribución / Cross-tenant / CAPI": YA EXISTEN (Motor 1-5, `AdsAttribution`, `AdsCrossTenantPool`, Enhanced CAPI). Los auditores vieron fragmentos, no el sistema.
+#### 🪦 Código muerto detectado (inofensivo, pendiente limpiar)
+7 funciones sin referencias en `SaaS_API_Handler`: `consume_pack_message`, `_resolve_text_position`, `_auto_fit_text`, `within_quota`, `_get_totp_code`, `handle_ads_ad_preview`, `handle_ads_resize_image`. Confirmado: router usa `elif "ruta" in path` explícito (sin dispatch dinámico) → si no están en un `elif`, no se ejecutan. **Nota: `ad-preview` y `resize-image` están marcados [x] en STATUS pero nunca se cablearon al router — features fantasma.**
+#### 📌 Lecciones nuevas
+- **#65:** STATUS.md NO es verdad absoluta. El Efecto COP (3 bugs en prod) no estaba documentado, y `ad-preview`/`resize-image` figuran [x] pero están muertos. **Cuando código y STATUS chocan, gana el código.**
+- **#66:** Umbrales de dinero hardcodeados (`spend>15`) rompen multi-tenant LATAM. Usar señales agnósticas a moneda (impresiones/CTR) o proporción al presupuesto, nunca número fijo en moneda cruda.
+- **#67:** `maxOutputTokens` es límite de seguridad, no de estilo. El prompt pide pero el modelo puede ignorar. Para 5 variantes ricas: dar techo generoso (16000) — el costo es por tokens usados, no por el límite.
+- **#68:** Auditorías externas confunden carencias con código no visto. Auditar contra el código REAL antes de "construir lo que falta" — varias features ya existían.
+- **#69:** Para que la IA respete límites de caracteres, el prompt debe ser ESTRICTO ("MÁXIMO X, frase completa dentro del límite") — como cuando pides manualmente a una IA un título de máx 40 chars y lo cumple.
+#### 🛡 Recursos defensivos
+- **Lambda backups** rollback: `SaaS_API_Handler:285` (pre-Efecto COP), `:287` (pre-copies-pro), `:290` (pre-refs-fix)
+#### 🏆 Producción actual
+**API v291 + Bot $LATEST (backup v279) + Remarketing v9 + Frontend `c479bdb`**
+Módulo Ads: 6 bugs de auditoría cerrados + copies profesionales + refs del usuario respetadas.
 ### 4 jun 2026 — Meta CAPI: anti-doble-conteo + Conversiones de chat CTWA 🦁📈
 **API $LATEST (backup v281) + Bot $LATEST (backup v279) + Frontend `98861f6`**
-
 #### 📊 SPRINT 8: CAPI Quality — Diagnóstico + fixes de Match Quality
 - [x] **Diagnóstico CAPI completo** (8 problemas detectados): `action_source` incorrecto, value=anticipo, PII incompleta, dataset no configurado
 - [x] **Fix `action_source=chat`** para flujos de WhatsApp (antes mandaba `website` — Match Quality Score degradado)
@@ -479,9 +512,9 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] Detección automática rechazos (cron diario)
 - [x] Push FCM cuando hay rechazos
 - [x] Editar anuncios (texto + imagen)
-- [x] Ad preview
+- [~] Ad preview — ⚠️ `handle_ads_ad_preview` definido pero NO cableado al router (función muerta, 5 jun)
 - [x] Edit budget endpoint
-- [x] Endpoint resize-image (3 formatos: 1:1, 9:16, 16:9 con Pillow)
+- [~] Endpoint resize-image — ⚠️ `handle_ads_resize_image` definido pero NO cableado al router (función muerta, 5 jun). Nota: `/ads/overlay-and-resize` SÍ funciona y es el que usa el wizard
 - [x] Saved audiences endpoint
 - [x] Cache Meta API L1 memoria + L2 DynamoDB persistente (TTL 15 min, sobrevive cold starts, 0 rate limits) — API v149
 - [x] Lazy load ads
