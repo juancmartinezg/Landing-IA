@@ -703,11 +703,11 @@ export default function WizardPage() {
                             </div>
                             <div>
                               <label className="text-[9px] text-gray-500 uppercase tracking-widest block mb-1">
-                                Texto principal <span className={`${primaryLen >= 400 && primaryLen <= 600 ? 'text-emerald-400' : 'text-yellow-400'}`}>({primaryLen}/600 — ideal 400-600)</span>
+                                Texto principal <span className={`${primaryLen >= 600 && primaryLen <= 2300 ? 'text-emerald-400' : 'text-yellow-400'}`}>({primaryLen}/2300 — ideal 600-1300)</span>
                               </label>
-                              <textarea value={primaryText} maxLength={600}
+                              <textarea value={primaryText} maxLength={2300}
                                 onChange={(e) => updateCopy('primary_text', e.target.value)}
-                                rows={4} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white resize-none" />
+                                rows={10} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white resize-y whitespace-pre-wrap" />
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                               <div>
