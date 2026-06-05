@@ -37,6 +37,12 @@ export default function WizardPage() {
   const [budgetDaily, setBudgetDaily] = useState('20000');
   const [duration, setDuration] = useState('7');
   const [campaignName, setCampaignName] = useState('');
+  const [adCountry, setAdCountry] = useState('CO');
+  const [adCity, setAdCity] = useState('');
+  const [adRadius, setAdRadius] = useState('25');
+  const [adAgeMin, setAdAgeMin] = useState('18');
+  const [adAgeMax, setAdAgeMax] = useState('65');
+  const [adGender, setAdGender] = useState('all');
   const [generatingPlan, setGeneratingPlan] = useState(false);
   const [imagesPerRound, setImagesPerRound] = useState(5);
   const [maxImagesCap, setMaxImagesCap] = useState(10);
@@ -82,6 +88,12 @@ export default function WizardPage() {
           if (d.budgetDaily) setBudgetDaily(d.budgetDaily);
           if (d.duration) setDuration(d.duration);
           if (d.imageHookMap) setImageHookMap(d.imageHookMap);
+          if (d.adCountry) setAdCountry(d.adCountry);
+          if (d.adCity !== undefined) setAdCity(d.adCity);
+          if (d.adRadius) setAdRadius(d.adRadius);
+          if (d.adAgeMin) setAdAgeMin(d.adAgeMin);
+          if (d.adAgeMax) setAdAgeMax(d.adAgeMax);
+          if (d.adGender) setAdGender(d.adGender);
           showToast('📂 Borrador restaurado');
         }
       } catch {}
@@ -93,14 +105,14 @@ export default function WizardPage() {
     if (!draftHydrated || !draftKey || typeof window === 'undefined') return;
     const t = setTimeout(() => {
       try {
-        const draft = { step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, savedAt: Date.now() };
+        const draft = { step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, adCountry, adCity, adRadius, adAgeMin, adAgeMax, adGender, savedAt: Date.now() };
         localStorage.setItem(draftKey, JSON.stringify(draft));
         setDraftSaved(true);
         setTimeout(() => setDraftSaved(false), 1500);
       } catch {}
     }, 500);
     return () => clearTimeout(t);
-  }, [step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, draftHydrated, draftKey]);
+  }, [step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, adCountry, adCity, adRadius, adAgeMin, adAgeMax, adGender, draftHydrated, draftKey]);
   // Warning si el servicio del borrador ya no existe
   useEffect(() => {
     if (!draftHydrated || !selectedSlug || services.length === 0) return;
@@ -321,11 +333,13 @@ export default function WizardPage() {
           budget_daily: parseInt(budgetDaily) || 20000,
           duration: parseInt(duration) || 7,
           service_slug: selectedSlug,
-          country: 'CO',
+          country: adCountry,
+          city: adCity,
+          radius: adRadius,
           cities: [],
-          age_min: 18,
-          age_max: 65,
-          gender: 'all',
+          age_min: parseInt(adAgeMin) || 18,
+          age_max: parseInt(adAgeMax) || 65,
+          gender: adGender,
           interests: [],
         }),
       });
@@ -783,6 +797,43 @@ export default function WizardPage() {
                         <select value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
                           <option value="7">7 días</option><option value="15">15 días</option><option value="30">30 días</option><option value="0">Indefinida</option>
                         </select>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-white/5">
+                      <h4 className="text-xs font-bold text-gray-300 mb-3">🎯 ¿A quién le mostramos el anuncio?</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                        <div>
+                          <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">País</label>
+                          <select value={adCountry} onChange={(e) => setAdCountry(e.target.value)} className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
+                            <option value="CO">🇨🇴 Colombia</option><option value="MX">🇲🇽 México</option><option value="AR">🇦🇷 Argentina</option><option value="PE">🇵🇪 Perú</option><option value="CL">🇨🇱 Chile</option><option value="EC">🇪🇨 Ecuador</option><option value="ES">🇪🇸 España</option><option value="US">🇺🇸 EE.UU.</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">Ciudad (opcional)</label>
+                          <input value={adCity} onChange={(e) => setAdCity(e.target.value)} placeholder="Ej: Medellín (vacío = todo el país)" className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">Radio (km)</label>
+                          <select value={adRadius} onChange={(e) => setAdRadius(e.target.value)} className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
+                            <option value="10">10 km</option><option value="25">25 km</option><option value="40">40 km</option><option value="80">80 km</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">Edad mínima</label>
+                          <input type="number" min={13} max={65} value={adAgeMin} onChange={(e) => setAdAgeMin(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">Edad máxima</label>
+                          <input type="number" min={13} max={65} value={adAgeMax} onChange={(e) => setAdAgeMax(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">Sexo</label>
+                          <select value={adGender} onChange={(e) => setAdGender(e.target.value)} className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
+                            <option value="all">👥 Todos</option><option value="male">👨 Hombres</option><option value="female">👩 Mujeres</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
