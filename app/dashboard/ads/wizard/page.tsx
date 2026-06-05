@@ -712,9 +712,9 @@ export default function WizardPage() {
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <label className="text-[9px] text-gray-500 uppercase tracking-widest block mb-1">
-                                  Descripción <span className="text-gray-600">({(c.description || '').length}/30)</span>
+                                  Descripción <span className="text-gray-600">({(c.description || '').length}/125)</span>
                                 </label>
-                                <input value={c.description || ''} maxLength={30}
+                                <input value={c.description || ''} maxLength={125}
                                   onChange={(e) => updateCopy('description', e.target.value)}
                                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white" />
                               </div>
