@@ -179,6 +179,33 @@ export default function WizardPage() {
     } catch { showToast('Error de conexión'); }
     setGeneratingImages(false);
   };
+  const regenerarNoMarcadas = async () => {
+    if (!plan) { showToast('⚠️ Primero genera la estrategia'); return; }
+    if (selectedImages.length === 0) { showToast('⚠️ Marca primero las que quieres conservar'); return; }
+    const conservadas = previewImages.filter((img: any) => selectedImages.includes(img.index));
+    const aReemplazar = previewImages.filter((p: any) => p.ok).length - conservadas.length;
+    if (aReemplazar <= 0) { showToast('No hay imágenes para reemplazar'); return; }
+    if (!confirm(`Conservas ${conservadas.length} y regeneras ${aReemplazar} nuevas (descuenta 1 wizard). ¿Continuar?`)) return;
+    setGeneratingImages(true);
+    try {
+      showToast(`⏳ Conservando ${conservadas.length}, generando ${aReemplazar} nuevas...`);
+      const ir = await fetch(`${API_URL}/ads/wizard/generate-images-preview`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ image_prompts: (plan.image_prompts || []).slice(0, aReemplazar), brand_asset_urls: refMode === 'real' ? selectedRefs : [], append: true }) });
+      const id = await ir.json();
+      if (id.ok) {
+        // Reindexar conservadas (0..n) + nuevas a continuación
+        const reindexConservadas = conservadas.map((img: any, i: number) => ({ ...img, index: i }));
+        const offset = reindexConservadas.length;
+        const newImgs = (id.images || []).map((img: any, i: number) => ({ ...img, index: offset + i }));
+        setPreviewImages([...reindexConservadas, ...newImgs]);
+        // Las conservadas pasan a ser índices 0..n-1
+        setSelectedImages(reindexConservadas.map((_: any, i: number) => i));
+        setImageHookMap({});
+        showToast(`✅ ${conservadas.length} conservadas + ${newImgs.length} nuevas`);
+        fetch(`${API_URL}/ads/wizard/check-quota`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' } }).then(r => r.json()).then(d => setQuota(d)).catch(() => {});
+      } else showToast('❌ ' + (id.error || 'Error regenerando'));
+    } catch { showToast('Error de conexión'); }
+    setGeneratingImages(false);
+  };
   const discardDraft = () => {
     if (!confirm('¿Descartar el borrador? Perderás todo el progreso (imágenes, textos, configuración).')) return;
     if (typeof window !== 'undefined' && draftKey) localStorage.removeItem(draftKey);
@@ -608,6 +635,9 @@ export default function WizardPage() {
                     <button onClick={() => setStep(6)} className="flex-1 min-w-[100px] border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
                     {refMode !== 'own' && (
                       <button onClick={() => { if (confirm('Esto borra TODAS las imágenes actuales y genera nuevas (descuenta 1 wizard). ¿Continuar?')) { setPreviewImages([]); setSelectedImages([]); generatePlanAndImages(); } }} className="border border-white/10 px-4 py-3 rounded-xl text-xs font-bold hover:bg-white/5" title="Borra todas y empieza de cero">🔄 Regenerar todo</button>
+                    )}
+                    {refMode !== 'own' && selectedImages.length > 0 && (
+                      <button onClick={regenerarNoMarcadas} disabled={generatingImages} className="border border-purple-500/30 px-4 py-3 rounded-xl text-xs font-bold hover:bg-purple-600/10 text-purple-300 disabled:opacity-50" title="Conserva las marcadas, regenera el resto">♻️ Regenerar no marcadas</button>
                     )}
                     <button onClick={() => { setStep(8); generateCopies(); }} disabled={selectedImages.length === 0 || generatingCopies} className="flex-1 min-w-[200px] bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
                       {generatingCopies ? '⏳...' : `📝 Generar textos (${selectedImages.length} img) →`}
