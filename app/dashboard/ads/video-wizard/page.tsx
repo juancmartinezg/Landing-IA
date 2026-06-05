@@ -30,6 +30,14 @@ export default function VideoWizardPage() {
   const [copies, setCopies] = useState<any[]>([]);
   const [generatingCopies, setGeneratingCopies] = useState(false);
   const [launching, setLaunching] = useState(false);
+  // Video IA state
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiGenerationId, setAiGenerationId] = useState('');
+  const [aiBrief, setAiBrief] = useState('');
+  const [aiStyle, setAiStyle] = useState('cinematic');
+  const [aiModel, setAiModel] = useState('wan');
+  const [aiPolling, setAiPolling] = useState(false);
+  const [aiImageUrl, setAiImageUrl] = useState('');
   useEffect(() => {
     if (!user?.companyId) return;
     fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).then(d => setServices(d.services || [])).catch(() => {});
@@ -110,6 +118,63 @@ export default function VideoWizardPage() {
       showToast('❌ Error: ' + (e.message || 'desconocido'));
     }
     setUploading(false);
+  };
+  const generateVideoAI = async () => {
+    if (!aiImageUrl) { showToast('⚠️ Selecciona una imagen de referencia'); return; }
+    if (!aiBrief) { showToast('⚠️ Describe qué quieres en el video'); return; }
+    setAiGenerating(true);
+    try {
+      const r = await fetch(`${API_URL}/ads/video/generate`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_url: aiImageUrl,
+          brief: aiBrief,
+          model: aiModel,
+          duration: 5,
+          style: aiStyle,
+        }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setAiGenerationId(d.generation_id);
+        showToast(`🎬 Video en cola (~${d.estimated_seconds}s). Esperando...`);
+        pollVideoStatus(d.generation_id);
+      } else {
+        showToast('❌ ' + (d.error || 'Error generando'));
+        setAiGenerating(false);
+      }
+    } catch {
+      showToast('Error de conexión');
+      setAiGenerating(false);
+    }
+  };
+  const pollVideoStatus = (genId: string) => {
+    setAiPolling(true);
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch(`${API_URL}/ads/library?type=video&limit=50`, { headers: h });
+        const d = await r.json();
+        const items = d.items || [];
+        const found = items.find((i: any) => i.generation_id === genId && i.s3_url);
+        if (found) {
+          clearInterval(interval);
+          setVideoUrl(found.s3_url);
+          setAiGenerating(false);
+          setAiPolling(false);
+          showToast('🎬 ¡Video IA generado exitosamente!');
+        }
+      } catch {}
+    }, 10000); // Poll cada 10s
+    // Timeout después de 3 min
+    setTimeout(() => {
+      clearInterval(interval);
+      if (!videoUrl) {
+        setAiPolling(false);
+        setAiGenerating(false);
+        showToast('⏳ El video está tardando más de lo esperado. Revisa tu biblioteca en unos minutos.');
+      }
+    }, 180000);
   };
   const generateCopies = async () => {
     if (!selectedSlug) { showToast('⚠️ Selecciona un servicio primero'); return; }
@@ -196,7 +261,7 @@ export default function VideoWizardPage() {
             {[
               { id: 'upload' as const, icon: '📤', l: 'Subir mi video', d: 'MP4 o MOV, hasta 500MB / 4 min', tag: 'GRATIS', tagColor: 'emerald', enabled: true },
               { id: 'library' as const, icon: '📚', l: 'Elegir de mi biblioteca', d: 'Videos que ya subí en campañas anteriores', tag: 'GRATIS', tagColor: 'emerald', enabled: true },
-              { id: 'ai' as const, icon: '🤖', l: 'Generar con IA', d: 'Reel automático con script + escenas IA', tag: 'PRÓXIMAMENTE', tagColor: 'yellow', enabled: false },
+              { id: 'ai' as const, icon: '🤖', l: 'Generar con IA', d: 'Video IA desde imagen + prompt (Wan Pro ~50s)', tag: 'NUEVO', tagColor: 'purple', enabled: true },
               { id: 'avatar' as const, icon: '🎭', l: 'Avatar IA HeyGen', d: 'Avatar digital que habla a cámara con tu script', tag: 'PRÓXIMAMENTE', tagColor: 'yellow', enabled: false },
             ].map(o => (
               <button key={o.id} disabled={!o.enabled}
@@ -347,6 +412,97 @@ export default function VideoWizardPage() {
           <div className="flex gap-2 mt-6">
             <button onClick={() => setStep(2)} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
             <button onClick={() => { setStep(4); generateCopies(); }} disabled={!videoUrl} className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
+              Siguiente →
+            </button>
+          </div>
+        </div>
+      )}
+      {/* STEP 3 — Generar con IA */}
+      {step === 3 && videoType === 'ai' && (
+        <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
+          <h2 className="text-lg font-bold mb-2">🤖 Generar video con IA</h2>
+          <p className="text-xs text-gray-400 mb-4">Sube una imagen de referencia y describe el movimiento que quieres.</p>
+          {!videoUrl ? (
+            <>
+              <div className="mb-4">
+                <label className="text-xs text-gray-300 font-bold block mb-2">Imagen de referencia *</label>
+                {!aiImageUrl ? (
+                  <div className="space-y-2">
+                    {services.filter((s: any) => s.image_url).map((s: any) => (
+                      <button key={s.slug} onClick={() => { setAiImageUrl(s.image_url); if (!aiBrief) setAiBrief(s.name); }}
+                        className={`w-full p-3 rounded-xl text-left border flex items-center gap-3 ${aiImageUrl === s.image_url ? 'border-purple-500 bg-purple-600/10' : 'border-white/5 bg-white/[0.02] hover:border-white/20'}`}>
+                        <img src={s.image_url} alt={s.name} className="w-16 h-16 rounded-lg object-cover" />
+                        <div>
+                          <p className="text-sm font-bold">{s.name}</p>
+                          <p className="text-[10px] text-gray-500">Usar esta imagen como base</p>
+                        </div>
+                      </button>
+                    ))}
+                    <div className="mt-2">
+                      <label className="text-[10px] text-gray-500 block mb-1">O pega URL de imagen:</label>
+                      <input value={aiImageUrl} onChange={(e) => setAiImageUrl(e.target.value)} placeholder="https://..."
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 border border-purple-500/30 rounded-xl bg-purple-600/5">
+                    <img src={aiImageUrl} alt="ref" className="w-20 h-20 rounded-lg object-cover" />
+                    <div className="flex-1">
+                      <p className="text-xs text-purple-300 font-bold">Imagen seleccionada ✅</p>
+                      <button onClick={() => setAiImageUrl('')} className="text-[10px] text-gray-400 hover:text-white mt-1">Cambiar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="mb-4">
+                <label className="text-xs text-gray-300 font-bold block mb-2">Describe el video *</label>
+                <textarea value={aiBrief} onChange={(e) => setAiBrief(e.target.value)} rows={3}
+                  placeholder="Ej: Persona disparando pistola 9mm en polígono profesional con humo cinematográfico"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Estilo</label>
+                  <select value={aiStyle} onChange={(e) => setAiStyle(e.target.value)}
+                    className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
+                    <option value="cinematic">🎬 Cinematográfico</option>
+                    <option value="dynamic">⚡ Dinámico</option>
+                    <option value="smooth">🌊 Suave</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Modelo</label>
+                  <select value={aiModel} onChange={(e) => setAiModel(e.target.value)}
+                    className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
+                    <option value="wan">🎯 Video IA Pro (~50s, $0.10)</option>
+                    <option value="kling">🏆 Video IA Cinematic (~110s, $0.15)</option>
+                  </select>
+                </div>
+              </div>
+              {aiGenerating ? (
+                <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-6 text-center">
+                  <div className="w-10 h-10 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-sm font-bold text-purple-300">Generando video con IA...</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{aiModel === 'wan' ? '~50 segundos' : '~110 segundos'} • No cierres esta página</p>
+                  {aiGenerationId && <p className="text-[9px] text-gray-600 mt-2 font-mono">ID: {aiGenerationId}</p>}
+                </div>
+              ) : (
+                <button onClick={generateVideoAI} disabled={!aiImageUrl || !aiBrief}
+                  className="w-full bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
+                  🤖 Generar video con IA
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="border border-emerald-500/30 rounded-xl p-4 bg-emerald-500/5">
+              <p className="text-xs text-emerald-400 font-bold mb-3">✅ Video IA generado</p>
+              <video src={videoUrl} controls className="w-full max-h-80 rounded-xl bg-black" />
+            </div>
+          )}
+          <div className="flex gap-2 mt-6">
+            <button onClick={() => { setStep(2); setVideoUrl(''); setAiGenerating(false); }} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
+            <button onClick={() => { setStep(4); generateCopies(); }} disabled={!videoUrl}
+              className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
               Siguiente →
             </button>
           </div>
