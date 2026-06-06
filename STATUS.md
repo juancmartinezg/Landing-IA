@@ -2,7 +2,56 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**API v291 + Bot $LATEST (backup v279) + Remarketing v9 + Frontend `c479bdb`** — Ads Pro: Auditoría + 7 fixes revenue-critical (5 jun 2026)
+**API v298 + Bot $LATEST (backup v279) + Video_Worker + Remarketing v9 + Frontend `5ab42d6`** — Ads Pro v2: Wizard pro + Video IA 15s + 5ta Lambda (6 jun 2026)
+### 6 jun 2026 — Sprint Ads Pro v2: Wizard profesional + Video IA + Video_Worker 🦁🎬
+**API v292→v298 + Video_Worker (Lambda NUEVA) + Frontend `5ab42d6`**
+Sesión maratón continuando Ads. Wizard de imágenes/copies pulido a nivel profesional, módulo de Video IA conectado de punta a punta, y NUEVA Lambda `Video_Worker` (5ta Lambda activa). ~16 deploys totales.
+#### 🖼️ SPRINT B1: Refs de imágenes — honrar selección del usuario
+- ✅ **Triple `[:3]` oculto** (API v292): las refs seleccionadas se recortaban a 3 en 3 capas distintas (`legacy_urls[:3]`, `max_refs=3`, `refs_full[:3]` en `_generate_single_image` L1542). Ahora honra las 5 que elige el usuario. Validado: `count=5 types=[location,location,location,product,logo]`
+- ✅ **Feature "♻️ Regenerar no marcadas"** (Frontend `c479bdb`): conserva las imágenes que gustaron, regenera el resto
+#### ✏️ SPRINT B2: Copies profesionales (API v293)
+- ✅ **description 30→125 chars** (Meta admite más; 30 era muy poco) + frontend alineado
+- ✅ Frontend: `primary_text` textarea 600→2300 + `whitespace-pre-wrap` (respeta saltos) + `rows=10`
+#### 🎯 SPRINT B3: Segmentación de campaña (API v294 + Frontend)
+- ✅ **Targeting estaba hardcodeado** (`country:CO`, `age:18-65`, `gender:all`). El wizard NUNCA preguntaba a quién mostrar el anuncio. `handle_ads_campaign_publish` ignoraba age/genders (hardcode 18/65, sin genders)
+- ✅ Backend: usa age/genders/cities/interests reales del body
+- ✅ Frontend: sección "🎯 ¿A quién le mostramos el anuncio?" — país, ciudad, radio, edad min/max, sexo
+#### 🔤 SPRINT B4: Overlay de texto en imágenes (API v297-v298 + layer nuevo)
+- ✅ **Fuentes faltantes** (CRÍTICO): `_get_overlay_font_path` buscaba Inter en `/var/task/fonts/` pero NO existían en el deploy NI en el layer pillow (STATUS decía que sí — era falso). Caía a `ImageFont.load_default()` → letra minúscula + sombra superpuesta
+- ✅ **Layer nuevo `fonts-inter:1`** (Inter-Bold + Inter-Regular TTF en `/opt/fonts/`) + código busca en `/opt` (v297)
+- ✅ **Wrap inteligente** (v298): 1 línea preferida → reducir → 2 líneas equilibradas (corte semántico). Margen 0.82 (SAFE_WIDTH) + SAFE_HEIGHT dinámico por aspect ratio (horizontal 0.15 / vertical 0.22 / cuadrado 0.18) + floor_size 24 (legible en móvil) + `while True` con break explícito + sombra proporcional
+- ✅ **Re-incrustar limpio** (Frontend): guarda `original_url` sin texto → re-incrusta desde la original (no texto sobre texto)
+- ✅ **Hook sin emojis** (Frontend `5ab42d6`): Inter no renderiza emojis (símbolo "notdef"). Se sanitiza el hook de la imagen (quita emojis), pero el cuerpo del anuncio CONSERVA emojis
+#### 🎬 SPRINT B5: Video IA — Lambda Video_Worker (NUEVA, 5ta activa)
+- ✅ **Pipeline conectado de punta a punta**: `/ads/video/generate` (API, encola SQS) → `Video_Worker` (Fal.ai wan/kling + FFmpeg + S3) → webhook → `AdsCreativeGenerations`
+- ✅ **Cadena rota reparada**: el worker guardaba `video_url` pero `/ads/library` leía `s3_url` + faltaban `asset_type`/`generated_at`. Fix: worker escribe `s3_url` + `asset_type=video` + `generated_at`. 3 videos huérfanos rescatados manualmente
+- ✅ **Acceso S3**: prefijo `videos/*` no estaba en bucket policy → 403 (videos no reproducían). Agregado a la policy
+- ✅ **FFmpeg 15s** (Capa 1): video 5s + cámara lenta del tramo final (setpts 2x) + freeze hasta 15s. Detección de audio vía `ffmpeg -i` (el layer NO trae ffprobe). Con/sin audio. FFMPEG_OK validado por reproceso (cero crédito Fal.ai)
+#### ❌ Confirmado del lado de Fal.ai (NO bug nuestro)
+- `fal-ai/wan-i2v` ahora rechaza (422 content checker) imágenes tácticas que ANTES aceptaba (misma imagen, mismo request, antes COMPLETED). Fal.ai endureció su filtro. `kling` SÍ las acepta
+- Video de kling viene MUDO: el prompt NO pide audio y `submit_to_fal` no manda parámetro de audio
+#### 📌 Lecciones nuevas
+- **#70:** Un límite repetido en N capas (el triple `[:3]`) engaña — un grep de `[:3]` lo cazó. Cuando algo "no se aplica completo", buscar TODAS las capas
+- **#71:** STATUS puede mentir. Decía "fuentes en layer pillow" — NO estaban en ningún lado. Verificar con `find *.ttf` en el deploy real, no confiar en STATUS
+- **#72:** El layer ffmpeg-arm64 trae `ffmpeg` pero NO `ffprobe`. Detectar audio con `ffmpeg -i` (busca "Audio:" en stderr) en vez de ffprobe
+- **#73:** Pillow `load_default()` ignora font_size → letra minúscula. Si el overlay sale chico, la fuente TTF no cargó (ruta/layer)
+- **#74:** Inter no tiene glifos de emoji → "notdef". Sanitizar texto incrustado en imagen (no el del post, que Meta sí renderiza)
+- **#75:** Truco anti-crédito: reprocesar video existente invocando el webhook del worker con un `video_url` ya generado — valida FFmpeg sin gastar Fal.ai
+- **#76:** Fal.ai endurece content checkers sin avisar. "Antes funcionaba" no garantiza "ahora funciona" con el mismo input
+#### 🛡 Recursos defensivos
+- **Lambda backups**: `SaaS_API_Handler` versiones v286-v298 publicadas. `Video_Worker` (Lambda nueva, sin backup previo)
+- **Layer nuevo**: `fonts-inter:1`
+#### ⏳ Pendientes próximo sprint (Ads)
+1. **Audio del video** — revisar doc Fal.ai `wan-i2v` (¿param `enable_audio`? ¿por prompt? ¿no genera?)
+2. **Prompt de video mejorado** — `_generate_video_motion_prompt` genera prompts débiles
+3. **Selector de imágenes del video-wizard** — solo muestra catálogo; falta galería (brand-assets) + biblioteca IA
+4. **Video 15s Capa 2** — intro con logo (1s) + CTA con drawtext (el FFmpeg SÍ soporta libfreetype/drawtext, confirmado en config) + pantalla de cierre
+5. **Imágenes que cortan** — confirmar si era cache del navegador (deploy `5ab42d6` ya tiene el fix de hook completo)
+6. **ffprobe en layer** — agregar al layer ffmpeg-arm64 para detección de audio robusta
+7. **Few-shot ganadores** — `AdsCreativeLibrary` con `pattern=neutro` en todos (clasificación rota); rankear por ctr_x100/leads
+#### 🏆 Producción actual
+**API v298 + Bot $LATEST (backup v279) + Video_Worker + Remarketing v9 + Frontend `5ab42d6`**
+**5 Lambdas activas** (antes 4): +`Video_Worker`. Wizard de ads profesional + Video IA 15s funcional.
 ### 5 jun 2026 — Sprint Ads Pro: Auditoría externa + 7 fixes 🦁📢
 **API v286→v291 + Frontend `c479bdb`**
 Auditoría profunda del módulo Ads (4 auditores externos + código real) → confirmados bugs reales, descartadas falsas alarmas, detectado código muerto. 6 bugs cerrados + 1 feature nueva.
@@ -411,7 +460,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Cron:** EventBridge
 ---
 ## 📐 INFRAESTRUCTURA
-### Lambdas (4 activas — todas con `log_error` → ErrorLog)
+### Lambdas (5 activas + agrega una línea para Video_Worker — Generación de video IA (Fal.ai wan/kling + FFmpeg 15s + S3), arm64.— todas con `log_error` → ErrorLog)
 - `WhatsApp_Typebot_Bridge` — Bot WhatsApp multi-tenant strict (~11,292 líneas, **v242** — `_internal_action=mark_paid_manual` handler para pago externo del asesor (CAPI Purchase + stock + post_flow + mensaje cliente). v241 fix CAPI Match Rate: `_send_meta_event` acepta country/region/zip + fix bug external_id sobreescritura (array de N IDs) + wrapper lee `customer_document_number` canónico. v240 — Fix M4 ad_id→campaign_id via Meta Graph + cache 24h + guarda `source_first_ad_id` separado. Previamente v236 AUDIT-1: guards defensivos `search_memory` + `get_services_catalog` guards defensivos `search_memory` + `get_services_catalog` (empty company_id → return None/[]) + `_cid_pay` blindado arriba del webhook post-pago (Bug 9.A/B raíz cerrado). Previamente Sprint Revenue Protection:
  `_save_lead_attribution` con `if_not_exists` idempotente + fallback campaign_id desde AdsAttribution + pax_count en 3 call sites + anti-hallucination datos servicio completo + Gemini cascada sin reply mentiroso + audio transcrito S3 + imagen S3 privado + rehidratación CRM + TTL 7d sesiones + ACTIVE passive state + WEBHOOK_RAW debug log) — Sprint E completo: captura PII 5 campos single+multi-persona + email confirmación Resend + cron recordatorios cascada WA→template→email + botones 1h (confirmar/reprogramar/cancelar) + no-show + FLOW_STATE_GUARD_UNIVERSAL debounce + funnel_mode 6 modos + Lead Qualifier + Shipping step-machine + payment reuse + regla 24b; Calendly mode: CalendarPicker v7.3 (`min_date`/`max_date`/`unavailable_dates`) + `_get_available_dates` y `_get_available_slots` con cascada svc→tenant→default + `available_weekdays` y `booking_mode` por servicio + handler async `_internal_action=post_booking_messages` (no bloquea flow) + `post_payment_flow=send_group_link` con mensaje custom + `screen` y `selected_slot` del nivel raíz v6.0/7.3 + scheduling_flow_id desde config_pro) — multicanal activo IG+FB via Gemini + multi-carousel por campaign_id + debounce async + anti-silencio + fragmentación + typing/read receipts + cascada 3 LLM + multi-tenant tokens
 - `SaaS_API_Handler` — incluye **`POST /scheduling-flow/setup`** auto-onboarding multi-tenant del WhatsApp Flow CalendarPicker v7.3 (crea + sube JSON + publica + guarda flow_id en config_pro, idempotente)

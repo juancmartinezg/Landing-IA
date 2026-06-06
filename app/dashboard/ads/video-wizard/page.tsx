@@ -474,8 +474,8 @@ export default function VideoWizardPage() {
                   <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Modelo</label>
                   <select value={aiModel} onChange={(e) => setAiModel(e.target.value)}
                     className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
-                    <option value="wan">🎯 Video IA Pro (~50s, $0.10)</option>
-                    <option value="kling">🏆 Video IA Cinematic (~110s, $0.15)</option>
+                    <option value="wan">🎯 Video IA Pro (~50s)</option>
+                    <option value="kling">🏆 Video IA Cinematic (~110s)</option>
                   </select>
                 </div>
               </div>
@@ -483,7 +483,7 @@ export default function VideoWizardPage() {
                 <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-6 text-center">
                   <div className="w-10 h-10 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                   <p className="text-sm font-bold text-purple-300">Generando video con IA...</p>
-                  <p className="text-[10px] text-gray-400 mt-1">{aiModel === 'wan' ? '~50 segundos' : '~110 segundos'} • No cierres esta página</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{aiModel === 'wan' ? '~60 segundos Aprox' : '~120 segundos aprox'} • No cierres esta página</p>
                   {aiGenerationId && <p className="text-[9px] text-gray-600 mt-2 font-mono">ID: {aiGenerationId}</p>}
                 </div>
               ) : (
