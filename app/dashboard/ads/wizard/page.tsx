@@ -893,6 +893,8 @@ export default function WizardPage() {
                           const imgIdx = selectedImages[i];
                           const img = previewImages.find((im: any) => im.index === imgIdx);
                           if (!img?.image_url) continue;
+                          // Siempre incrustar desde la imagen ORIGINAL sin texto (evita texto sobre texto al re-incrustar)
+                          const sourceUrl = img.original_url || img.image_url;
                           const copyIdx = imageHookMap[imgIdx] ?? (i % copies.length);
                           const copyText = copies[copyIdx]?.primary_text || copies[copyIdx]?.text || copies[0]?.primary_text || copies[0]?.text || '';
                           // Hook: primera oración, máx 30 chars
@@ -902,7 +904,7 @@ export default function WizardPage() {
                               method: 'POST',
                               headers: { ...h, 'Content-Type': 'application/json' },
                               body: JSON.stringify({
-                                image_url: img.image_url,
+                                image_url: sourceUrl,
                                 overlay_text: hookText,
                                 include_overlay: true,
                                 service_slug: selectedSlug,  // auto-fill chips precio + ubicacion desde business_profile
@@ -913,6 +915,8 @@ export default function WizardPage() {
                               // Guardar los 3 formatos para que wizard_launch los mande como arrays paralelos
                               setPreviewImages((prev: any[]) => prev.map((p: any) => p.index === imgIdx ? {
                                 ...p,
+                                // Preservar la original sin texto la primera vez (para re-incrustar limpio)
+                                original_url: p.original_url || p.image_url,
                                 image_url: ovData.square,
                                 image_vertical: ovData.vertical || '',
                                 image_horizontal: ovData.horizontal || '',
