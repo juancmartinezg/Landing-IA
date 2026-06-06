@@ -897,8 +897,15 @@ export default function WizardPage() {
                           const sourceUrl = img.original_url || img.image_url;
                           const copyIdx = imageHookMap[imgIdx] ?? (i % copies.length);
                           const copyText = copies[copyIdx]?.primary_text || copies[copyIdx]?.text || copies[0]?.primary_text || copies[0]?.text || '';
-                          // Hook: primera oración, máx 30 chars
-                          const hookText = (copyText.split('.')[0] || copyText).substring(0, 30).trim() || 'Ver más';
+                         // Hook: primera oración completa, SIN emojis (Inter no los renderiza → "notdef")
+                          // El backend hace auto-fit + wrap a 2 líneas.
+                          let hookText = (copyText.split('.')[0] || copyText).trim();
+                          // Quitar emojis/símbolos no soportados por la fuente (conserva letras con acento, ñ, números y puntuación básica)
+                          hookText = hookText.replace(/[^\p{L}\p{N}\s.,!¡?¿:;"'$%&()\-+/]/gu, '').replace(/\s+/g, ' ').trim();
+                          if (hookText.length > 60) {
+                            hookText = hookText.substring(0, 60).replace(/\s+\S*$/, '').trim();
+                          }
+                          if (!hookText) hookText = 'Ver más';
                           try {
                             const ovRes = await fetch(`${API_URL}/ads/overlay-and-resize`, {
                               method: 'POST',
