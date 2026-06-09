@@ -38,6 +38,9 @@ export default function VideoWizardPage() {
   const [aiModel, setAiModel] = useState('wan');
   const [aiPolling, setAiPolling] = useState(false);
   const [aiImageUrl, setAiImageUrl] = useState('');
+  const [brandImages, setBrandImages] = useState<any[]>([]);
+  const [aiLibraryImages, setAiLibraryImages] = useState<any[]>([]);
+  const [imgSourcesLoaded, setImgSourcesLoaded] = useState(false);
   useEffect(() => {
     if (!user?.companyId) return;
     fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).then(d => setServices(d.services || [])).catch(() => {});
@@ -48,6 +51,19 @@ export default function VideoWizardPage() {
       const d = await r.json();
       if (d.ok) setLibraryVideos(d.items || []);
     } catch {}
+  };
+  // Carga fuentes de imágenes base para video IA: brand-assets + imágenes generadas
+  const loadImageSources = async () => {
+    if (imgSourcesLoaded) return;
+    try {
+      const [ba, lib] = await Promise.all([
+        fetch(`${API_URL}/brand-assets`, { headers: h }).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_URL}/ads/library?type=image&limit=50`, { headers: h }).then(r => r.json()).catch(() => ({})),
+      ]);
+      setBrandImages(ba.assets || []);
+      setAiLibraryImages((lib.items || []).filter((it: any) => it.s3_url));
+    } catch {}
+    setImgSourcesLoaded(true);
   };
   const toggleChannel = (ch: string) => setChannels(p => p.includes(ch) ? p.filter(c => c !== ch) : [...p, ch]);
   // VALIDAR + SUBIR video manual
@@ -272,6 +288,7 @@ export default function VideoWizardPage() {
                   }
                   setVideoType(o.id);
                   if (o.id === 'library') loadLibraryVideos();
+                  if (o.id === 'ai') loadImageSources();
                   setStep(2);
                 }}
                 className={`p-5 rounded-xl text-left border transition-all relative ${!o.enabled ? 'opacity-60 cursor-not-allowed border-white/5 bg-white/[0.02]' : 'border-white/10 bg-white/[0.02] hover:border-purple-500/50 hover:bg-purple-600/5'}`}>
@@ -426,19 +443,56 @@ export default function VideoWizardPage() {
             <>
               <div className="mb-4">
                 <label className="text-xs text-gray-300 font-bold block mb-2">Imagen de referencia *</label>
-                {!aiImageUrl ? (
-                  <div className="space-y-2">
-                    {services.filter((s: any) => s.image_url).map((s: any) => (
-                      <button key={s.slug} onClick={() => { setAiImageUrl(s.image_url); if (!aiBrief) setAiBrief(s.name); }}
-                        className={`w-full p-3 rounded-xl text-left border flex items-center gap-3 ${aiImageUrl === s.image_url ? 'border-purple-500 bg-purple-600/10' : 'border-white/5 bg-white/[0.02] hover:border-white/20'}`}>
-                        <img src={s.image_url} alt={s.name} className="w-16 h-16 rounded-lg object-cover" />
-                        <div>
-                          <p className="text-sm font-bold">{s.name}</p>
-                          <p className="text-[10px] text-gray-500">Usar esta imagen como base</p>
+                 {!aiImageUrl ? (
+                  <div className="space-y-4">
+                    {/* Catálogo de servicios */}
+                    {services.filter((s: any) => s.image_url).length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">📦 Del catálogo</p>
+                        <div className="space-y-2">
+                          {services.filter((s: any) => s.image_url).map((s: any) => (
+                            <button key={s.slug} onClick={() => { setAiImageUrl(s.image_url); if (!aiBrief) setAiBrief(s.name); }}
+                              className="w-full p-3 rounded-xl text-left border flex items-center gap-3 border-white/5 bg-white/[0.02] hover:border-white/20">
+                              <img src={s.image_url} alt={s.name} className="w-16 h-16 rounded-lg object-cover" />
+                              <div>
+                                <p className="text-sm font-bold">{s.name}</p>
+                                <p className="text-[10px] text-gray-500">Usar esta imagen como base</p>
+                              </div>
+                            </button>
+                          ))}
                         </div>
-                      </button>
-                    ))}
-                    <div className="mt-2">
+                      </div>
+                    )}
+                    {/* Imágenes generadas por IA (biblioteca) */}
+                    {aiLibraryImages.length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">📚 Mis imágenes generadas ({aiLibraryImages.length})</p>
+                        <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                          {aiLibraryImages.map((it: any) => (
+                            <button key={it.generation_id || it.s3_url} onClick={() => setAiImageUrl(it.s3_url)}
+                              className="rounded-lg overflow-hidden border-2 border-transparent hover:border-purple-500/50 transition-all">
+                              <img src={it.s3_url} alt="" className="w-full aspect-square object-cover" loading="lazy" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Brand assets (fotos del negocio) */}
+                    {brandImages.length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">🏢 Mis fotos del negocio ({brandImages.length})</p>
+                        <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+                          {brandImages.map((a: any) => (
+                            <button key={a.asset_id} onClick={() => setAiImageUrl(a.s3_url)}
+                              className="rounded-lg overflow-hidden border-2 border-transparent hover:border-purple-500/50 transition-all">
+                              <img src={a.thumbnail_url || a.s3_url} alt={a.name} className="w-full aspect-square object-cover" loading="lazy" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* URL manual */}
+                    <div>
                       <label className="text-[10px] text-gray-500 block mb-1">O pega URL de imagen:</label>
                       <input value={aiImageUrl} onChange={(e) => setAiImageUrl(e.target.value)} placeholder="https://..."
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white" />
@@ -474,7 +528,7 @@ export default function VideoWizardPage() {
                   <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Modelo</label>
                   <select value={aiModel} onChange={(e) => setAiModel(e.target.value)}
                     className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
-                    <option value="wan">🎯 Video IA Pro (~50s)</option>
+                    <option value="wan">🎯 Video IA Pro (~50s aprox)</option>
                     <option value="kling">🏆 Video IA Cinematic (~110s)</option>
                   </select>
                 </div>
