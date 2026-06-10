@@ -902,8 +902,8 @@ export default function WizardPage() {
                           let hookText = (copyText.split('.')[0] || copyText).trim();
                           // Quitar emojis/símbolos no soportados por la fuente (conserva letras con acento, ñ, números y puntuación básica)
                           hookText = hookText.replace(/[^\p{L}\p{N}\s.,!¡?¿:;"'$%&()\-+/]/gu, '').replace(/\s+/g, ' ').trim();
-                          if (hookText.length > 60) {
-                            hookText = hookText.substring(0, 60).replace(/\s+\S*$/, '').trim();
+                          if (hookText.length > 100) {
+                            hookText = hookText.substring(0, 100).replace(/\s+\S*$/, '').trim();
                           }
                           if (!hookText) hookText = 'Ver más';
                           try {
