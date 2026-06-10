@@ -2,7 +2,82 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**API v298 + Bot $LATEST (backup v279) + Video_Worker + Remarketing v9 + Frontend `5ab42d6`** — Ads Pro v2: Wizard pro + Video IA 15s + 5ta Lambda (6 jun 2026)
+**API v306 + Bot v284 + Video_Worker (v3/pro + closing-frame) + Remarketing v9 + Frontend `872f68b`** — AI Storyboard Engine planificado + Video funcional + fixes críticos (10 jun 2026)
+### 10 jun 2026 — Sprint Ads: Video funcional + image_hook + AI Storyboard Engine 🦁🎬
+**API v302→v306 + Bot v284 + Video_Worker (múltiples iteraciones) + Frontend `872f68b`**
+Sesión de 2 días (9-10 jun). Video IA funcional con cierre premium. Fix email crítico. image_hook en copies. Roadmap completo del AI Storyboard Engine aprobado.
+#### 🐛 Fix crítico: Email confirmación (Bot v284)
+- ✅ **Bug:** `_handle_pii_confirm` recorría `attendees_list` para enviar email, pero en compras de 1 persona esa lista está vacía → el email NUNCA se enviaba para compras individuales (la mayoría)
+- ✅ **Fix:** fallback al email del titular del buffer PII cuando `attendees_list` está vacío
+- ✅ **Impacto:** afectaba TODA compra de 1 persona desde que existe el flujo PII. Clientes pagaron sin confirmación por email.
+#### ✏️ image_hook en copies (API v302 + Frontend `872f68b`)
+- ✅ **Problema raíz del texto cortado:** el frontend extraía `copyText.split('.')[0]` cortado a 60 chars → "Potencia tu perfil profesional con múltiples" (sin sentido)
+- ✅ **Fix:** Gemini genera `image_hook` (40-90 chars, frase COMPLETA para overlay) junto con los copies. Campo nuevo en `responseSchema` + `required`
+- ✅ **Frontend:** campo editable "Texto para imagen" en paso 8. Al incrustar, usa `image_hook` (no el split cortado). Fallback si copies viejos no traen el campo.
+- ✅ Validado E2E: hooks de 70-76 chars, frases completas, sin cortes
+#### 🎬 Video IA funcional (API v299-v306 + Video_Worker)
+- ✅ **Fix prompt:** `http` undefined en `_generate_video_motion_prompt` → siempre caía al fallback genérico. Fix: PoolManager local (v300)
+- ✅ **Fix modelo Gemini:** `gemini-2.0-flash` deprecado (404) → `gemini-2.5-flash` (v301). Prompt rico ahora SÍ funciona
+- ✅ **Modelo Kling:** `v2/master` → `v3/pro` (audio nativo + mejor calidad + menor costo <$1 vs $2)
+- ✅ **generate_audio: true** activado en payload a Fal.ai → `VIDEO_HAS_AUDIO: True`
+- ✅ **Lock atómico idempotencia:** ConditionExpression en DDB (webhooks duplicados de Fal.ai ya no reprocesan)
+- ✅ **Cierre premium multi-tenant:** endpoint `POST /ads/video/closing-frame` genera imagen con gradiente de colores de marca + logo + nombre + precio + ubicación + CTA. Lee `brand_colors` de config_pro
+- ✅ **brand_colors en config_pro:** campo nuevo `{primary, secondary, accent, text}` para gradientes multi-tenant
+- ✅ **FFmpeg pipeline:** video 5s + fade out al color de marca + cierre 5s (concat). Audio del video preservado con `0:a?`
+- ✅ **Selector de imágenes video-wizard:** ahora muestra galería (brand-assets) + biblioteca IA + catálogo (antes solo catálogo)
+- ⚠️ **xfade no funciona** en este build FFmpeg 7.0.2 (concat con fades cortos como alternativa)
+- ⚠️ **Transición video→cierre:** tiene ~1-2s de color sólido (limitación de concat sin xfade). Aceptable para MVP.
+#### ❌ Confirmado de Fal.ai
+- `fal-ai/wan-i2v` rechaza (422) imágenes tácticas que antes aceptaba. Fal.ai endureció content checker. `kling` las acepta.
+- Kling v3 Pro genera audio nativo con `generate_audio: true` ✅
+#### 🎬 AI STORYBOARD ENGINE — Roadmap aprobado (próximo sprint dedicado)
+**Concepto:** Motor de narrativa visual reutilizable. De "IA generó un video" → "Una agencia produjo una pieza publicitaria".
+**Estructura narrativa:** HOOK (problema) → SOLUCIÓN (servicio en acción) → RESULTADO (transformación) → CIERRE PREMIUM
+**3 escenas Kling en paralelo + cierre = ~18-20s | ~$3 USD por video | ~120s generación**
+**Sprint 1 — Inteligencia Narrativa:**
+- Endpoint `POST /ads/video/plan` con Gemini: clasifica ángulo (authority/curiosity/aspirational/problem/urgency) + genera storyboard 3 escenas + visual_style inmutable (mismo sujeto/paleta/iluminación en las 3)
+- Preview del storyboard ANTES de generar imágenes (usuario edita sin gastar créditos)
+- 3 imágenes temáticas generadas en paralelo, aprobables individualmente
+**Sprint 2 — Animación Multi-Escena:**
+- 3 videos Kling v3 Pro en paralelo (SQS simultáneo, no secuencial)
+- Tracking por `scene_index` + `parent_generation_id` (idempotencia por escena)
+- Concatenación cuando `scenes_completed == 3` (ADD atómico + ReturnValues)
+- Audio: Kling a -12dB + cama ambiental continua por categoría + loudnorm
+**Sprint 3 — Frontend Wizard Premium:**
+- Nuevo modo "🎬 Video Premium (narrativa)" en video-wizard
+- Flujo: storyboard → aprobar → imágenes → aprobar → animar → preview → lanzar
+**Sprint 4 — Variantes A/B + Aprendizaje:**
+- 3 hooks distintos (solo regenerar escena 1) = 5 créditos total
+- Tracking `hook_type` × `industry` × CTR × CPA → loop de aprendizaje
+- Inyectar patrones ganadores en prompt de futuros planes
+**Adaptaciones técnicas confirmadas:**
+- REST API Gemini con responseSchema dict (no SDK google.generativeai)
+- gemini-2.5-flash (no 1.5-pro)
+- concat con fades (no xfade — bug del build FFmpeg)
+- Audio post-proceso con volume + amix + loudnorm (SÍ funciona)
+- Tabla `AdsCreativeGenerations` existente (no tabla nueva)
+#### 📌 Lecciones nuevas
+- **#77:** `gemini-2.0-flash` fue deprecado sin aviso. Verificar modelos activos antes de asumir que siguen vivos.
+- **#78:** `http` como variable global NO existe en funciones helper de la API. Cada función necesita su PoolManager local (lección #56 reincidente).
+- **#79:** Kling v2/master cobra $2/generación vs v3/pro <$1. Siempre verificar costo del modelo ANTES de producción.
+- **#80:** `attendees_list` vacío en compras de 1 persona → el email nunca se enviaba. Guard con fallback al buffer del titular.
+- **#81:** `concat` en FFmpeg es secuencial (siempre hay corte). `xfade` es la solución real pero no funciona en todos los builds. Aceptar la limitación o recompilar FFmpeg.
+- **#82:** El `image_hook` de Gemini (40-90 chars, frase completa) es infinitamente mejor que `split('.')[0]` cortado a 60. Nunca extraer hooks de texto largo — generarlos específicamente.
+- **#83:** Para video premium, la narrativa (problema→solución→resultado) importa más que los efectos. 3 escenas coherentes > 1 escena con transiciones fancy.
+#### 🛡 Recursos defensivos
+- **API:** v299-v306 publicadas (rollback a v298 pre-video si necesario)
+- **Bot:** v284 (fix email)
+- **Video_Worker:** múltiples iteraciones (closing-frame + hook + fades + idempotencia)
+- **Layer:** `fonts-inter:1` adjunto a API + Worker
+#### ⏳ Pendientes inmediatos (antes del Storyboard Engine)
+1. Reenviar emails a clientes afectados (compras 1 persona sin confirmación)
+2. Quitar logs temporales del worker (FFMPEG_VF, CTA_EXTRACT)
+3. Frontend video-wizard: pasar `cta_text` + `hook_text` al generar (conectar con el backend)
+4. Limpiar registros de prueba en DDB (vid_cta_test1-16, vid_premium_test1-13, vid_hook_test1)
+#### 🏆 Producción actual
+**API v306 + Bot v284 + Video_Worker (v3/pro + closing-frame + idempotencia) + Remarketing v9 + Frontend `872f68b`**
+**5 Lambdas activas.** Video IA funcional con cierre premium. Copies con image_hook. AI Storyboard Engine planificado.
+### 6 jun 2026 — Sprint Ads Pro v2: Wizard profesional + Video IA + Video_Worker 🦁🎬
 ### 6 jun 2026 — Sprint Ads Pro v2: Wizard profesional + Video IA + Video_Worker 🦁🎬
 **API v292→v298 + Video_Worker (Lambda NUEVA) + Frontend `5ab42d6`**
 Sesión maratón continuando Ads. Wizard de imágenes/copies pulido a nivel profesional, módulo de Video IA conectado de punta a punta, y NUEVA Lambda `Video_Worker` (5ta Lambda activa). ~16 deploys totales.
