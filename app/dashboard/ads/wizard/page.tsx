@@ -742,6 +742,15 @@ export default function WizardPage() {
                               </div>
                             </div>
                           </div>
+                          <div className="mt-2">
+                            <label className="text-[9px] text-gray-500 uppercase tracking-widest block mb-1">
+                              Texto para imagen <span className="text-gray-600">({(c.image_hook || '').length}/90 — editable)</span>
+                            </label>
+                            <input value={c.image_hook || ''} maxLength={90}
+                              onChange={(e) => updateCopy('image_hook', e.target.value)}
+                              placeholder="Gancho visual para incrustar en la imagen"
+                              className="w-full bg-white/5 border border-purple-500/30 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white" />
+                          </div>
                           {c.social_proof_used && <p className="text-[9px] text-emerald-400 mt-2 italic">🛡️ {c.social_proof_used}</p>}
                         </div>
                       );
@@ -897,14 +906,16 @@ export default function WizardPage() {
                           const sourceUrl = img.original_url || img.image_url;
                           const copyIdx = imageHookMap[imgIdx] ?? (i % copies.length);
                           const copyText = copies[copyIdx]?.primary_text || copies[copyIdx]?.text || copies[0]?.primary_text || copies[0]?.text || '';
-                         // Hook: primera oración completa, SIN emojis (Inter no los renderiza → "notdef")
-                          // El backend hace auto-fit + wrap a 2 líneas.
-                          let hookText = (copyText.split('.')[0] || copyText).trim();
-                          // Quitar emojis/símbolos no soportados por la fuente (conserva letras con acento, ñ, números y puntuación básica)
-                          hookText = hookText.replace(/[^\p{L}\p{N}\s.,!¡?¿:;"'$%&()\-+/]/gu, '').replace(/\s+/g, ' ').trim();
-                          if (hookText.length > 130) {
-                            hookText = hookText.substring(0, 130).replace(/\s+\S*$/, '').trim();
+                         // Usar image_hook generado por Gemini (editable). Fallback al split si no existe.
+                          let hookText = (copies[copyIdx]?.image_hook || '').trim();
+                          if (!hookText) {
+                            hookText = (copyText.split('.')[0] || copyText).trim();
+                            if (hookText.length > 90) {
+                              hookText = hookText.substring(0, 90).replace(/\s+\S*$/, '').trim();
+                            }
                           }
+                          // Quitar emojis (Inter no los renderiza)
+                          hookText = hookText.replace(/[^\p{L}\p{N}\s.,!¡?¿:;"'$%&()\-+/]/gu, '').replace(/\s+/g, ' ').trim();
                           if (!hookText) hookText = 'Ver más';
                           try {
                             const ovRes = await fetch(`${API_URL}/ads/overlay-and-resize`, {
