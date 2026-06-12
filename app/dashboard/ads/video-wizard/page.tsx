@@ -136,28 +136,65 @@ export default function VideoWizardPage() {
     setUploading(false);
   };
   const generateVideoAI = async () => {
-    if (!aiImageUrl) { showToast('⚠️ Selecciona una imagen de referencia'); return; }
-    if (!aiBrief) { showToast('⚠️ Describe qué quieres en el video'); return; }
+    if (!selectedSlug) { showToast('⚠️ Selecciona un servicio en el paso anterior'); return; }
     setAiGenerating(true);
     try {
-      const r = await fetch(`${API_URL}/ads/video/generate`, {
+      // 1. Storyboard: Gemini genera el plan narrativo de 3 escenas
+      showToast('🧠 Diseñando el storyboard...');
+      const planRes = await fetch(`${API_URL}/ads/video/plan`, {
         method: 'POST',
         headers: { ...h, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image_url: aiImageUrl,
-          brief: aiBrief,
-          model: aiModel,
-          duration: 5,
-          style: aiStyle,
+          service_slug: selectedSlug,
+          brief: aiBrief || '',            // opcional: contexto extra
+          hook_type: 'authority',
         }),
       });
-      const d = await r.json();
-      if (d.success) {
-        setAiGenerationId(d.generation_id);
-        showToast(`🎬 Video en cola (~${d.estimated_seconds}s). Esperando...`);
-        pollVideoStatus(d.generation_id);
+      const planData = await planRes.json();
+      if (!planData.success || !planData.plan) {
+        showToast('❌ ' + (planData.error || 'No se pudo generar el storyboard'));
+        setAiGenerating(false); return;
+      }
+      // 2. Generar las 3 imágenes (ancladas a la imagen de referencia si hay)
+      showToast('🎨 Generando las 3 escenas...');
+      const imgRes = await fetch(`${API_URL}/ads/video/storyboard-images`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan_id: planData.plan_id,
+          scenes: planData.plan.scenes,
+          service_slug: selectedSlug,
+          reference_image_url: aiImageUrl || '',   // opcional: ancla visual
+        }),
+      });
+      const imgData = await imgRes.json();
+      if (!imgData.success || (imgData.total_ok || 0) < 3) {
+        showToast('❌ No se pudieron generar las 3 imágenes. Intenta de nuevo.');
+        setAiGenerating(false); return;
+      }
+      const order = ['hook', 'solution', 'outcome'];
+      const sceneImages = order.map(
+        (role) => (imgData.scenes.find((s: any) => s.role === role) || {}).image_url
+      );
+      // 3. Animar las 3 escenas (3 créditos Kling) + concatenar
+      showToast('🎬 Animando el video premium (~3 min)...');
+      const genRes = await fetch(`${API_URL}/ads/video/generate-premium`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan: planData.plan,
+          scene_images: sceneImages,
+          service_slug: selectedSlug,
+          cta_text: 'Reserva tu cupo',
+        }),
+      });
+      const genData = await genRes.json();
+      if (genData.success) {
+        setAiGenerationId(genData.generation_id);
+        showToast('🎬 Video premium en producción. Esperando...');
+        pollVideoStatus(genData.generation_id);
       } else {
-        showToast('❌ ' + (d.error || 'Error generando'));
+        showToast('❌ ' + (genData.error || 'Error generando'));
         setAiGenerating(false);
       }
     } catch {
@@ -509,7 +546,7 @@ export default function VideoWizardPage() {
                 )}
               </div>
               <div className="mb-4">
-                <label className="text-xs text-gray-300 font-bold block mb-2">Describe el video *</label>
+                <label className="text-xs text-gray-300 font-bold block mb-2">Contexto extra (opcional)</label>
                 <textarea value={aiBrief} onChange={(e) => setAiBrief(e.target.value)} rows={3}
                   placeholder="Ej: Persona disparando pistola 9mm en polígono profesional con humo cinematográfico"
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white resize-none" />
@@ -541,9 +578,9 @@ export default function VideoWizardPage() {
                   {aiGenerationId && <p className="text-[9px] text-gray-600 mt-2 font-mono">ID: {aiGenerationId}</p>}
                 </div>
               ) : (
-                <button onClick={generateVideoAI} disabled={!aiImageUrl || !aiBrief}
+                <button onClick={generateVideoAI} disabled={!selectedSlug}
                   className="w-full bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
-                  🤖 Generar video con IA
+                  🎬 Generar video premium (3 escenas)
                 </button>
               )}
             </>
