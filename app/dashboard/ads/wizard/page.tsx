@@ -40,9 +40,19 @@ export default function WizardPage() {
   // Destino de WhatsApp (selector "Destinos de mensajes" tipo Meta)
   const [waNumbers, setWaNumbers] = useState<any[]>([]);
   const [waNumber, setWaNumber] = useState('');
-  const [adCountry, setAdCountry] = useState('CO');
-  const [adCity, setAdCity] = useState('');
-  const [adRadius, setAdRadius] = useState('25');
+  // Geo avanzado tipo Meta: incluir/excluir multi país/departamento/ciudad + públicos guardados
+  const [geoCountries, setGeoCountries] = useState<any[]>([{ key: 'CO', name: 'Colombia' }]);
+  const [geoRegions, setGeoRegions] = useState<any[]>([]);
+  const [geoCities, setGeoCities] = useState<any[]>([]);
+  const [exclRegions, setExclRegions] = useState<any[]>([]);
+  const [exclCities, setExclCities] = useState<any[]>([]);
+  const [geoType, setGeoType] = useState<'country' | 'region' | 'city'>('city');
+  const [geoExclude, setGeoExclude] = useState(false);
+  const [geoQuery, setGeoQuery] = useState('');
+  const [geoResults, setGeoResults] = useState<any[]>([]);
+  const [geoSearching, setGeoSearching] = useState(false);
+  const [savedAudiences, setSavedAudiences] = useState<any[]>([]);
+  const [savedAudName, setSavedAudName] = useState('');
   const [adAgeMin, setAdAgeMin] = useState('18');
   const [adAgeMax, setAdAgeMax] = useState('65');
   const [adGender, setAdGender] = useState('all');
@@ -64,6 +74,8 @@ export default function WizardPage() {
       // Selecciona el default (bot) si no hay valor, o si el guardado ya no existe en la lista
       setWaNumber(prev => (prev && list.some((n: any) => n.value === prev)) ? prev : (d.default || ''));
     }).catch(() => {});
+    // Públicos guardados (geo + edad + sexo reutilizables)
+    fetch(`${API_URL}/ads/saved-audiences`, { headers: h }).then(r => r.json()).then(d => setSavedAudiences(d.audiences || [])).catch(() => {});
     // Leer cap multi-tenant desde config_pro (sin hardcode)
     fetch(`${API_URL}/config`, { headers: h }).then(r => r.ok ? r.json() : null).then(d => {
       if (d?.wizard_max_images_per_round) setMaxImagesCap(parseInt(d.wizard_max_images_per_round));
@@ -98,9 +110,11 @@ export default function WizardPage() {
           if (d.budgetDaily) setBudgetDaily(d.budgetDaily);
           if (d.duration) setDuration(d.duration);
           if (d.imageHookMap) setImageHookMap(d.imageHookMap);
-          if (d.adCountry) setAdCountry(d.adCountry);
-          if (d.adCity !== undefined) setAdCity(d.adCity);
-          if (d.adRadius) setAdRadius(d.adRadius);
+          if (d.geoCountries) setGeoCountries(d.geoCountries);
+          if (d.geoRegions) setGeoRegions(d.geoRegions);
+          if (d.geoCities) setGeoCities(d.geoCities);
+          if (d.exclRegions) setExclRegions(d.exclRegions);
+          if (d.exclCities) setExclCities(d.exclCities);
           if (d.adAgeMin) setAdAgeMin(d.adAgeMin);
           if (d.adAgeMax) setAdAgeMax(d.adAgeMax);
           if (d.adGender) setAdGender(d.adGender);
@@ -116,14 +130,14 @@ export default function WizardPage() {
     if (!draftHydrated || !draftKey || typeof window === 'undefined') return;
     const t = setTimeout(() => {
       try {
-        const draft = { step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, adCountry, adCity, adRadius, adAgeMin, adAgeMax, adGender, waNumber, savedAt: Date.now() };
+        const draft = { step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, geoCountries, geoRegions, geoCities, exclRegions, exclCities, adAgeMin, adAgeMax, adGender, waNumber, savedAt: Date.now() };
         localStorage.setItem(draftKey, JSON.stringify(draft));
         setDraftSaved(true);
         setTimeout(() => setDraftSaved(false), 1500);
       } catch {}
     }, 500);
     return () => clearTimeout(t);
-  }, [step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, adCountry, adCity, adRadius, adAgeMin, adAgeMax, adGender, waNumber, draftHydrated, draftKey]);
+  }, [step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, geoCountries, geoRegions, geoCities, exclRegions, exclCities, adAgeMin, adAgeMax, adGender, waNumber, draftHydrated, draftKey]);
   // Warning si el servicio del borrador ya no existe
   useEffect(() => {
     if (!draftHydrated || !selectedSlug || services.length === 0) return;
@@ -337,6 +351,66 @@ export default function WizardPage() {
     } catch { showToast('Error de conexión'); }
     setGeneratingCopies(false);
   };
+  // ---- Geo avanzado (búsqueda en Meta + chips incluir/excluir) ----
+  const geoSearch = async () => {
+    if (geoQuery.trim().length < 2) { setGeoResults([]); return; }
+    setGeoSearching(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/search-targeting?type=${geoType}&q=${encodeURIComponent(geoQuery.trim())}`, { headers: h });
+      const d = await res.json();
+      setGeoResults(d.results || []);
+    } catch { setGeoResults([]); }
+    setGeoSearching(false);
+  };
+  const geoBuckets: Record<string, [any[], (v: any[]) => void]> = {
+    'country|inc': [geoCountries, setGeoCountries],
+    'region|inc': [geoRegions, setGeoRegions],
+    'city|inc': [geoCities, setGeoCities],
+    'region|exc': [exclRegions, setExclRegions],
+    'city|exc': [exclCities, setExclCities],
+  };
+  const addGeo = (item: any) => {
+    const bucket = geoBuckets[`${geoType}|${geoExclude ? 'exc' : 'inc'}`];
+    if (!bucket) return;
+    const [list, setList] = bucket;
+    if (list.some((x: any) => String(x.key) === String(item.key))) return;
+    const entry: any = { key: item.key, name: item.name, region: item.region || '', country_name: item.country_name || '' };
+    if (geoType === 'city' && !geoExclude) entry.radius = 25;
+    setList([...list, entry]);
+    setGeoQuery(''); setGeoResults([]);
+  };
+  const removeGeo = (list: any[], setList: (v: any[]) => void, key: any) => setList(list.filter((x: any) => String(x.key) !== String(key)));
+  const setCityRadius = (key: any, radius: string) => setGeoCities(geoCities.map((c: any) => String(c.key) === String(key) ? { ...c, radius: parseInt(radius) || 25 } : c));
+  // ---- Públicos guardados ----
+  const loadSavedAudiences = () => fetch(`${API_URL}/ads/saved-audiences`, { headers: h }).then(r => r.json()).then(d => setSavedAudiences(d.audiences || [])).catch(() => {});
+  const applyAudience = (a: any) => {
+    setGeoCountries(a.countries?.length ? a.countries : (a.country ? [{ key: a.country, name: a.country }] : geoCountries));
+    setGeoRegions(a.regions || []);
+    setGeoCities(a.cities || []);
+    setExclRegions(a.excluded_regions || []);
+    setExclCities(a.excluded_cities || []);
+    if (a.age_min) setAdAgeMin(String(a.age_min));
+    if (a.age_max) setAdAgeMax(String(a.age_max));
+    if (a.gender) setAdGender(a.gender);
+    showToast(`👥 Público "${a.name}" cargado`);
+  };
+  const saveAudience = async () => {
+    if (!savedAudName.trim()) { showToast('Ponle un nombre al público'); return; }
+    try {
+      const res = await fetch(`${API_URL}/ads/saved-audiences`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({
+        name: savedAudName.trim(),
+        country: geoCountries[0]?.key || 'CO',
+        countries: geoCountries, regions: geoRegions, cities: geoCities,
+        excluded_regions: exclRegions, excluded_cities: exclCities,
+        age_min: parseInt(adAgeMin) || 18, age_max: parseInt(adAgeMax) || 65, gender: adGender, interests: [],
+      }) });
+      if (res.ok) { setSavedAudName(''); loadSavedAudiences(); showToast('💾 Público guardado'); }
+      else showToast('❌ No se pudo guardar el público');
+    } catch { showToast('Error de conexión'); }
+  };
+  const deleteAudience = async (id: string) => {
+    try { await fetch(`${API_URL}/ads/saved-audiences`, { method: 'DELETE', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); loadSavedAudiences(); showToast('🗑️ Público eliminado'); } catch {}
+  };
   const launchCampaign = async () => {
     setLaunching(true);
     try {
@@ -370,10 +444,12 @@ export default function WizardPage() {
           budget_daily: parseInt(budgetDaily) || 20000,
           duration: parseInt(duration) || 7,
           service_slug: selectedSlug,
-          country: adCountry,
-          city: adCity,
-          radius: adRadius,
-          cities: [],
+          country: geoCountries[0]?.key || 'CO',
+          countries: geoCountries.map((c: any) => c.key),
+          regions: geoRegions.map((r: any) => ({ key: r.key, name: r.name })),
+          cities: geoCities.map((c: any) => ({ key: c.key, name: c.name, radius: parseInt(c.radius) || 25 })),
+          excluded_regions: exclRegions.map((r: any) => ({ key: r.key, name: r.name })),
+          excluded_cities: exclCities.map((c: any) => ({ key: c.key, name: c.name })),
           age_min: parseInt(adAgeMin) || 18,
           age_max: parseInt(adAgeMax) || 65,
           gender: adGender,
@@ -875,23 +951,74 @@ export default function WizardPage() {
                     )}
                     <div className="mt-4 pt-4 border-t border-white/5">
                       <h4 className="text-xs font-bold text-gray-300 mb-3">🎯 ¿A quién le mostramos el anuncio?</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                        <div>
-                          <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">País</label>
-                          <select value={adCountry} onChange={(e) => setAdCountry(e.target.value)} className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
-                            <option value="CO">🇨🇴 Colombia</option><option value="MX">🇲🇽 México</option><option value="AR">🇦🇷 Argentina</option><option value="PE">🇵🇪 Perú</option><option value="CL">🇨🇱 Chile</option><option value="EC">🇪🇨 Ecuador</option><option value="ES">🇪🇸 España</option><option value="US">🇺🇸 EE.UU.</option>
+                      {/* Públicos guardados (cargar / guardar / borrar) */}
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span className="text-[10px] text-gray-500 uppercase tracking-widest">👥 Públicos</span>
+                        {savedAudiences.length > 0 && (
+                          <select onChange={(e) => { const a = savedAudiences.find((x: any) => x.id === e.target.value); if (a) applyAudience(a); e.currentTarget.value = ''; }} defaultValue="" className="bg-[#1a1f2e] border border-white/10 rounded-lg px-2 py-1.5 text-[11px] outline-none focus:border-purple-500 text-white">
+                            <option value="" disabled>Cargar público guardado…</option>
+                            {savedAudiences.map((a: any) => (<option key={a.id} value={a.id}>{a.name}</option>))}
                           </select>
+                        )}
+                        <input value={savedAudName} onChange={(e) => setSavedAudName(e.target.value)} placeholder="Nombre del público" className="flex-1 min-w-[120px] bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] outline-none focus:border-purple-500 text-white" />
+                        <button type="button" onClick={saveAudience} className="text-[11px] bg-purple-600/80 hover:bg-purple-600 text-white font-bold px-3 py-1.5 rounded-lg">💾 Guardar</button>
+                      </div>
+                      {savedAudiences.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {savedAudiences.map((a: any) => (
+                            <span key={a.id} className="inline-flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2 py-0.5 text-[10px] text-gray-400">
+                              {a.name}
+                              <button type="button" onClick={() => deleteAudience(a.id)} className="text-gray-500 hover:text-red-400">×</button>
+                            </span>
+                          ))}
                         </div>
-                        <div>
-                          <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">Ciudad (opcional)</label>
-                          <input value={adCity} onChange={(e) => setAdCity(e.target.value)} placeholder="Ej: Medellín (vacío = todo el país)" className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white" />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">Radio (km)</label>
-                          <select value={adRadius} onChange={(e) => setAdRadius(e.target.value)} className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
-                            <option value="10">10 km</option><option value="25">25 km</option><option value="40">40 km</option><option value="80">80 km</option>
+                      )}
+                      {/* Buscador de ubicaciones (incluir / excluir) — multi país/depto/ciudad */}
+                      <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3 mb-3">
+                        <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">📍 Ubicaciones</label>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <select value={geoType} onChange={(e) => { const v = e.target.value as 'country' | 'region' | 'city'; setGeoType(v); if (v === 'country') setGeoExclude(false); setGeoResults([]); }} className="bg-[#1a1f2e] border border-white/10 rounded-lg px-2 py-1.5 text-[11px] outline-none focus:border-purple-500 text-white">
+                            <option value="country">País</option>
+                            <option value="region">Departamento/Estado</option>
+                            <option value="city">Ciudad</option>
                           </select>
+                          <div className="flex rounded-lg overflow-hidden border border-white/10">
+                            <button type="button" onClick={() => setGeoExclude(false)} className={`px-3 py-1.5 text-[11px] font-bold ${!geoExclude ? 'bg-emerald-600 text-white' : 'bg-white/5 text-gray-400'}`}>Incluir</button>
+                            <button type="button" disabled={geoType === 'country'} onClick={() => setGeoExclude(true)} className={`px-3 py-1.5 text-[11px] font-bold ${geoExclude ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-400'} ${geoType === 'country' ? 'opacity-40 cursor-not-allowed' : ''}`}>Excluir</button>
+                          </div>
+                          <input value={geoQuery} onChange={(e) => setGeoQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); geoSearch(); } }} placeholder={geoType === 'country' ? 'Buscar país…' : geoType === 'region' ? 'Buscar departamento…' : 'Buscar ciudad…'} className="flex-1 min-w-[140px] bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] outline-none focus:border-purple-500 text-white" />
+                          <button type="button" onClick={geoSearch} className="text-[11px] bg-white/10 hover:bg-white/20 text-white font-bold px-3 py-1.5 rounded-lg">{geoSearching ? '…' : 'Buscar'}</button>
                         </div>
+                        {geoResults.length > 0 && (
+                          <div className="max-h-40 overflow-y-auto border border-white/10 rounded-lg divide-y divide-white/5 mb-2">
+                            {geoResults.map((r: any) => (
+                              <button type="button" key={`${r.key}-${r.name}`} onClick={() => addGeo(r)} className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-purple-600/20">
+                                {r.name}{r.region ? `, ${r.region}` : ''}{r.country_name ? ` — ${r.country_name}` : ''}
+                                <span className={`ml-2 text-[9px] font-bold ${geoExclude ? 'text-red-400' : 'text-emerald-400'}`}>{geoExclude ? 'EXCLUIR' : 'INCLUIR'}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {(geoCountries.length + geoRegions.length + geoCities.length) > 0 && (
+                          <div className="mb-1">
+                            <p className="text-[9px] text-emerald-400 uppercase tracking-widest mb-1">✓ Incluir</p>
+                            <div className="flex flex-wrap gap-1 items-center">
+                              {geoCountries.map((c: any) => (<span key={`co-${c.key}`} className="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2 py-0.5 text-[10px] text-emerald-300">🌎 {c.name}<button type="button" onClick={() => removeGeo(geoCountries, setGeoCountries, c.key)} className="hover:text-white">×</button></span>))}
+                              {geoRegions.map((r: any) => (<span key={`re-${r.key}`} className="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2 py-0.5 text-[10px] text-emerald-300">🏞️ {r.name}<button type="button" onClick={() => removeGeo(geoRegions, setGeoRegions, r.key)} className="hover:text-white">×</button></span>))}
+                              {geoCities.map((c: any) => (<span key={`ci-${c.key}`} className="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2 py-0.5 text-[10px] text-emerald-300">📍 {c.name}<input type="number" min={1} value={c.radius} onChange={(e) => setCityRadius(c.key, e.target.value)} className="w-10 bg-transparent border-b border-emerald-500/40 text-center text-emerald-200 outline-none" />km<button type="button" onClick={() => removeGeo(geoCities, setGeoCities, c.key)} className="hover:text-white">×</button></span>))}
+                            </div>
+                          </div>
+                        )}
+                        {(exclRegions.length + exclCities.length) > 0 && (
+                          <div className="mt-2">
+                            <p className="text-[9px] text-red-400 uppercase tracking-widest mb-1">✕ Excluir</p>
+                            <div className="flex flex-wrap gap-1">
+                              {exclRegions.map((r: any) => (<span key={`xre-${r.key}`} className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/30 rounded-full px-2 py-0.5 text-[10px] text-red-300">🏞️ {r.name}<button type="button" onClick={() => removeGeo(exclRegions, setExclRegions, r.key)} className="hover:text-white">×</button></span>))}
+                              {exclCities.map((c: any) => (<span key={`xci-${c.key}`} className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/30 rounded-full px-2 py-0.5 text-[10px] text-red-300">📍 {c.name}<button type="button" onClick={() => removeGeo(exclCities, setExclCities, c.key)} className="hover:text-white">×</button></span>))}
+                            </div>
+                          </div>
+                        )}
+                        <p className="text-[10px] text-gray-600 mt-2">Agrega varios países, departamentos o ciudades. Usa “Excluir” para quitar zonas (ej: todo Colombia menos un departamento).</p>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
