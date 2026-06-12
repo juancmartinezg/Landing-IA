@@ -982,19 +982,48 @@ export default function WizardPage() {
                             }
                           } catch {}
                         }
-                        setOverlayInProgress(false);
+                         setOverlayInProgress(false);
                         if (success === selectedImages.length) showToast(`✅ Texto incrustado en ${success} imagen${success > 1 ? 'es' : ''}. Revisa arriba antes de lanzar.`);
                         else if (success > 0) showToast(`⚠️ ${success}/${selectedImages.length} incrustadas. Reintenta para completar.`);
                         else showToast('❌ No se pudo incrustar el texto');
                       };
+                      // Deshacer: restaura la imagen original sin texto (usa original_url guardado)
+                      const undoOverlay = () => {
+                        setPreviewImages((prev: any[]) => prev.map((p: any) => {
+                          if (!selectedImages.includes(p.index) || !p.original_url) return p;
+                          return {
+                            ...p,
+                            image_url: p.original_url,
+                            image_vertical: '',
+                            image_horizontal: '',
+                            overlay_applied: false,
+                          };
+                        }));
+                        showToast('↩️ Texto quitado — imágenes restauradas a su versión original');
+                      };
                       if (!allOverlaid) {
-                        // Modo "own": botón de resize sin texto (imagen intacta). Resto: incrustar texto.
+                        // Modo "own": el texto es OPCIONAL. Ofrece incrustar texto O usar tal cual.
                         if (refMode === 'own') {
                           return (
-                            <button onClick={doResizeOnly} disabled={launching || overlayInProgress || selectedImages.length === 0}
-                              className="flex-1 min-w-[200px] bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50">
-                              {overlayInProgress ? '⏳ Preparando...' : '📐 Preparar mis imágenes para lanzar'}
-                            </button>
+                            <>
+                              <button onClick={doOverlay} disabled={launching || overlayInProgress || copies.length === 0 || selectedImages.length === 0}
+                                className="flex-1 min-w-[200px] bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold text-white shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50"
+                                title="Incrusta el texto del copy sobre tus imágenes">
+                                {overlayInProgress ? '⏳ Incrustando...' : someOverlaid ? '🔁 Reintentar incrustar faltantes' : '✏️ Incrustar texto (opcional)'}
+                              </button>
+                              {someOverlaid && (
+                                <button onClick={undoOverlay} disabled={launching || overlayInProgress}
+                                  className="min-w-[140px] border border-yellow-500/30 hover:bg-yellow-500/10 py-3 px-4 rounded-xl text-xs font-bold text-yellow-300 transition-all disabled:opacity-50"
+                                  title="Restaura las imágenes a su versión original sin texto">
+                                  ↩️ Quitar texto
+                                </button>
+                              )}
+                              <button onClick={doResizeOnly} disabled={launching || overlayInProgress || selectedImages.length === 0}
+                                className="flex-1 min-w-[200px] border border-white/10 hover:bg-white/5 py-3 rounded-xl text-sm font-bold text-gray-300 transition-all disabled:opacity-50"
+                                title="Usa tus imágenes tal cual, sin texto">
+                                {overlayInProgress ? '⏳ Preparando...' : '📐 Usar tal cual (sin texto)'}
+                              </button>
+                            </>
                           );
                         }
                         return (
