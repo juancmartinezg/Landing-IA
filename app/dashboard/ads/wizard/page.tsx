@@ -888,12 +888,13 @@ export default function WizardPage() {
                     <button onClick={() => setStep(7)} className="flex-1 min-w-[100px] border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
                     {(() => {
                       // Modo "own": las imágenes ya tienen los 3 formatos cuando image_vertical existe.
+                      // El video (is_video) cuenta como YA listo: no requiere overlay ni resize.
                       const ownReady = refMode === 'own' && selectedImages.length > 0 &&
-                        selectedImages.every((idx) => { const im = previewImages.find((i: any) => i.index === idx); return im?.image_vertical; });
+                        selectedImages.every((idx) => { const im = previewImages.find((i: any) => i.index === idx); return im?.is_video || im?.image_vertical; });
                       const allOverlaid = refMode === 'own'
                         ? ownReady
-                        : (selectedImages.length > 0 && selectedImages.every((idx) => previewImages.find((i: any) => i.index === idx)?.overlay_applied));
-                      const someOverlaid = selectedImages.some((idx) => previewImages.find((i: any) => i.index === idx)?.overlay_applied);
+                        : (selectedImages.length > 0 && selectedImages.every((idx) => { const im = previewImages.find((i: any) => i.index === idx); return im?.is_video || im?.overlay_applied; }));
+                      const someOverlaid = selectedImages.some((idx) => { const im = previewImages.find((i: any) => i.index === idx); return !im?.is_video && im?.overlay_applied; });
                       // Resize mecánico Pillow (sin texto, sin IA) para generar vertical/horizontal de imágenes propias
                       const doResizeOnly = async () => {
                         if (selectedImages.length === 0) return;
