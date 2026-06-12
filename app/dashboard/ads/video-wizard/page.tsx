@@ -204,6 +204,7 @@ export default function VideoWizardPage() {
   };
   const pollVideoStatus = (genId: string) => {
     setAiPolling(true);
+    let resolved = false;  // evita stale closure de videoUrl en el timeout
     const interval = setInterval(async () => {
       try {
         const r = await fetch(`${API_URL}/ads/library?type=video&limit=50`, { headers: h });
@@ -211,23 +212,24 @@ export default function VideoWizardPage() {
         const items = d.items || [];
         const found = items.find((i: any) => i.generation_id === genId && i.s3_url);
         if (found) {
+          resolved = true;
           clearInterval(interval);
           setVideoUrl(found.s3_url);
           setAiGenerating(false);
           setAiPolling(false);
-          showToast('🎬 ¡Video IA generado exitosamente!');
+          showToast('🎬 ¡Video premium generado exitosamente!');
         }
       } catch {}
     }, 10000); // Poll cada 10s
-    // Timeout después de 3 min
+    // Timeout 8 min: el flujo premium (3 escenas Kling + concat) tarda 3-5 min
     setTimeout(() => {
       clearInterval(interval);
-      if (!videoUrl) {
+      if (!resolved) {
         setAiPolling(false);
         setAiGenerating(false);
         showToast('⏳ El video está tardando más de lo esperado. Revisa tu biblioteca en unos minutos.');
       }
-    }, 180000);
+    }, 480000);
   };
   const generateCopies = async () => {
     if (!selectedSlug) { showToast('⚠️ Selecciona un servicio primero'); return; }
