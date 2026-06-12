@@ -122,6 +122,27 @@ export default function WizardPage() {
       setSelectedSlug('');
     }
   }, [services, draftHydrated]);
+  // Video devuelto por el video-wizard: lo inyecta como 4ª variante (image_url vacío + video_url)
+  useEffect(() => {
+    if (!draftHydrated || typeof window === 'undefined') return;
+    const raw = sessionStorage.getItem('cb_wizard_pending_video');
+    if (!raw) return;
+    sessionStorage.removeItem('cb_wizard_pending_video');
+    try {
+      const v = JSON.parse(raw);
+      if (!v?.video_url) return;
+      setPreviewImages(prev => {
+        if (prev.some((i: any) => i.video_url === v.video_url)) return prev;  // ya inyectado
+        const nextIdx = prev.length ? Math.max(...prev.map((i: any) => i.index ?? 0)) + 1 : 0;
+        const slot = { index: nextIdx, image_url: '', video_url: v.video_url, ok: true, is_video: true, overlay_applied: true };
+        // Auto-seleccionar el video para que entre al launch
+        setSelectedImages(sel => sel.includes(nextIdx) ? sel : [...sel, nextIdx]);
+        return [...prev, slot];
+      });
+      setStep(8);
+      showToast('🎬 Video agregado como variante. Revísalo y lanza.');
+    } catch {}
+  }, [draftHydrated]);
   const toggleChannel = (ch: string) => setChannels(prev => prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch]);
   const addBenefit = () => { if (newBenefit.trim() && benefits.length < 10) { setBenefits([...benefits, newBenefit.trim()]); setNewBenefit(''); } };
   const toggleRef = (url: string) => setSelectedRefs(prev => prev.includes(url) ? prev.filter(u => u !== url) : prev.length < 5 ? [...prev, url] : prev);
@@ -615,9 +636,16 @@ export default function WizardPage() {
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
                     {previewImages.filter((img: any) => img.ok).map((img: any) => (
-                      <button key={img.index} onClick={() => toggleImage(img.index)}
+                      <button key={img.index} onClick={() => { if (img.is_video) return; toggleImage(img.index); }}
                         className={`relative rounded-xl overflow-hidden border-2 transition-all hover:scale-[1.02] ${selectedImages.includes(img.index) ? 'border-purple-500 ring-2 ring-purple-500/50 shadow-lg shadow-purple-600/30' : 'border-transparent hover:border-white/20'}`}>
-                        <img src={img.image_url} alt={`Variante ${img.index + 1}`} className="w-full aspect-square object-cover" loading="lazy" />
+                        {img.is_video ? (
+                          <video src={img.video_url} className="w-full aspect-square object-cover bg-black" />
+                        ) : (
+                          <img src={img.image_url} alt={`Variante ${img.index + 1}`} className="w-full aspect-square object-cover" loading="lazy" />
+                        )}
+                        {img.is_video && (
+                          <div className="absolute bottom-1 left-1 bg-purple-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">🎬 Video</div>
+                        )}
                         {selectedImages.includes(img.index) && (
                           <div className="absolute top-2 right-2 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
                             {selectedImages.indexOf(img.index) + 1}
@@ -764,11 +792,16 @@ export default function WizardPage() {
                         const currentCopyIdx = imageHookMap[imgIdx] ?? 0;
                         if (!img) return null;
                         return (
-                          <div key={imgIdx} className={`rounded-xl overflow-hidden border-2 ${img.overlay_applied ? 'border-emerald-500/50' : 'border-white/10'}`}>
+                          <div key={imgIdx} className={`rounded-xl overflow-hidden border-2 ${img.is_video ? 'border-purple-500/50' : img.overlay_applied ? 'border-emerald-500/50' : 'border-white/10'}`}>
                             <div className="relative">
-                              <img src={img.image_url} alt={`Img ${pos + 1}`} className="w-full aspect-square object-cover" />
+                              {img.is_video ? (
+                                <video src={img.video_url} controls className="w-full aspect-square object-cover bg-black" />
+                              ) : (
+                                <img src={img.image_url} alt={`Img ${pos + 1}`} className="w-full aspect-square object-cover" />
+                              )}
                               <div className="absolute top-2 left-2 w-7 h-7 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">{pos + 1}</div>
-                              {img.overlay_applied && <div className="absolute top-2 right-2 bg-emerald-600 text-white text-[9px] font-bold px-2 py-1 rounded-full shadow-lg">✓ Con texto</div>}
+                              {img.is_video && <div className="absolute top-2 right-2 bg-purple-600 text-white text-[9px] font-bold px-2 py-1 rounded-full shadow-lg">🎬 Video</div>}
+                              {!img.is_video && img.overlay_applied && <div className="absolute top-2 right-2 bg-emerald-600 text-white text-[9px] font-bold px-2 py-1 rounded-full shadow-lg">✓ Con texto</div>}
                             </div>
                             <div className="p-2 bg-[#0f1320]">
                               <label className="text-[9px] text-gray-500 uppercase tracking-widest block mb-1">Copy a incrustar</label>

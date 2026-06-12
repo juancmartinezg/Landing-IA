@@ -261,43 +261,24 @@ export default function VideoWizardPage() {
     } catch { showToast('Error de conexión'); }
     setGeneratingCopies(false);
   };
+  // Modo "4ª variante": devuelve el video al wizard de imágenes en vez de
+  // lanzar una campaña propia. Lo guarda en sessionStorage y regresa.
   const launchCampaign = async () => {
     if (!videoUrl) { showToast('⚠️ Sube o elige un video primero'); return; }
-    if (copies.length === 0) { showToast('⚠️ Genera los textos primero'); return; }
     setLaunching(true);
     try {
-      const r = await fetch(`${API_URL}/ads/wizard/launch`, {
-        method: 'POST',
-        headers: { ...h, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: campaignName || `Video ${Date.now()}`,
-          image_urls: [],
-          image_urls_vertical: [],
-          image_urls_horizontal: [],
-          video_urls: [videoUrl],
-          copies: copies.slice(0, 1),
-          cta_text: 'Reserva ahora',
-          strategy,
-          channels,
-          budget_daily: parseInt(budgetDaily) || 20000,
-          duration: parseInt(duration) || 7,
-          service_slug: selectedSlug,
-          country: 'CO',
-          cities: [],
-          age_min: 18,
-          age_max: 65,
-          gender: 'all',
-          interests: [],
-        }),
-      });
-      if (r.ok) {
-        showToast('🚀 ¡Campaña con video publicada!');
-        setTimeout(() => window.location.href = '/dashboard/ads', 2000);
-      } else {
-        const d = await r.json();
-        showToast('❌ ' + (d.error || 'Error'));
+      const payload = {
+        video_url: videoUrl,
+        service_slug: selectedSlug,
+        copy: copies[0] || null,
+        ts: Date.now(),
+      };
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('cb_wizard_pending_video', JSON.stringify(payload));
       }
-    } catch { showToast('Error de conexión'); }
+      showToast('🎬 Video listo. Volviendo al wizard para lanzar todo junto...');
+      setTimeout(() => { window.location.href = '/dashboard/ads/wizard?video=1'; }, 1200);
+    } catch { showToast('Error guardando el video'); }
     setLaunching(false);
   };
   return (
@@ -676,9 +657,9 @@ export default function VideoWizardPage() {
           )}
           <div className="flex gap-2 flex-wrap">
             <button onClick={() => setStep(3)} className="flex-1 min-w-[100px] border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
-            <button onClick={launchCampaign} disabled={!videoUrl || copies.length === 0 || launching}
+            <button onClick={launchCampaign} disabled={!videoUrl || launching}
               className="flex-1 min-w-[200px] bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
-              {launching ? '⏳ Publicando...' : '🚀 Lanzar campaña con video'}
+              {launching ? '⏳ Guardando...' : '➕ Agregar este video a mi campaña'}
             </button>
           </div>
         </div>
