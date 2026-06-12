@@ -41,8 +41,8 @@ export default function LibraryPage() {
     if (!confirm(`¿Eliminar ${selected.length} creativo${selected.length > 1 ? 's' : ''}? Esta acción no se puede deshacer.`)) return;
     setDeleting(true);
     try {
-      const r = await fetch(`${API_URL}/ads/library`, {
-        method: 'DELETE',
+      const r = await fetch(`${API_URL}/ads/library/delete`, {
+        method: 'POST',
         headers: { ...h, 'Content-Type': 'application/json' },
         body: JSON.stringify({ generation_ids: selected }),
       });
