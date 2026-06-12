@@ -37,6 +37,9 @@ export default function WizardPage() {
   const [budgetDaily, setBudgetDaily] = useState('20000');
   const [duration, setDuration] = useState('7');
   const [campaignName, setCampaignName] = useState('');
+  // Destino de WhatsApp (selector "Destinos de mensajes" tipo Meta)
+  const [waNumbers, setWaNumbers] = useState<any[]>([]);
+  const [waNumber, setWaNumber] = useState('');
   const [adCountry, setAdCountry] = useState('CO');
   const [adCity, setAdCity] = useState('');
   const [adRadius, setAdRadius] = useState('25');
@@ -54,6 +57,11 @@ export default function WizardPage() {
     fetch(`${API_URL}/ads/wizard/check-quota`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' } }).then(r => r.json()).then(d => setQuota(d)).catch(() => {});
     fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).then(d => setServices(d.services || [])).catch(() => {});
     fetch(`${API_URL}/brand-assets`, { headers: h }).then(r => r.json()).then(d => setBrandAssets(d.assets || [])).catch(() => {});
+    // Números de WhatsApp disponibles para el destino del anuncio (default = bot)
+    fetch(`${API_URL}/ads/whatsapp-numbers`, { headers: h }).then(r => r.json()).then(d => {
+      setWaNumbers(d.numbers || []);
+      if (d.default) setWaNumber(prev => prev || d.default);
+    }).catch(() => {});
     // Leer cap multi-tenant desde config_pro (sin hardcode)
     fetch(`${API_URL}/config`, { headers: h }).then(r => r.ok ? r.json() : null).then(d => {
       if (d?.wizard_max_images_per_round) setMaxImagesCap(parseInt(d.wizard_max_images_per_round));
@@ -94,6 +102,7 @@ export default function WizardPage() {
           if (d.adAgeMin) setAdAgeMin(d.adAgeMin);
           if (d.adAgeMax) setAdAgeMax(d.adAgeMax);
           if (d.adGender) setAdGender(d.adGender);
+          if (d.waNumber) setWaNumber(d.waNumber);
           showToast('📂 Borrador restaurado');
         }
       } catch {}
@@ -105,7 +114,7 @@ export default function WizardPage() {
     if (!draftHydrated || !draftKey || typeof window === 'undefined') return;
     const t = setTimeout(() => {
       try {
-        const draft = { step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, adCountry, adCity, adRadius, adAgeMin, adAgeMax, adGender, savedAt: Date.now() };
+        const draft = { step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, adCountry, adCity, adRadius, adAgeMin, adAgeMax, adGender, waNumber, savedAt: Date.now() };
         localStorage.setItem(draftKey, JSON.stringify(draft));
         setDraftSaved(true);
         setTimeout(() => setDraftSaved(false), 1500);
@@ -367,6 +376,7 @@ export default function WizardPage() {
           age_max: parseInt(adAgeMax) || 65,
           gender: adGender,
           interests: [],
+          whatsapp_phone_number: waNumber,
         }),
       });
       if (r.ok) {
@@ -846,6 +856,21 @@ export default function WizardPage() {
                         </select>
                       </div>
                     </div>
+                    {channels.includes('whatsapp') && (
+                      <div className="mt-4 pt-4 border-t border-white/5">
+                        <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">💚 Número de WhatsApp (destino del anuncio)</label>
+                        {waNumbers.length > 0 ? (
+                          <select value={waNumber} onChange={(e) => setWaNumber(e.target.value)} className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
+                            {waNumbers.map((n: any) => (
+                              <option key={n.value} value={n.value}>{n.display}{n.label ? ` — ${n.label}` : ''}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="text-[11px] text-gray-500">Cargando números… (se usará el del bot por defecto)</p>
+                        )}
+                        <p className="text-[10px] text-gray-600 mt-1">A este número llegarán los clientes que toquen tu anuncio. Por defecto es el del bot.</p>
+                      </div>
+                    )}
                     <div className="mt-4 pt-4 border-t border-white/5">
                       <h4 className="text-xs font-bold text-gray-300 mb-3">🎯 ¿A quién le mostramos el anuncio?</h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
