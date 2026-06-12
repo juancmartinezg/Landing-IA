@@ -139,6 +139,11 @@ export default function WizardPage() {
         setSelectedImages(sel => sel.includes(nextIdx) ? sel : [...sel, nextIdx]);
         return [...prev, slot];
       });
+      // Caso solo-video: si no hay copies (no se pasó por el flujo de imágenes),
+      // sembrar el copy que generó el video-wizard para que el paso 8 muestre el botón lanzar.
+      if (v.copy && typeof v.copy === 'object') {
+        setCopies(prev => prev.length ? prev : [v.copy]);
+      }
       setStep(8);
       showToast('🎬 Video agregado como variante. Revísalo y lanza.');
     } catch {}

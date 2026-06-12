@@ -748,9 +748,14 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
             </button>
           )}
           {campaigns.length > 0 && (
-            <a href="/dashboard/ads/wizard" className="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-sm font-bold transition-all">
-              ✨ Nueva campaña
-            </a>
+            <>
+              <a href="/dashboard/ads/video-wizard" className="bg-white/5 hover:bg-purple-600/20 border border-purple-500/30 text-purple-300 px-4 py-2 rounded-xl text-sm font-bold transition-all">
+                🎬 Campaña de video
+              </a>
+              <a href="/dashboard/ads/wizard" className="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl text-sm font-bold transition-all">
+                ✨ Nueva campaña
+              </a>
+            </>
           )}
         </div>
       </div>
@@ -785,9 +790,14 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
               <p className="text-5xl mb-4">📢</p>
               <h2 className="text-xl font-bold mb-2">Atrae más clientes con publicidad</h2>
               <p className="text-gray-400 text-sm mb-6">La IA crea y optimiza tus anuncios automáticamente.<br/>Solo dinos qué promocionar y cuánto invertir.</p>
-              <a href="/dashboard/ads/wizard" className="bg-purple-600 hover:bg-purple-500 px-8 py-3 rounded-xl text-sm font-bold transition-all inline-block">
-                ✨ Crear mi primera campaña
-              </a>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <a href="/dashboard/ads/wizard" className="bg-purple-600 hover:bg-purple-500 px-8 py-3 rounded-xl text-sm font-bold transition-all inline-block">
+                  ✨ Crear con imágenes
+                </a>
+                <a href="/dashboard/ads/video-wizard" className="bg-white/5 hover:bg-purple-600/20 border border-purple-500/30 text-purple-300 px-8 py-3 rounded-xl text-sm font-bold transition-all inline-block">
+                  🎬 Crear con video
+                </a>
+              </div>
             </div>
           ) : (
              <>
