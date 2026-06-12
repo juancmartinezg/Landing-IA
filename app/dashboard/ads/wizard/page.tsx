@@ -949,25 +949,6 @@ export default function WizardPage() {
                       </div>
                     )}
                     <div className="mt-4 pt-4 border-t border-white/5">
-                        </select>
-                      </div>
-                    </div>
-                    {channels.includes('whatsapp') && (
-                      <div className="mt-4 pt-4 border-t border-white/5">
-                        <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">💚 Número de WhatsApp (destino del anuncio)</label>
-                        {waNumbers.length > 0 ? (
-                          <select value={waNumber} onChange={(e) => setWaNumber(e.target.value)} className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
-                            {waNumbers.map((n: any) => (
-                              <option key={n.value} value={n.value}>{n.display}{n.label ? ` — ${n.label}` : ''}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <p className="text-[11px] text-gray-500">Cargando números… (se usará el del bot por defecto)</p>
-                        )}
-                        <p className="text-[10px] text-gray-600 mt-1">A este número llegarán los clientes que toquen tu anuncio. Por defecto es el del bot.</p>
-                      </div>
-                    )}
-                    <div className="mt-4 pt-4 border-t border-white/5">
                       <h4 className="text-xs font-bold text-gray-300 mb-3">🎯 ¿A quién le mostramos el anuncio?</h4>
                       {/* Públicos guardados (cargar / guardar / borrar) */}
                       <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -1038,8 +1019,6 @@ export default function WizardPage() {
                         )}
                         <p className="text-[10px] text-gray-600 mt-2">Agrega varios países, departamentos o ciudades. Usa “Excluir” para quitar zonas (ej: todo Colombia menos un departamento).</p>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                           <label className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 block">Edad mínima</label>
