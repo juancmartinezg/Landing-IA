@@ -59,8 +59,10 @@ export default function WizardPage() {
     fetch(`${API_URL}/brand-assets`, { headers: h }).then(r => r.json()).then(d => setBrandAssets(d.assets || [])).catch(() => {});
     // Números de WhatsApp disponibles para el destino del anuncio (default = bot)
     fetch(`${API_URL}/ads/whatsapp-numbers`, { headers: h }).then(r => r.json()).then(d => {
-      setWaNumbers(d.numbers || []);
-      if (d.default) setWaNumber(prev => prev || d.default);
+      const list = d.numbers || [];
+      setWaNumbers(list);
+      // Selecciona el default (bot) si no hay valor, o si el guardado ya no existe en la lista
+      setWaNumber(prev => (prev && list.some((n: any) => n.value === prev)) ? prev : (d.default || ''));
     }).catch(() => {});
     // Leer cap multi-tenant desde config_pro (sin hardcode)
     fetch(`${API_URL}/config`, { headers: h }).then(r => r.ok ? r.json() : null).then(d => {
@@ -121,7 +123,7 @@ export default function WizardPage() {
       } catch {}
     }, 500);
     return () => clearTimeout(t);
-  }, [step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, adCountry, adCity, adRadius, adAgeMin, adAgeMax, adGender, draftHydrated, draftKey]);
+  }, [step, strategy, channels, language, selectedSlug, benefits, refMode, selectedRefs, plan, previewImages, selectedImages, copies, campaignName, budgetDaily, duration, imageHookMap, adCountry, adCity, adRadius, adAgeMin, adAgeMax, adGender, waNumber, draftHydrated, draftKey]);
   // Warning si el servicio del borrador ya no existe
   useEffect(() => {
     if (!draftHydrated || !selectedSlug || services.length === 0) return;
