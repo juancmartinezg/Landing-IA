@@ -157,7 +157,7 @@ export default function WizardPage() {
   const loadOwnLibrary = async () => {
     if (ownLibLoaded) return;
     try {
-      const r = await fetch(`${API_URL}/ads/library?type=image`, { headers: h });
+      const r = await fetch(`${API_URL}/ads/library?type=image&limit=200&period=365`, { headers: h });
       const d = await r.json();
       if (d.ok) setOwnLibrary(d.items || []);
     } catch {}
