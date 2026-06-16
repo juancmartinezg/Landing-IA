@@ -52,6 +52,9 @@ export default function WizardPage() {
   const [geoSearching, setGeoSearching] = useState(false);
   const [savedAudiences, setSavedAudiences] = useState<any[]>([]);
   const [savedAudName, setSavedAudName] = useState('');
+  // Públicos inteligentes (Compradores + Lookalike) — onboarding 1 vez por cliente
+  const [smartAudDone, setSmartAudDone] = useState(true);
+  const [smartAudBusy, setSmartAudBusy] = useState(false);
   const [adAgeMin, setAdAgeMin] = useState('18');
   const [adAgeMax, setAdAgeMax] = useState('65');
   const [adGender, setAdGender] = useState('all');
@@ -75,6 +78,8 @@ export default function WizardPage() {
     }).catch(() => {});
    // Públicos guardados (geo + edad + sexo reutilizables)
     fetch(`${API_URL}/ads/saved-audiences`, { headers: h }).then(r => r.json()).then(d => setSavedAudiences(d.audiences || [])).catch(() => {});
+    // Estado del onboarding de públicos inteligentes (banner 1 vez por cliente)
+    fetch(`${API_URL}/ads/onboarding-status`, { headers: h }).then(r => r.json()).then(d => setSmartAudDone(!!d.done)).catch(() => {});
     // Leer cap multi-tenant desde config_pro (sin hardcode)
     fetch(`${API_URL}/config`, { headers: h }).then(r => r.ok ? r.json() : null).then(d => {
       if (d?.wizard_max_images_per_round) setMaxImagesCap(parseInt(d.wizard_max_images_per_round));
@@ -409,6 +414,23 @@ export default function WizardPage() {
   };
   const deleteAudience = async (id: string) => {
     try { await fetch(`${API_URL}/ads/saved-audiences`, { method: 'DELETE', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); loadSavedAudiences(); showToast('🗑️ Público eliminado'); } catch {}
+  };
+  const setupSmartAudiences = async () => {
+    setSmartAudBusy(true);
+    try {
+      const res = await fetch(`${API_URL}/ads/setup-smart-audiences`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const d = await res.json();
+      if (d.needs_tos && d.tos_url) {
+        window.open(d.tos_url, '_blank');
+        showToast('📝 Acepta los términos de Meta en la pestaña nueva y vuelve a tocar el botón');
+      } else if (d.done) {
+        setSmartAudDone(true);
+        showToast(d.lookalike_pending ? '✅ Público de compradores activado (el Lookalike se crea al cruzar 100)' : '✅ Públicos inteligentes activados');
+      } else {
+        showToast('❌ ' + (d.error || 'No se pudo activar'));
+      }
+    } catch { showToast('Error de conexión'); }
+    finally { setSmartAudBusy(false); }
   };
   const launchCampaign = async () => {
     setLaunching(true);
@@ -950,6 +972,20 @@ export default function WizardPage() {
                     )}
                     <div className="mt-4 pt-4 border-t border-white/5">
                       <h4 className="text-xs font-bold text-gray-300 mb-3">🎯 ¿A quién le mostramos el anuncio?</h4>
+                      {!smartAudDone && (
+                        <div className="bg-gradient-to-r from-purple-600/15 to-emerald-600/15 border border-purple-500/30 rounded-lg p-3 mb-3">
+                          <div className="flex items-start gap-2">
+                            <span className="text-lg leading-none">🧠</span>
+                            <div className="flex-1">
+                              <p className="text-[12px] font-bold text-white">Activa los Públicos Inteligentes</p>
+                              <p className="text-[10px] text-gray-400 mt-0.5">Creamos un público de tus compradores reales y un Lookalike que mejora solo con cada venta. Se hace 1 sola vez.</p>
+                              <button type="button" onClick={setupSmartAudiences} disabled={smartAudBusy} className="mt-2 text-[11px] bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold px-3 py-1.5 rounded-lg">
+                                {smartAudBusy ? '⏳ Activando…' : '🧠 Activar públicos inteligentes'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {/* Públicos guardados (cargar / guardar / borrar) */}
                       <div className="flex flex-wrap items-center gap-2 mb-3">
                         <span className="text-[10px] text-gray-500 uppercase tracking-widest">👥 Públicos</span>

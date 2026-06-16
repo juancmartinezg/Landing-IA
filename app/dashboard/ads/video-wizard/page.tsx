@@ -41,6 +41,11 @@ export default function VideoWizardPage() {
   const [brandImages, setBrandImages] = useState<any[]>([]);
   const [aiLibraryImages, setAiLibraryImages] = useState<any[]>([]);
   const [imgSourcesLoaded, setImgSourcesLoaded] = useState(false);
+  // Revisión de escenas antes de animar (permite regenerar 1 sola escena)
+  const [aiScenes, setAiScenes] = useState<any[]>([]);
+  const [aiPlan, setAiPlan] = useState<any>(null);
+  const [aiPlanId, setAiPlanId] = useState('');
+  const [regenRole, setRegenRole] = useState('');
   useEffect(() => {
     if (!user?.companyId) return;
     fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).then(d => setServices(d.services || [])).catch(() => {});
@@ -135,27 +140,22 @@ export default function VideoWizardPage() {
     }
     setUploading(false);
   };
-  const generateVideoAI = async () => {
+  // 1) Genera el plan + las 3 imágenes y se detiene para que las revises
+  const generateScenes = async () => {
     if (!selectedSlug) { showToast('⚠️ Selecciona un servicio en el paso anterior'); return; }
     setAiGenerating(true);
     try {
-      // 1. Storyboard: Gemini genera el plan narrativo de 3 escenas
       showToast('🧠 Diseñando el storyboard...');
       const planRes = await fetch(`${API_URL}/ads/video/plan`, {
         method: 'POST',
         headers: { ...h, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service_slug: selectedSlug,
-          brief: aiBrief || '',            // opcional: contexto extra
-          hook_type: 'authority',
-        }),
+        body: JSON.stringify({ service_slug: selectedSlug, brief: aiBrief || '', hook_type: 'authority' }),
       });
       const planData = await planRes.json();
       if (!planData.success || !planData.plan) {
         showToast('❌ ' + (planData.error || 'No se pudo generar el storyboard'));
         setAiGenerating(false); return;
       }
-      // 2. Generar las 3 imágenes (ancladas a la imagen de referencia si hay)
       showToast('🎨 Generando las 3 escenas...');
       const imgRes = await fetch(`${API_URL}/ads/video/storyboard-images`, {
         method: 'POST',
@@ -164,7 +164,7 @@ export default function VideoWizardPage() {
           plan_id: planData.plan_id,
           scenes: planData.plan.scenes,
           service_slug: selectedSlug,
-          reference_image_url: aiImageUrl || '',   // opcional: ancla visual
+          reference_image_url: aiImageUrl || '',
         }),
       });
       const imgData = await imgRes.json();
@@ -173,20 +173,58 @@ export default function VideoWizardPage() {
         setAiGenerating(false); return;
       }
       const order = ['hook', 'solution', 'outcome'];
-      const sceneImages = order.map(
-        (role) => (imgData.scenes.find((s: any) => s.role === role) || {}).image_url
-      );
-      // 3. Animar las 3 escenas (3 créditos Kling) + concatenar
+      const scenes = order.map((role) => imgData.scenes.find((s: any) => s.role === role) || { role, image_url: '' });
+      setAiPlan(planData.plan);
+      setAiPlanId(planData.plan_id);
+      setAiScenes(scenes);
+      showToast('✅ 3 escenas listas. Revísalas y regenera la que no te guste.');
+    } catch {
+      showToast('Error de conexión');
+    }
+    setAiGenerating(false);
+  };
+  // 2) Regenera SOLO una escena (usa regenerate_role del backend)
+  const regenerateScene = async (role: string) => {
+    if (!aiPlan) return;
+    setRegenRole(role);
+    try {
+      const hookUrl = (aiScenes.find((s: any) => s.role === 'hook') || {}).image_url || '';
+      const res = await fetch(`${API_URL}/ads/video/storyboard-images`, {
+        method: 'POST',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan_id: aiPlanId,
+          scenes: aiPlan.scenes,
+          service_slug: selectedSlug,
+          reference_image_url: aiImageUrl || '',
+          regenerate_role: role,
+          hook_image_url: hookUrl,
+        }),
+      });
+      const d = await res.json();
+      if (d.success && d.scene?.image_url) {
+        setAiScenes((prev) => prev.map((s: any) => s.role === role ? { ...s, image_url: d.scene.image_url } : s));
+        showToast('✅ Escena regenerada');
+      } else {
+        showToast('❌ ' + (d.scene?.error || d.error || 'No se pudo regenerar'));
+      }
+    } catch {
+      showToast('Error de conexión');
+    }
+    setRegenRole('');
+  };
+  // 3) Anima las 3 escenas aprobadas + concatena
+  const animateScenes = async () => {
+    if (aiScenes.length < 3 || aiScenes.some((s: any) => !s.image_url)) { showToast('⚠️ Faltan escenas'); return; }
+    setAiGenerating(true);
+    try {
+      const order = ['hook', 'solution', 'outcome'];
+      const sceneImages = order.map((role) => (aiScenes.find((s: any) => s.role === role) || {}).image_url);
       showToast('🎬 Animando el video premium (~3 min)...');
       const genRes = await fetch(`${API_URL}/ads/video/generate-premium`, {
         method: 'POST',
         headers: { ...h, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan: planData.plan,
-          scene_images: sceneImages,
-          service_slug: selectedSlug,
-          cta_text: 'Reserva tu cupo',
-        }),
+        body: JSON.stringify({ plan: aiPlan, scene_images: sceneImages, service_slug: selectedSlug, cta_text: 'Reserva tu cupo' }),
       });
       const genData = await genRes.json();
       if (genData.success) {
@@ -556,14 +594,44 @@ export default function VideoWizardPage() {
               {aiGenerating ? (
                 <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-6 text-center">
                   <div className="w-10 h-10 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                  <p className="text-sm font-bold text-purple-300">Generando video con IA...</p>
-                  <p className="text-[10px] text-gray-400 mt-1">{aiModel === 'wan' ? '~60 segundos Aprox' : '~120 segundos aprox'} • No cierres esta página</p>
+                  <p className="text-sm font-bold text-purple-300">{aiScenes.length === 3 ? 'Animando el video premium...' : 'Generando las 3 escenas...'}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{aiScenes.length === 3 ? '~3 min • No cierres esta página' : 'unos segundos...'}</p>
                   {aiGenerationId && <p className="text-[9px] text-gray-600 mt-2 font-mono">ID: {aiGenerationId}</p>}
                 </div>
+              ) : aiScenes.length === 3 ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-300 font-bold">🎬 Revisa las 3 escenas (regenera la que no te guste)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['hook', 'solution', 'outcome'].map((role) => {
+                      const sc = aiScenes.find((s: any) => s.role === role) || {};
+                      const labels: any = { hook: '1 · Gancho', solution: '2 · La clase', outcome: '3 · Resultado' };
+                      return (
+                        <div key={role} className="rounded-lg overflow-hidden border border-white/10 bg-white/[0.02]">
+                          {sc.image_url
+                            ? <img src={sc.image_url} alt={role} className="w-full aspect-square object-cover" />
+                            : <div className="w-full aspect-square flex items-center justify-center text-[10px] text-gray-600">sin imagen</div>}
+                          <div className="p-1.5">
+                            <p className="text-[9px] text-gray-400 mb-1">{labels[role]}</p>
+                            <button onClick={() => regenerateScene(role)} disabled={!!regenRole}
+                              className="w-full text-[10px] bg-white/5 hover:bg-white/10 border border-white/10 rounded px-1 py-1 disabled:opacity-50">
+                              {regenRole === role ? '⏳...' : '🔄 Regenerar'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setAiScenes([]); setAiPlan(null); setAiPlanId(''); }} disabled={!!regenRole}
+                      className="flex-1 border border-white/10 py-2.5 rounded-xl text-xs font-bold hover:bg-white/5 disabled:opacity-50">↺ Empezar de nuevo</button>
+                    <button onClick={animateScenes} disabled={!!regenRole}
+                      className="flex-1 bg-purple-600 hover:bg-purple-500 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50">🎬 Animar video</button>
+                  </div>
+                </div>
               ) : (
-                <button onClick={generateVideoAI} disabled={!selectedSlug}
+                <button onClick={generateScenes} disabled={!selectedSlug}
                   className="w-full bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
-                  🎬 Generar video premium (3 escenas)
+                  🎨 Generar las 3 escenas
                 </button>
               )}
             </>
@@ -574,7 +642,7 @@ export default function VideoWizardPage() {
             </div>
           )}
           <div className="flex gap-2 mt-6">
-            <button onClick={() => { setStep(2); setVideoUrl(''); setAiGenerating(false); }} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
+            <button onClick={() => { setStep(2); setVideoUrl(''); setAiGenerating(false); setAiScenes([]); setAiPlan(null); setAiPlanId(''); }} className="flex-1 border border-white/10 py-3 rounded-xl text-sm font-bold hover:bg-white/5">← Atrás</button>
             <button onClick={() => { setStep(4); generateCopies(); }} disabled={!videoUrl}
               className="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
               Siguiente →
