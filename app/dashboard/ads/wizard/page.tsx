@@ -413,7 +413,7 @@ export default function WizardPage() {
     } catch { showToast('Error de conexión'); }
   };
   const deleteAudience = async (id: string) => {
-    try { await fetch(`${API_URL}/ads/saved-audiences`, { method: 'DELETE', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); loadSavedAudiences(); showToast('🗑️ Público eliminado'); } catch {}
+    try { await fetch(`${API_URL}/ads/saved-audiences?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers: h }); loadSavedAudiences(); showToast('🗑️ Público eliminado'); } catch {}
   };
   const setupSmartAudiences = async () => {
     setSmartAudBusy(true);
