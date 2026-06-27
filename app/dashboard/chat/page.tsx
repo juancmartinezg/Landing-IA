@@ -1,8 +1,25 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../providers';
 import LeadCard from '../../components/LeadCard';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
+function ChatImage({ s3Key, companyId }: { s3Key: string; companyId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    if (!s3Key) return;
+    fetch(`${API_URL}/chat/media?key=${encodeURIComponent(s3Key)}`, {
+      headers: { 'client-id': companyId },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.url) setUrl(d.url); else setError(true); })
+      .catch(() => setError(true));
+  }, [s3Key, companyId]);
+  if (error) return <p className="text-xs text-gray-500 italic">No se pudo cargar la imagen</p>;
+  if (!url) return <div className="w-48 h-32 bg-white/5 rounded-lg animate-pulse" />;
+  return <img src={url} alt="Imagen enviada" className="max-w-[260px] max-h-[300px] rounded-lg cursor-pointer" onClick={() => window.open(url, '_blank')} />;
+}
 export default function ChatPage() {
   const { user } = useAuth();
   const [tab, setTab] = useState<'bot' | 'agent'>('bot');
@@ -747,6 +764,11 @@ export default function ChatPage() {
                               }`}>
                                 {isHuman ? '🙋 Asesor' : msg.private ? '🔒 Nota privada' : '🤖 Bot'}
                               </p>
+                            )}
+                            {msg.meta?.s3_key && msg.meta?.media_kind === 'image' && (
+                              <div className="mb-1">
+                                <ChatImage s3Key={msg.meta.s3_key} companyId={user?.companyId || ''} />
+                              </div>
                             )}
                             <p className="whitespace-pre-wrap pr-12">{msg.text || msg.content || ''}</p>
                             <span className={`absolute bottom-1.5 right-3 text-[9px] ${
