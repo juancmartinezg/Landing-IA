@@ -507,6 +507,17 @@ export default function FacturacionPage() {
             <select className={inputCls} value={cfg.modo_facturacion} onChange={e => setCfg({ ...cfg, modo_facturacion: e.target.value })}>
               {MODOS.map(m => <option key={m.id} value={m.id} className="bg-gray-900">{m.label}</option>)}
             </select>
+            <label className="text-xs text-gray-400 block mt-4">Tratamiento del IVA al facturar
+              <select className={inputCls} value={cfg.factura_iva_modo || 'INCLUIDO'} onChange={e => setCfg({ ...cfg, factura_iva_modo: e.target.value })}>
+                <option value="INCLUIDO" className="bg-gray-900">IVA incluido en el precio (no cobra de mas al cliente)</option>
+                <option value="ADICIONAL" className="bg-gray-900">IVA adicional (se suma al pedir factura)</option>
+              </select>
+            </label>
+            <p className="text-xs text-gray-500 mt-1">
+              {(cfg.factura_iva_modo || 'INCLUIDO') === 'ADICIONAL'
+                ? 'El bot preguntara por la factura ANTES del link (o cobrara el IVA aparte). El cliente paga precio + IVA.'
+                : 'El precio ya trae el IVA; la factura solo lo desglosa. El cliente no paga nada extra.'}
+            </p>
             <label className="flex items-center gap-2 text-sm text-gray-400 mt-4">
               <input type="checkbox" checked={!!cfg.pedir_rut} onChange={e => setCfg({ ...cfg, pedir_rut: e.target.checked })} />
               Pedir el RUT por WhatsApp (lectura automatica con IA)
