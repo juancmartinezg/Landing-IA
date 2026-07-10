@@ -25,6 +25,7 @@ const menuItems = [
   { href: '/dashboard/marketing', label: 'Envío masivo', icon: '📣', roles: ['owner', 'admin'], permission: 'manage_templates' },
   { href: '/dashboard/gateway', label: 'Pasarela', icon: '🏦', roles: ['owner'], permission: 'edit_payment_gateways' },
   { href: '/dashboard/inventory', label: 'Inventario', icon: '📦', roles: ['owner', 'admin'], permission: 'edit_services' },
+  { href: '/dashboard/facturacion', label: 'Facturación', icon: '🧾', roles: ['owner', 'admin'], permission: 'edit_services' },
   { href: '/dashboard/ads', label: 'Anuncios IA', icon: '🚀', roles: ['owner', 'admin'], permission: 'view_ads' },
   { href: '/dashboard/ads/library', label: 'Biblioteca creativos', icon: '📚', roles: ['owner', 'admin'], permission: 'view_ads' },
   { href: '/dashboard/ads/video-wizard', label: 'Wizard de Video', icon: '🎬', roles: ['owner', 'admin'], permission: 'create_ads' },
