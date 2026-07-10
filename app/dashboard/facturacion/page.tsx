@@ -191,6 +191,50 @@ export default function FacturacionPage() {
   };
   const setEmisor = (k: string, v: string) => setCfg({ ...cfg, emisor: { ...(cfg.emisor || {}), [k]: v } });
   const setNum = (k: string, v: any) => setCfg({ ...cfg, numeracion: { ...(cfg.numeracion || {}), [k]: v } });
+  const setNumMany = (obj: any) => setCfg((c: any) => ({ ...c, numeracion: { ...(c.numeracion || {}), ...obj } }));
+  const [resoLoading, setResoLoading] = useState(false);
+  const leerResolucion = async (file: File) => {
+    if (!ERP_URL) { showToast('Falta NEXT_PUBLIC_ERP_API_URL'); return; }
+    setResoLoading(true);
+    try {
+      const b64: string = await new Promise((resolve, reject) => {
+        if (file.type === 'application/pdf') {
+          const r = new FileReader();
+          r.onload = () => resolve((r.result as string).split(',')[1] || '');
+          r.onerror = () => reject(new Error('pdf'));
+          r.readAsDataURL(file);
+          return;
+        }
+        const url = URL.createObjectURL(file);
+        const im = new window.Image();
+        im.onload = () => {
+          const max = 1800;
+          const scale = Math.min(1, max / Math.max(im.width, im.height));
+          const w = Math.round(im.width * scale), h = Math.round(im.height * scale);
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          if (!ctx) { reject(new Error('canvas')); return; }
+          ctx.drawImage(im, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          resolve(c.toDataURL('image/jpeg', 0.85).split(',')[1] || '');
+        };
+        im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img')); };
+        im.src = url;
+      });
+      const mime = file.type === 'application/pdf' ? 'application/pdf' : 'image/jpeg';
+      const res = await fetch(`${ERP_URL}/erp/facturacion/resolucion`, {
+        method: 'POST', headers: hj,
+        body: JSON.stringify({ documento_b64: b64, mime_type: mime }),
+      });
+      const d = await res.json();
+      const n = d.numeracion || {};
+      if (!n.numero_formulario && !n.prefijo) { showToast('No se pudo leer la resolucion. Ingresa los datos manualmente.'); return; }
+      setNumMany(n);
+      showToast('Resolucion leida: ' + (n.prefijo || '') + ' ' + (n.numero_formulario || ''));
+    } catch { showToast('Error leyendo la resolucion'); }
+    finally { setResoLoading(false); }
+  };
 
   // ---- Bulk ----
   const [bulkPreview, setBulkPreview] = useState<any>(null);
@@ -480,16 +524,64 @@ export default function FacturacionPage() {
             </div>
           </div>
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
-            <h3 className="font-bold mb-4">Resolucion y numeracion DIAN</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input className={inputCls} placeholder="Prefijo (ej. FE)" value={cfg.numeracion?.prefijo || ''} onChange={e => setNum('prefijo', e.target.value)} />
-              <input className={inputCls} placeholder="Numero de resolucion" value={cfg.numeracion?.resolucion_numero || ''} onChange={e => setNum('resolucion_numero', e.target.value)} />
-              <input className={inputCls} placeholder="Clave tecnica" value={cfg.numeracion?.clave_tecnica || ''} onChange={e => setNum('clave_tecnica', e.target.value)} />
-              <div className="flex gap-2">
-                <input type="number" className={inputCls} placeholder="Rango desde" value={cfg.numeracion?.rango_desde || ''} onChange={e => setNum('rango_desde', parseInt(e.target.value) || 0)} />
-                <input type="number" className={inputCls} placeholder="Rango hasta" value={cfg.numeracion?.rango_hasta || ''} onChange={e => setNum('rango_hasta', parseInt(e.target.value) || 0)} />
-              </div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-bold">Resolucion y numeracion DIAN</h3>
+              <label className="cursor-pointer text-xs px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500">
+                {resoLoading ? 'Leyendo…' : '📄 Subir resolucion DIAN'}
+                <input type="file" accept="image/*,application/pdf" className="hidden" disabled={resoLoading}
+                  onChange={e => e.target.files?.[0] && leerResolucion(e.target.files[0])} />
+              </label>
             </div>
+            <p className="text-xs text-gray-500 mb-4">Sube el documento de autorizacion de la DIAN y se completan los campos solos.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="text-xs text-gray-400">Nombre de la numeracion
+                <input className={inputCls} placeholder="Ej. FVE VENTAS" value={cfg.numeracion?.nombre || ''} onChange={e => setNum('nombre', e.target.value)} />
+              </label>
+              <label className="text-xs text-gray-400">Proxima factura (consecutivo)
+                <input type="number" className={inputCls} placeholder="Ej. 122" value={cfg.numeracion?.proxima_factura || ''} onChange={e => setNum('proxima_factura', parseInt(e.target.value) || 0)} />
+              </label>
+              <label className="text-xs text-gray-400">Prefijo
+                <input className={inputCls} placeholder="Ej. FEE" value={cfg.numeracion?.prefijo || ''} onChange={e => setNum('prefijo', e.target.value)} />
+              </label>
+              <label className="text-xs text-gray-400">Numero de formulario / resolucion
+                <input className={inputCls} placeholder="Ej. 18764108490776" value={cfg.numeracion?.resolucion_numero || ''} onChange={e => setNum('resolucion_numero', e.target.value)} />
+              </label>
+              <label className="text-xs text-gray-400">Vigencia desde
+                <input type="date" className={inputCls} value={cfg.numeracion?.vigencia_desde || ''} onChange={e => setNum('vigencia_desde', e.target.value)} />
+              </label>
+              <label className="text-xs text-gray-400">Vigencia hasta
+                <input type="date" className={inputCls} value={cfg.numeracion?.vigencia_hasta || ''} onChange={e => setNum('vigencia_hasta', e.target.value)} />
+              </label>
+              <label className="text-xs text-gray-400">Desde el numero
+                <input type="number" className={inputCls} placeholder="Ej. 28" value={cfg.numeracion?.rango_desde || ''} onChange={e => setNum('rango_desde', parseInt(e.target.value) || 0)} />
+              </label>
+              <label className="text-xs text-gray-400">Hasta el numero
+                <input type="number" className={inputCls} placeholder="Ej. 500" value={cfg.numeracion?.rango_hasta || ''} onChange={e => setNum('rango_hasta', parseInt(e.target.value) || 0)} />
+              </label>
+              <label className="text-xs text-gray-400">Clave tecnica (POS/doc. soporte)
+                <input className={inputCls} placeholder="Opcional" value={cfg.numeracion?.clave_tecnica || ''} onChange={e => setNum('clave_tecnica', e.target.value)} />
+              </label>
+              <label className="text-xs text-gray-400">Tipo de documento
+                <input className={inputCls} placeholder="Factura de venta" value={cfg.numeracion?.tipo_documento || ''} onChange={e => setNum('tipo_documento', e.target.value)} />
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-4 mt-4">
+              <label className="flex items-center gap-2 text-sm text-gray-400">
+                <input type="checkbox" checked={cfg.numeracion?.numeracion_automatica !== false} onChange={e => setNum('numeracion_automatica', e.target.checked)} />
+                Numeracion automatica
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-400">
+                <input type="checkbox" checked={cfg.numeracion?.numeracion_electronica !== false} onChange={e => setNum('numeracion_electronica', e.target.checked)} />
+                Numeracion electronica
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-400">
+                <input type="checkbox" checked={!!cfg.numeracion?.preferida} onChange={e => setNum('preferida', e.target.checked)} />
+                Preferida
+              </label>
+            </div>
+            <label className="text-xs text-gray-400 block mt-4">Texto de autorizacion
+              <textarea className={inputCls + ' h-24'} placeholder="Texto de la autorizacion DIAN" value={cfg.numeracion?.texto_autorizacion || ''} onChange={e => setNum('texto_autorizacion', e.target.value)} />
+            </label>
           </div>
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
             <h3 className="font-bold mb-4">Proveedor tecnologico (PT)</h3>
