@@ -124,18 +124,40 @@ export default function FacturacionPage() {
     if (!ERP_URL) { showToast('Falta NEXT_PUBLIC_ERP_API_URL'); return; }
     setRutLoading(true);
     try {
-      const b64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1] || '');
-        reader.readAsDataURL(file);
+      // Reescala/reencoda a JPEG: soluciona HEIC de iPhone y evita el limite de 6MB del request
+      const b64: string = await new Promise((resolve, reject) => {
+        if (file.type === 'application/pdf') {
+          const r = new FileReader();
+          r.onload = () => resolve((r.result as string).split(',')[1] || '');
+          r.onerror = () => reject(new Error('pdf'));
+          r.readAsDataURL(file);
+          return;
+        }
+        const url = URL.createObjectURL(file);
+        const im = new window.Image();
+        im.onload = () => {
+          const max = 1600;
+          const scale = Math.min(1, max / Math.max(im.width, im.height));
+          const w = Math.round(im.width * scale), h = Math.round(im.height * scale);
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          if (!ctx) { reject(new Error('canvas')); return; }
+          ctx.drawImage(im, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          resolve(c.toDataURL('image/jpeg', 0.85).split(',')[1] || '');
+        };
+        im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img')); };
+        im.src = url;
       });
+      const mime = file.type === 'application/pdf' ? 'application/pdf' : 'image/jpeg';
       const res = await fetch(`${ERP_URL}/erp/facturacion/rut`, {
         method: 'POST', headers: hj,
-        body: JSON.stringify({ imagen_b64: b64, mime_type: file.type || 'image/jpeg' }),
+        body: JSON.stringify({ imagen_b64: b64, mime_type: mime }),
       });
       const d = await res.json();
       const t = d.tercero || {};
-      if (!t.numero_doc) { showToast('No se pudo leer el RUT. Ingresa los datos manualmente.'); return; }
+      if (!t.numero_doc) { showToast(d.error ? ('Error: ' + d.error) : 'No se pudo leer el RUT. Ingresa los datos manualmente.'); return; }
       setNf({ ...nf, consumidor_final: false, adquiriente: {
         tipo_doc: t.tipo_doc || '31', numero_doc: t.numero_doc || '', dv: t.dv || '',
         nombre_razon_social: t.nombre_razon_social || '', email: t.email || '',
