@@ -10,6 +10,7 @@ type Tab = 'facturas' | 'nueva' | 'terceros' | 'config' | 'bulk';
 
 interface Linea {
   codigo: string;
+  prod_id?: string;
   descripcion: string;
   cantidad: number;
   precio_unitario: number;
@@ -69,7 +70,22 @@ export default function FacturacionPage() {
       .then(r => r.json()).then(d => { if (d && Object.keys(d).length) setCfg({ ...cfg, ...d }); }).catch(() => {});
   };
 
-  useEffect(() => { loadFacturas(); loadTerceros(); loadConfig(); /* eslint-disable-next-line */ }, []);
+  // ---- Catalogo de productos/servicios ----
+  const [productos, setProductos] = useState<any[]>([]);
+  const loadProductos = () => {
+    if (!ERP_URL) return;
+    fetch(`${ERP_URL}/erp/facturacion/productos`, { headers: h })
+      .then(r => r.json()).then(d => setProductos(d.productos || [])).catch(() => {});
+  };
+  const elegirProducto = (i: number, id: string) => {
+    const p = productos.find((x: any) => (x.id || x.slug) === id);
+    setLineas(lineas.map((l, idx) => idx !== i ? l : (
+      p ? { ...l, prod_id: id, codigo: p.slug || p.id || l.codigo, descripcion: p.nombre || p.descripcion || l.descripcion, precio_unitario: p.precio || l.precio_unitario }
+        : { ...l, prod_id: '' }
+    )));
+  };
+
+  useEffect(() => { loadFacturas(); loadTerceros(); loadConfig(); loadProductos(); /* eslint-disable-next-line */ }, []);
 
   // ---- Nueva factura ----
   const [nf, setNf] = useState({
@@ -389,6 +405,12 @@ export default function FacturacionPage() {
             <div className="space-y-3">
               {lineas.map((l, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                  <select className={`${inputCls} col-span-12`} value={l.prod_id || ''} onChange={e => elegirProducto(i, e.target.value)}>
+                    <option value="" className="bg-gray-900">— Producto manual (escribe abajo) —</option>
+                    {productos.map((p: any) => (
+                      <option key={p.id || p.slug} value={p.id || p.slug} className="bg-gray-900">{p.nombre}{p.precio ? ` — ${cop(Math.round(p.precio))}` : ''}</option>
+                    ))}
+                  </select>
                   <input className={`${inputCls} col-span-12 md:col-span-4`} placeholder="Descripcion" value={l.descripcion} onChange={e => setLn(i, 'descripcion', e.target.value)} />
                   <input type="number" className={`${inputCls} col-span-3 md:col-span-1`} placeholder="Cant" value={l.cantidad} onChange={e => setLn(i, 'cantidad', parseFloat(e.target.value) || 0)} />
                   <input type="number" className={`${inputCls} col-span-5 md:col-span-2`} placeholder="Precio" value={l.precio_unitario} onChange={e => setLn(i, 'precio_unitario', parseFloat(e.target.value) || 0)} />
