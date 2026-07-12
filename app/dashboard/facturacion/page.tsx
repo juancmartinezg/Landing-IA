@@ -191,6 +191,24 @@ export default function FacturacionPage() {
     await fetch(`${ERP_URL}/erp/facturacion/terceros`, { method: 'POST', headers: hj, body: JSON.stringify(nuevoTercero) });
     showToast('Cliente guardado'); setNuevoTercero({ tipo_doc: '13', numero_doc: '', dv: '', nombre_razon_social: '', email: '', telefono: '', direccion: '' }); loadTerceros();
   };
+  const buscarClientePorDoc = (doc: string) => {
+    const q = (doc || '').trim();
+    if (!q) return;
+    const t = terceros.find((x: any) => String(x.numero_doc || x.tercero_id || '') === q);
+    if (t) {
+      setNf({ ...nf, consumidor_final: false, adquiriente: {
+        tipo_doc: t.tipo_doc || nf.adquiriente.tipo_doc || '13',
+        numero_doc: t.numero_doc || t.tercero_id || q,
+        dv: t.dv || '', nombre_razon_social: t.nombre_razon_social || '',
+        email: t.email || '', telefono: t.telefono || '', direccion: t.direccion || '',
+      }});
+      showToast('Cliente encontrado: ' + (t.nombre_razon_social || q));
+    } else {
+      setNuevoTercero({ tipo_doc: nf.adquiriente.tipo_doc || '13', numero_doc: q, dv: '', nombre_razon_social: '', email: '', telefono: '', direccion: '' });
+      setTab('terceros');
+      showToast('Cliente no registrado. Créalo aquí y vuelve a la factura.');
+    }
+  };
   const borrarTercero = async (doc: string) => {
     await fetch(`${ERP_URL}/erp/facturacion/terceros/${encodeURIComponent(doc)}`, { method: 'DELETE', headers: h });
     loadTerceros();
@@ -386,8 +404,12 @@ export default function FacturacionPage() {
                   {TIPO_DOC.map(t => <option key={t.id} value={t.id} className="bg-gray-900">{t.label}</option>)}
                 </select>
                 <div className="flex gap-2">
-                  <input className={inputCls} placeholder="Numero de documento" value={nf.adquiriente.numero_doc} onChange={e => setNf({ ...nf, adquiriente: { ...nf.adquiriente, numero_doc: e.target.value } })} />
+                  <input className={inputCls} placeholder="Numero de documento" value={nf.adquiriente.numero_doc}
+                    onChange={e => setNf({ ...nf, adquiriente: { ...nf.adquiriente, numero_doc: e.target.value } })}
+                    onBlur={e => buscarClientePorDoc(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); buscarClientePorDoc((e.target as HTMLInputElement).value); } }} />
                   <input className={`${inputCls} w-20`} placeholder="DV" value={nf.adquiriente.dv} onChange={e => setNf({ ...nf, adquiriente: { ...nf.adquiriente, dv: e.target.value } })} />
+                  <button type="button" onClick={() => buscarClientePorDoc(nf.adquiriente.numero_doc)} className="px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold whitespace-nowrap">Buscar</button>
                 </div>
                 <input className={inputCls} placeholder="Nombre / Razon social" value={nf.adquiriente.nombre_razon_social} onChange={e => setNf({ ...nf, adquiriente: { ...nf.adquiriente, nombre_razon_social: e.target.value } })} />
                 <input className={inputCls} placeholder="Email" value={nf.adquiriente.email} onChange={e => setNf({ ...nf, adquiriente: { ...nf.adquiriente, email: e.target.value } })} />
