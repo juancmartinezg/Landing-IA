@@ -346,6 +346,16 @@ export default function FacturacionPage() {
     return map[estado] || 'bg-white/5 text-gray-400';
   };
   const cop = (n: number) => '$' + (n || 0).toLocaleString('es-CO');
+  const verFactura = async (f: any) => {
+    if (!ERP_URL || !f?.factura_id) { showToast('Factura sin ID'); return; }
+    try {
+      const res = await fetch(`${ERP_URL}/erp/facturacion/representacion?id=${encodeURIComponent(f.factura_id)}`, { headers: h });
+      const html = await res.text();
+      const w = window.open('', '_blank');
+      if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+      else showToast('Permite las ventanas emergentes para ver la factura');
+    } catch { showToast('No se pudo abrir la factura'); }
+  };
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'facturas', label: 'Facturas' },
@@ -400,6 +410,7 @@ export default function FacturacionPage() {
                       <th className="text-right px-3 py-3">Total</th>
                       <th className="text-center px-3 py-3">Estado</th>
                       <th className="text-left px-5 py-3 hidden md:table-cell">CUFE</th>
+                      <th className="px-3 py-3"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -411,6 +422,7 @@ export default function FacturacionPage() {
                         <td className="px-3 py-3 text-right">{cop(f.total)}</td>
                         <td className="px-3 py-3 text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${badge(f.estado)}`}>{f.estado}</span></td>
                         <td className="px-5 py-3 hidden md:table-cell text-[10px] text-gray-500 font-mono">{(f.cufe || '').slice(0, 16)}{f.cufe ? '…' : ''}</td>
+                        <td className="px-3 py-3 text-right"><button onClick={() => verFactura(f)} className="text-indigo-400 text-xs font-bold hover:text-indigo-300">Ver</button></td>
                       </tr>
                     ))}
                   </tbody>
