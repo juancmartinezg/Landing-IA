@@ -130,13 +130,13 @@ export default function FacturacionPage() {
   const [nf, setNf] = useState({
     tipo: 'FEV', consumidor_final: false,
     adquiriente: { tipo_doc: '13', numero_doc: '', dv: '', nombre_razon_social: '', email: '', telefono: '', direccion: '' },
-    medio_pago: '10',
+    forma_pago: '1', medio_pago: '10', fecha_venc: '', orden_compra: '', notas: '',
   });
-  const [lineas, setLineas] = useState<Linea[]>([{ codigo: '', descripcion: '', cantidad: 1, precio_unitario: 0, precio_iva_incluido: true, iva: 19 }]);
+  const [lineas, setLineas] = useState<Linea[]>([{ codigo: '', descripcion: '', cantidad: 1, precio_unitario: 0, precio_iva_incluido: true, iva: 19, descuento: 0 }]);
   const [emitting, setEmitting] = useState(false);
   const [rutLoading, setRutLoading] = useState(false);
 
-  const addLinea = () => setLineas([...lineas, { codigo: '', descripcion: '', cantidad: 1, precio_unitario: 0, precio_iva_incluido: true, iva: 19 }]);
+  const addLinea = () => setLineas([...lineas, { codigo: '', descripcion: '', cantidad: 1, precio_unitario: 0, precio_iva_incluido: true, iva: 19, descuento: 0 }]);
   const rmLinea = (i: number) => setLineas(lineas.filter((_, idx) => idx !== i));
   const setLn = (i: number, k: keyof Linea, v: any) => setLineas(lineas.map((l, idx) => idx === i ? { ...l, [k]: v } : l));
 
@@ -162,9 +162,11 @@ export default function FacturacionPage() {
         lineas: lineas.map(l => ({
           codigo: l.codigo || 'SVC', descripcion: l.descripcion, cantidad: l.cantidad,
           precio_unitario: l.precio_unitario, precio_iva_incluido: l.precio_iva_incluido,
+          descuento: l.descuento || 0,
           impuestos: l.iva > 0 ? [{ tipo: 'IVA', tarifa: l.iva }] : [],
         })),
-        medio_pago: nf.medio_pago, origen: 'crm_manual',
+        forma_pago: nf.forma_pago, medio_pago: nf.medio_pago,
+        fecha_venc: nf.fecha_venc, notas: nf.notas, origen: 'crm_manual',
       };
       const res = await fetch(`${ERP_URL}/erp/facturacion/emitir`, { method: 'POST', headers: hj, body: JSON.stringify(payload) });
       const d = await res.json();
@@ -472,6 +474,39 @@ export default function FacturacionPage() {
           </div>
 
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
+            <h3 className="font-bold mb-4">Datos del documento</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="text-xs text-gray-400">Forma de pago
+                <select className={inputCls} value={nf.forma_pago} onChange={e => setNf({ ...nf, forma_pago: e.target.value })}>
+                  <option value="1" className="bg-gray-900">Contado</option>
+                  <option value="2" className="bg-gray-900">Credito</option>
+                </select>
+              </label>
+              <label className="text-xs text-gray-400">Medio de pago
+                <select className={inputCls} value={nf.medio_pago} onChange={e => setNf({ ...nf, medio_pago: e.target.value })}>
+                  <option value="10" className="bg-gray-900">Efectivo</option>
+                  <option value="42" className="bg-gray-900">Consignacion bancaria</option>
+                  <option value="47" className="bg-gray-900">Transferencia</option>
+                  <option value="48" className="bg-gray-900">Tarjeta credito</option>
+                  <option value="49" className="bg-gray-900">Tarjeta debito</option>
+                  <option value="20" className="bg-gray-900">Cheque</option>
+                </select>
+              </label>
+              {nf.forma_pago === '2' && (
+                <label className="text-xs text-gray-400">Fecha de vencimiento
+                  <input type="date" className={inputCls} value={nf.fecha_venc} onChange={e => setNf({ ...nf, fecha_venc: e.target.value })} />
+                </label>
+              )}
+              <label className="text-xs text-gray-400">Orden de compra (opcional)
+                <input className={inputCls} placeholder="N de orden" value={nf.orden_compra} onChange={e => setNf({ ...nf, orden_compra: e.target.value })} />
+              </label>
+            </div>
+            <label className="text-xs text-gray-400 block mt-3">Notas / Observaciones
+              <textarea className={inputCls} rows={2} placeholder="Notas visibles en la factura" value={nf.notas} onChange={e => setNf({ ...nf, notas: e.target.value })} />
+            </label>
+          </div>
+
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold">Items</h3>
               <button onClick={addLinea} className="text-xs font-bold text-indigo-400 hover:text-indigo-300">+ Agregar linea</button>
@@ -498,6 +533,7 @@ export default function FacturacionPage() {
                   <input className={`${inputCls} col-span-12 md:col-span-4`} placeholder="Descripcion" value={l.descripcion} onChange={e => setLn(i, 'descripcion', e.target.value)} />
                   <input type="number" className={`${inputCls} col-span-3 md:col-span-1`} placeholder="Cant" value={l.cantidad} onChange={e => setLn(i, 'cantidad', parseFloat(e.target.value) || 0)} />
                   <input type="number" className={`${inputCls} col-span-5 md:col-span-2`} placeholder="Precio" value={l.precio_unitario} onChange={e => setLn(i, 'precio_unitario', parseFloat(e.target.value) || 0)} />
+                  <input type="number" className={`${inputCls} col-span-4 md:col-span-1`} placeholder="Desc $" title="Descuento en pesos" value={l.descuento} onChange={e => setLn(i, 'descuento', parseFloat(e.target.value) || 0)} />
                   <select className={`${inputCls} col-span-4 md:col-span-2`} value={l.iva} onChange={e => setLn(i, 'iva', parseFloat(e.target.value))}>
                     <option value={19} className="bg-gray-900">IVA 19%</option>
                     <option value={5} className="bg-gray-900">IVA 5%</option>
