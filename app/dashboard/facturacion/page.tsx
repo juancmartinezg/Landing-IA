@@ -80,9 +80,25 @@ export default function FacturacionPage() {
   const elegirProducto = (i: number, id: string) => {
     const p = productos.find((x: any) => (x.id || x.slug) === id);
     setLineas(lineas.map((l, idx) => idx !== i ? l : (
-      p ? { ...l, prod_id: id, codigo: p.slug || p.id || l.codigo, descripcion: p.nombre || p.descripcion || l.descripcion, precio_unitario: p.precio || l.precio_unitario }
+      p ? { ...l, prod_id: id, codigo: p.slug || p.id || l.codigo, descripcion: p.nombre || p.descripcion || l.descripcion, precio_unitario: p.precio || l.precio_unitario, iva: (p.iva !== undefined && p.iva !== null) ? p.iva : l.iva }
         : { ...l, prod_id: '' }
     )));
+  };
+  const guardarItem = async (i: number) => {
+    const l = lineas[i];
+    if (!ERP_URL) { showToast('Falta NEXT_PUBLIC_ERP_API_URL'); return; }
+    if (!l.descripcion?.trim()) { showToast('Escribe la descripcion del item'); return; }
+    try {
+      const res = await fetch(`${ERP_URL}/erp/facturacion/items`, {
+        method: 'POST', headers: hj,
+        body: JSON.stringify({ nombre: l.descripcion, descripcion: l.descripcion, precio: l.precio_unitario, iva: l.iva }),
+      });
+      const d = await res.json();
+      if (d.error) { showToast('Error: ' + d.error); return; }
+      showToast('Item guardado para reusar: ' + (d.nombre || l.descripcion));
+      loadProductos();
+      setLineas(prev => prev.map((x, idx) => idx === i ? { ...x, prod_id: d.id } : x));
+    } catch { showToast('Error guardando el item'); }
   };
 
   useEffect(() => { loadFacturas(); loadTerceros(); loadConfig(); loadProductos(); /* eslint-disable-next-line */ }, []);
@@ -427,12 +443,21 @@ export default function FacturacionPage() {
             <div className="space-y-3">
               {lineas.map((l, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                  <select className={`${inputCls} col-span-12`} value={l.prod_id || ''} onChange={e => elegirProducto(i, e.target.value)}>
+                  <select className={`${inputCls} col-span-9 md:col-span-10`} value={l.prod_id || ''} onChange={e => elegirProducto(i, e.target.value)}>
                     <option value="" className="bg-gray-900">— Producto manual (escribe abajo) —</option>
-                    {productos.map((p: any) => (
-                      <option key={p.id || p.slug} value={p.id || p.slug} className="bg-gray-900">{p.nombre}{p.precio ? ` — ${cop(Math.round(p.precio))}` : ''}</option>
-                    ))}
+                    <optgroup label="Catalogo">
+                      {productos.filter((p: any) => p.origen !== 'factura').map((p: any) => (
+                        <option key={p.id || p.slug} value={p.id || p.slug} className="bg-gray-900">{p.nombre}{p.precio ? ` — ${cop(Math.round(p.precio))}` : ''}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Mis items">
+                      {productos.filter((p: any) => p.origen === 'factura').map((p: any) => (
+                        <option key={p.id || p.slug} value={p.id || p.slug} className="bg-gray-900">{p.nombre}{p.precio ? ` — ${cop(Math.round(p.precio))}` : ''}</option>
+                      ))}
+                    </optgroup>
                   </select>
+                  <button type="button" onClick={() => guardarItem(i)} title="Guardar este item para reusarlo (no entra al catalogo del bot)"
+                    className="col-span-3 md:col-span-2 px-2 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold whitespace-nowrap">💾 Guardar item</button>
                   <input className={`${inputCls} col-span-12 md:col-span-4`} placeholder="Descripcion" value={l.descripcion} onChange={e => setLn(i, 'descripcion', e.target.value)} />
                   <input type="number" className={`${inputCls} col-span-3 md:col-span-1`} placeholder="Cant" value={l.cantidad} onChange={e => setLn(i, 'cantidad', parseFloat(e.target.value) || 0)} />
                   <input type="number" className={`${inputCls} col-span-5 md:col-span-2`} placeholder="Precio" value={l.precio_unitario} onChange={e => setLn(i, 'precio_unitario', parseFloat(e.target.value) || 0)} />
