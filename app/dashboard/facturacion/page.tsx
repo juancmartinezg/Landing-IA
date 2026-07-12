@@ -690,6 +690,34 @@ export default function FacturacionPage() {
               <input className={inputCls} placeholder="Email" value={cfg.emisor?.email || ''} onChange={e => setEmisor('email', e.target.value)} />
               <input className={inputCls} placeholder="Direccion" value={cfg.emisor?.direccion || ''} onChange={e => setEmisor('direccion', e.target.value)} />
               <input className={inputCls} placeholder="Codigo DANE municipio" value={cfg.emisor?.municipio_dane || ''} onChange={e => setEmisor('municipio_dane', e.target.value)} />
+              <input className={inputCls} placeholder="Telefono" value={cfg.emisor?.telefono || ''} onChange={e => setEmisor('telefono', e.target.value)} />
+              <input className={inputCls} placeholder="Sitio web" value={cfg.emisor?.web || ''} onChange={e => setEmisor('web', e.target.value)} />
+              <input className={inputCls} placeholder="Responsabilidad fiscal (ej. Responsable de IVA e INC)" value={cfg.emisor?.responsabilidad || ''} onChange={e => setEmisor('responsabilidad', e.target.value)} />
+              <input className={inputCls} placeholder="URL del logo (https://...)" value={cfg.emisor?.logo_url || ''} onChange={e => setEmisor('logo_url', e.target.value)} />
+            </div>
+          </div>
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
+            <h3 className="font-bold mb-1">Proveedor tecnologico (PT)</h3>
+            <p className="text-xs text-gray-500 mb-4">Software AUTORIZADO ante la DIAN que transmite la factura. En pruebas no aplica. Al conectar el PT real, estos datos salen en la factura.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="text-xs text-gray-400">Proveedor
+                <select className={inputCls} value={cfg.pt_proveedor || 'stub'} onChange={e => setCfg({ ...cfg, pt_proveedor: e.target.value })}>
+                  <option value="stub" className="bg-gray-900">Pruebas (stub)</option>
+                  <option value="factus" className="bg-gray-900">Factus</option>
+                  <option value="dataico" className="bg-gray-900">Dataico</option>
+                  <option value="hka" className="bg-gray-900">HKA</option>
+                  <option value="alegra" className="bg-gray-900">Alegra</option>
+                </select>
+              </label>
+              <label className="text-xs text-gray-400">Ambiente
+                <select className={inputCls} value={cfg.ambiente || 'habilitacion'} onChange={e => setCfg({ ...cfg, ambiente: e.target.value })}>
+                  <option value="habilitacion" className="bg-gray-900">Habilitacion / Pruebas</option>
+                  <option value="produccion" className="bg-gray-900">Produccion</option>
+                </select>
+              </label>
+              <input className={inputCls} placeholder="Razon social del PT (ej. Soluciones Alegra S.A.S)" value={cfg.pt_razon_social || ''} onChange={e => setCfg({ ...cfg, pt_razon_social: e.target.value })} />
+              <input className={inputCls} placeholder="NIT del PT (ej. 900.559.088-2)" value={cfg.pt_nit || ''} onChange={e => setCfg({ ...cfg, pt_nit: e.target.value })} />
+              <input className={inputCls} placeholder="Nombre del software (ej. clientes.bot)" value={cfg.pt_software || ''} onChange={e => setCfg({ ...cfg, pt_software: e.target.value })} />
             </div>
           </div>
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
