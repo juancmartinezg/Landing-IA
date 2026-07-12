@@ -16,6 +16,7 @@ interface Linea {
   precio_unitario: number;
   precio_iva_incluido: boolean;
   iva: number;
+  descuento: number;
 }
 
 const MODOS = [
