@@ -6,7 +6,7 @@ import { useAuth } from '../../providers';
 // NEXT_PUBLIC_ERP_API_URL=https://<tu-erp-lambda-url>.lambda-url.us-east-1.on.aws
 const ERP_URL = process.env.NEXT_PUBLIC_ERP_API_URL || '';
 
-type Tab = 'facturas' | 'nueva' | 'terceros' | 'config' | 'bulk';
+type Tab = 'facturas' | 'nueva' | 'terceros' | 'items' | 'config' | 'bulk';
 
 interface Linea {
   codigo: string;
@@ -80,28 +80,51 @@ export default function FacturacionPage() {
   const elegirProducto = (i: number, id: string) => {
     const p = productos.find((x: any) => (x.id || x.slug) === id);
     setLineas(lineas.map((l, idx) => idx !== i ? l : (
-      p ? { ...l, prod_id: id, codigo: p.slug || p.id || l.codigo, descripcion: p.nombre || p.descripcion || l.descripcion, precio_unitario: p.precio || l.precio_unitario, iva: (p.iva !== undefined && p.iva !== null) ? p.iva : l.iva }
+      p ? { ...l, prod_id: id, codigo: p.codigo || p.slug || p.id || l.codigo, descripcion: p.nombre || p.descripcion || l.descripcion, precio_unitario: p.precio || l.precio_unitario, iva: (p.iva !== undefined && p.iva !== null) ? p.iva : l.iva }
         : { ...l, prod_id: '' }
     )));
+  };
+
+  // ---- Mis items (reusables, fuera del catalogo del bot) ----
+  const [misItems, setMisItems] = useState<any[]>([]);
+  const emptyItemForm = { id: '', codigo: '', nombre: '', precio: 0, iva: 19 };
+  const [itemForm, setItemForm] = useState<any>(emptyItemForm);
+  const loadItems = () => {
+    if (!ERP_URL) return;
+    fetch(`${ERP_URL}/erp/facturacion/items`, { headers: h })
+      .then(r => r.json()).then(d => setMisItems(d.items || [])).catch(() => {});
+  };
+  const guardarItemBackend = async (payload: any, after?: (d: any) => void) => {
+    try {
+      const res = await fetch(`${ERP_URL}/erp/facturacion/items`, { method: 'POST', headers: hj, body: JSON.stringify(payload) });
+      const d = await res.json();
+      if (d.error) { showToast('Error: ' + d.error); return; }
+      showToast((d.actualizado ? 'Item actualizado: ' : 'Item guardado: ') + (d.nombre || payload.nombre));
+      loadProductos(); loadItems();
+      if (after) after(d);
+    } catch { showToast('Error guardando el item'); }
+  };
+  const guardarItemForm = async () => {
+    if (!itemForm.nombre?.trim()) { showToast('Nombre requerido'); return; }
+    await guardarItemBackend(itemForm, () => setItemForm(emptyItemForm));
+  };
+  const borrarItemGuardado = async (id: string) => {
+    if (!window.confirm('Eliminar este item?')) return;
+    await fetch(`${ERP_URL}/erp/facturacion/items/${encodeURIComponent(id)}`, { method: 'DELETE', headers: h });
+    loadProductos(); loadItems();
   };
   const guardarItem = async (i: number) => {
     const l = lineas[i];
     if (!ERP_URL) { showToast('Falta NEXT_PUBLIC_ERP_API_URL'); return; }
     if (!l.descripcion?.trim()) { showToast('Escribe la descripcion del item'); return; }
-    try {
-      const res = await fetch(`${ERP_URL}/erp/facturacion/items`, {
-        method: 'POST', headers: hj,
-        body: JSON.stringify({ nombre: l.descripcion, descripcion: l.descripcion, precio: l.precio_unitario, iva: l.iva }),
-      });
-      const d = await res.json();
-      if (d.error) { showToast('Error: ' + d.error); return; }
-      showToast('Item guardado para reusar: ' + (d.nombre || l.descripcion));
-      loadProductos();
-      setLineas(prev => prev.map((x, idx) => idx === i ? { ...x, prod_id: d.id } : x));
-    } catch { showToast('Error guardando el item'); }
+    const norm = (s: string) => (s || '').trim().toLowerCase();
+    const dup = productos.find((p: any) => (l.codigo && norm(p.codigo) === norm(l.codigo)) || norm(p.nombre) === norm(l.descripcion));
+    if (dup && !window.confirm(`Ya existe "${dup.nombre}"${dup.origen === 'catalogo' ? ' (en el catalogo)' : ' (en tus items)'}. Guardar/actualizar de todas formas?`)) return;
+    await guardarItemBackend({ codigo: l.codigo, nombre: l.descripcion, descripcion: l.descripcion, precio: l.precio_unitario, iva: l.iva },
+      (d: any) => setLineas(prev => prev.map((x, idx) => idx === i ? { ...x, prod_id: d.id, codigo: d.codigo || x.codigo } : x)));
   };
 
-  useEffect(() => { loadFacturas(); loadTerceros(); loadConfig(); loadProductos(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadFacturas(); loadTerceros(); loadConfig(); loadProductos(); loadItems(); /* eslint-disable-next-line */ }, []);
 
   // ---- Nueva factura ----
   const [nf, setNf] = useState({
@@ -328,6 +351,7 @@ export default function FacturacionPage() {
     { id: 'facturas', label: 'Facturas' },
     { id: 'nueva', label: 'Nueva factura' },
     { id: 'terceros', label: 'Clientes' },
+    { id: 'items', label: 'Mis items' },
     { id: 'bulk', label: 'Carga masiva' },
     { id: 'config', label: 'Configuracion' },
   ];
@@ -443,7 +467,8 @@ export default function FacturacionPage() {
             <div className="space-y-3">
               {lineas.map((l, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                  <select className={`${inputCls} col-span-9 md:col-span-10`} value={l.prod_id || ''} onChange={e => elegirProducto(i, e.target.value)}>
+                  <input className={`${inputCls} col-span-4 md:col-span-2`} placeholder="Codigo" value={l.codigo} onChange={e => setLn(i, 'codigo', e.target.value)} />
+                  <select className={`${inputCls} col-span-5 md:col-span-8`} value={l.prod_id || ''} onChange={e => elegirProducto(i, e.target.value)}>
                     <option value="" className="bg-gray-900">— Producto manual (escribe abajo) —</option>
                     <optgroup label="Catalogo">
                       {productos.filter((p: any) => p.origen !== 'factura').map((p: any) => (
@@ -525,6 +550,58 @@ export default function FacturacionPage() {
                         <td className="px-3 py-3 hidden sm:table-cell text-gray-400">{t.email}</td>
                         <td className="px-3 py-3 hidden md:table-cell"><span className="text-[10px] px-2 py-1 rounded-full bg-white/5 text-gray-400">{t.fuente}</span></td>
                         <td className="px-5 py-3 text-right"><button onClick={() => borrarTercero(t.numero_doc)} className="text-red-400 text-xs">Eliminar</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== MIS ITEMS ===== */}
+      {tab === 'items' && (
+        <div className="space-y-6">
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
+            <h3 className="font-bold mb-1">{itemForm.id ? 'Editar item' : 'Nuevo item'}</h3>
+            <p className="text-xs text-gray-500 mb-4">Items propios reusables. NO entran al catalogo del bot; solo aparecen al facturar.</p>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <input className={inputCls} placeholder="Codigo" value={itemForm.codigo} onChange={e => setItemForm({ ...itemForm, codigo: e.target.value })} />
+              <input className={`${inputCls} md:col-span-2`} placeholder="Nombre / Descripcion" value={itemForm.nombre} onChange={e => setItemForm({ ...itemForm, nombre: e.target.value })} />
+              <input type="number" className={inputCls} placeholder="Precio" value={itemForm.precio} onChange={e => setItemForm({ ...itemForm, precio: parseFloat(e.target.value) || 0 })} />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
+              <select className={`${inputCls} md:w-48`} value={itemForm.iva} onChange={e => setItemForm({ ...itemForm, iva: parseFloat(e.target.value) })}>
+                <option value={19} className="bg-gray-900">IVA 19%</option>
+                <option value={5} className="bg-gray-900">IVA 5%</option>
+                <option value={0} className="bg-gray-900">Excluido/0%</option>
+              </select>
+              <div className="flex gap-3">
+                {itemForm.id && <button onClick={() => setItemForm(emptyItemForm)} className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-bold">Cancelar</button>}
+                <button onClick={guardarItemForm} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-bold">{itemForm.id ? 'Actualizar item' : 'Guardar item'}</button>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl overflow-hidden">
+            {misItems.length === 0 ? <div className="p-8 text-center text-gray-500 text-sm">Aun no tienes items propios. Se crean aqui o con "Guardar item" en Nueva factura.</div> : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-white/5 text-xs text-gray-500 uppercase tracking-widest">
+                    <th className="text-left px-5 py-3">Codigo</th><th className="text-left px-3 py-3">Nombre</th>
+                    <th className="text-right px-3 py-3">Precio</th><th className="text-left px-3 py-3 hidden sm:table-cell">IVA</th><th className="px-5 py-3"></th>
+                  </tr></thead>
+                  <tbody>
+                    {misItems.map((it: any, i: number) => (
+                      <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
+                        <td className="px-5 py-3 font-mono text-xs">{it.codigo || '—'}</td>
+                        <td className="px-3 py-3">{it.nombre}</td>
+                        <td className="px-3 py-3 text-right">{cop(Math.round(it.precio || 0))}</td>
+                        <td className="px-3 py-3 hidden sm:table-cell text-gray-400">{it.iva}%</td>
+                        <td className="px-5 py-3 text-right whitespace-nowrap">
+                          <button onClick={() => setItemForm({ id: it.id, codigo: it.codigo || '', nombre: it.nombre || '', precio: it.precio || 0, iva: it.iva ?? 19 })} className="text-indigo-400 text-xs mr-4">Editar</button>
+                          <button onClick={() => borrarItemGuardado(it.id)} className="text-red-400 text-xs">Eliminar</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
