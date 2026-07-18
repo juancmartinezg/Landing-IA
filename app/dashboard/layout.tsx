@@ -29,7 +29,7 @@ const menuItems = [
   { href: '/dashboard/ads', label: 'Anuncios IA', icon: '🚀', roles: ['owner', 'admin'], permission: 'view_ads' },
   { href: '/dashboard/ads/library', label: 'Biblioteca creativos', icon: '📚', roles: ['owner', 'admin'], permission: 'view_ads' },
   { href: '/dashboard/ads/video-wizard', label: 'Wizard de Video', icon: '🎬', roles: ['owner', 'admin'], permission: 'create_ads' },
-  { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: '📱', roles: ['owner'], permission: 'edit_business_config' },
+  { href: '/dashboard/whatsapp', label: 'Integraciones', icon: '🔌', roles: ['owner'], permission: 'edit_business_config' },
   { href: '/dashboard/settings', label: 'Configuracion', icon: '⚙️', roles: ['owner'], permission: 'edit_business_config' },
   { href: '/dashboard/billing', label: 'Suscripción', icon: '💎', roles: ['owner'], permission: 'view_billing' },
   { href: '/dashboard/affiliate', label: 'Afiliados', icon: '🤝', roles: ['owner'], permission: null },

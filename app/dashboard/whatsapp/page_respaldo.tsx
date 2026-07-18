@@ -5,7 +5,7 @@ import Link from 'next/link';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const META_APP_ID = '27398458396409385';
 const META_CONFIG_ID = '997214322992918';
-export default function IntegracionesPage() {
+export default function WhatsAppPage() {
   const { user } = useAuth();
   const [config, setConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -17,7 +17,6 @@ export default function IntegracionesPage() {
   const [submittingPin, setSubmittingPin] = useState(false);
   const [enablingChat, setEnablingChat] = useState(false);
   const [chatConvMsg, setChatConvMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const sessionData = useRef<any>(null);
   const showToast = (msg: string) => {
     setToast(msg);
@@ -64,10 +63,6 @@ export default function IntegracionesPage() {
     return () => window.removeEventListener('message', handler);
   }, []);
   const isConnected = config?.phone_number_id && config?.waba_id && config.phone_number_id !== 'pending' && config.waba_id !== 'pending' && config.phone_number_id !== 'DISCONNECTED' && config.waba_id !== 'DISCONNECTED';
-  const channels: string[] = Array.isArray(config?.channels_enabled) ? config.channels_enabled : [];
-  const fbConnected = channels.includes('facebook') || (!!config?.page_id && config?.page_id !== 'DISCONNECTED');
-  const igConnected = channels.includes('instagram') || (!!config?.ig_id && config?.ig_id !== 'DISCONNECTED');
-  const anyConnected = isConnected || fbConnected || igConnected;
   const handleSignupResponse = useCallback(async (response: any) => {
     console.log('Embedded Signup response:', JSON.stringify(response));
     if (response.authResponse) {
@@ -126,7 +121,7 @@ export default function IntegracionesPage() {
       showToast('Error enviando el PIN');
     }
     setSubmittingPin(false);
-  };
+  };  
   const handleConnect = () => {
     const FB = (window as any).FB;
     if (!FB) return showToast('SDK no cargado');
@@ -170,34 +165,6 @@ export default function IntegracionesPage() {
       showToast('Error desconectando');
     }
   };
-  // Desconectar un canal social (instagram / facebook) sin tocar los demas
-  const handleDisconnectChannel = async (channel: 'instagram' | 'facebook') => {
-    const nombre = channel === 'instagram' ? 'Instagram' : 'Facebook / Messenger';
-    if (!confirm(`¿Desconectar ${nombre}? Dejarás de recibir y responder mensajes por ese canal.`)) return;
-    setDisconnecting(channel);
-    try {
-      const res = await fetch(`${API_URL}/channels/disconnect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'client-id': user?.companyId || '' },
-        body: JSON.stringify({ channel }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setConfig((c: any) => {
-          const next = { ...c, channels_enabled: data.channels_enabled || [] };
-          if (channel === 'instagram') next.ig_id = '';
-          if (channel === 'facebook') { next.page_id = ''; next.page_name = ''; }
-          return next;
-        });
-        showToast(`${nombre} desconectado`);
-      } else {
-        showToast('Error: ' + (data.error || 'No se pudo desconectar'));
-      }
-    } catch {
-      showToast('Error desconectando');
-    }
-    setDisconnecting(null);
-  };
   // Activar conversiones de chat (CTWA): autodescubre el dataset de mensajeria
   const handleEnableChatConversions = async () => {
     setEnablingChat(true);
@@ -219,41 +186,6 @@ export default function IntegracionesPage() {
     setEnablingChat(false);
   };
   if (loading) return <div className="text-center py-12 text-gray-500">Cargando...</div>;
-
-  const ChannelCard = ({ icon, name, connected, accent, children, onDisconnect, busy }: any) => (
-    <div className={`rounded-2xl p-6 border ${connected ? 'bg-white/[0.03] border-white/10' : 'bg-white/[0.02] border-white/5'}`}>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-11 h-11 rounded-full flex items-center justify-center text-2xl" style={{ background: accent + '22' }}>{icon}</div>
-        <div className="flex-1">
-          <h3 className="font-bold">{name}</h3>
-          {connected ? (
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">● Conectado</span>
-          ) : (
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">○ No conectado</span>
-          )}
-        </div>
-      </div>
-      {connected && (
-        <>
-          <div className="space-y-2 text-sm">{children}</div>
-          <button onClick={onDisconnect} disabled={busy}
-            className="mt-4 text-xs text-red-400 hover:text-red-300 font-bold disabled:opacity-50">
-            {busy ? 'Desconectando...' : 'Desconectar'}
-          </button>
-        </>
-      )}
-      {!connected && (
-        <p className="text-xs text-gray-500">Se conecta al vincular tu cuenta con Facebook.</p>
-      )}
-    </div>
-  );
-  const Row = ({ k, v }: { k: string; v: any }) => (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-[11px] text-gray-500 uppercase tracking-widest">{k}</span>
-      <span className="text-sm text-white font-mono truncate max-w-[60%] text-right">{v || '-'}</span>
-    </div>
-  );
-
   return (
     <div>
       {toast && (
@@ -298,44 +230,49 @@ export default function IntegracionesPage() {
         <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center">
           <div className="bg-[#1a1f2e] border border-white/10 rounded-3xl p-10 text-center max-w-sm">
             <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-            <h3 className="text-xl font-bold text-white mb-2">Conectando...</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Conectando WhatsApp...</h3>
             <p className="text-gray-400 text-sm">Completa el proceso en la ventana de Facebook.<br />Esta pantalla se actualizará automáticamente.</p>
           </div>
         </div>
       )}
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
-        <h1 className="text-2xl font-bold">Integraciones 🔌</h1>
-        <button
-          onClick={handleConnect}
-          disabled={connecting || !sdkReady}
-          className="bg-[#1877F2] hover:bg-[#0f66d0] text-white font-bold px-5 py-2.5 rounded-2xl transition-all shadow-lg text-sm disabled:opacity-50"
-        >
-          {connecting ? 'Conectando...' : !sdkReady ? 'Cargando...' : anyConnected ? '🔗 Reconectar / agregar canales' : '🔗 Conectar con Facebook'}
-        </button>
-      </div>
-      <p className="text-sm text-gray-400 mb-6">
-        Conecta tu cuenta de Facebook una sola vez y clientes.bot centraliza WhatsApp, Instagram Direct y Messenger en un mismo inbox.
-      </p>
-
-      {anyConnected ? (
+      <h1 className="text-2xl font-bold mb-6">Conectar WhatsApp 📱</h1>
+      {isConnected ? (
         <div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <ChannelCard icon="💚" name="WhatsApp" connected={isConnected} accent="#25D366"
-              onDisconnect={handleDisconnect} busy={false}>
-              <Row k="Phone Number ID" v={config?.phone_number_id} />
-              <Row k="WABA ID" v={config?.waba_id} />
-              <Row k="Negocio" v={config?.brand_name} />
-            </ChannelCard>
-            <ChannelCard icon="📸" name="Instagram Direct" connected={igConnected} accent="#E1306C"
-              onDisconnect={() => handleDisconnectChannel('instagram')} busy={disconnecting === 'instagram'}>
-              <Row k="Instagram ID" v={config?.ig_id} />
-              <Row k="Página vinculada" v={config?.page_name} />
-            </ChannelCard>
-            <ChannelCard icon="💬" name="Facebook / Messenger" connected={fbConnected} accent="#1877F2"
-              onDisconnect={() => handleDisconnectChannel('facebook')} busy={disconnecting === 'facebook'}>
-              <Row k="Página" v={config?.page_name} />
-              <Row k="Page ID" v={config?.page_id} />
-            </ChannelCard>
+          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-8 mb-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                <span className="text-3xl">✅</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-emerald-400">WhatsApp Conectado</h2>
+                <p className="text-sm text-gray-400">Tu bot está activo y respondiendo mensajes</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <div className="bg-white/[0.03] rounded-xl p-4">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Phone Number ID</p>
+                <p className="text-sm text-white font-mono">{config.phone_number_id}</p>
+              </div>
+              <div className="bg-white/[0.03] rounded-xl p-4">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">WABA ID</p>
+                <p className="text-sm text-white font-mono">{config.waba_id}</p>
+              </div>
+              <div className="bg-white/[0.03] rounded-xl p-4">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Nombre del negocio</p>
+                <p className="text-sm text-white">{config.brand_name || '-'}</p>
+              </div>
+              <div className="bg-white/[0.03] rounded-xl p-4">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Estado del bot</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <p className="text-sm text-emerald-400 font-bold">Activo</p>
+                </div>
+              </div>
+            </div>
+            <button onClick={handleDisconnect}
+              className="mt-6 text-xs text-red-400 hover:text-red-300 font-bold">
+              Desconectar WhatsApp
+            </button>
           </div>
           {/* Conversiones de chat (CTWA) — atribución de ventas por anuncios de WhatsApp */}
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 mb-6">
@@ -401,53 +338,53 @@ export default function IntegracionesPage() {
       ) : (
         <div className="max-w-2xl mx-auto">
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-8 text-center mb-6">
-            <p className="text-5xl mb-4">🔌</p>
-            <h2 className="text-xl font-bold mb-2">Conecta tus canales</h2>
+            <p className="text-5xl mb-4">📱</p>
+            <h2 className="text-xl font-bold mb-2">Conecta tu WhatsApp Business</h2>
             <p className="text-gray-400 text-sm mb-6">
-              Vincula tu cuenta de Facebook con un clic: conectamos tu WhatsApp Business, tu Página (Messenger) y tu Instagram Direct en un solo inbox.
+              Vincula tu línea de WhatsApp Business con un clic. Nosotros nos encargamos de toda la configuración técnica.
             </p>
             <button
               onClick={handleConnect}
               disabled={connecting || !sdkReady}
-              className="bg-[#1877F2] hover:bg-[#0f66d0] text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-lg text-lg disabled:opacity-50"
+              className="bg-[#25D366] hover:bg-[#1da851] text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-lg text-lg disabled:opacity-50"
             >
               {connecting ? 'Conectando...' : !sdkReady ? 'Cargando...' : '🔗 Conectar con Facebook'}
             </button>
             <p className="text-[10px] text-gray-600 mt-4">
-              Al conectar, autorizas a clientes.bot a gestionar mensajes de tus canales (WhatsApp, Instagram y Messenger).
+              Al conectar, autorizas a clientes.bot a gestionar mensajes de tu línea de WhatsApp Business.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-white/[0.03] border border-white/5 rounded-xl p-5 text-center">
               <p className="text-2xl mb-2">1️⃣</p>
               <h3 className="font-bold text-sm mb-1">Inicia sesión</h3>
-              <p className="text-xs text-gray-400">Con tu cuenta de Facebook que administra tu negocio</p>
+              <p className="text-xs text-gray-400">Con tu cuenta de Facebook que administra tu WhatsApp Business</p>
             </div>
             <div className="bg-white/[0.03] border border-white/5 rounded-xl p-5 text-center">
               <p className="text-2xl mb-2">2️⃣</p>
               <h3 className="font-bold text-sm mb-1">Autoriza</h3>
-              <p className="text-xs text-gray-400">Permite que clientes.bot gestione tus mensajes</p>
+              <p className="text-xs text-gray-400">Permite que clientes.bot gestione los mensajes de tu línea</p>
             </div>
             <div className="bg-white/[0.03] border border-white/5 rounded-xl p-5 text-center">
               <p className="text-2xl mb-2">3️⃣</p>
               <h3 className="font-bold text-sm mb-1">Listo</h3>
-              <p className="text-xs text-gray-400">Tus canales quedan conectados y el bot empieza a responder</p>
+              <p className="text-xs text-gray-400">Tu bot se activa automáticamente y empieza a responder</p>
             </div>
           </div>
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
             <h3 className="font-bold mb-4">Preguntas Frecuentes</h3>
             <div className="space-y-4">
               <div>
-                <p className="text-sm font-bold text-indigo-400 mb-1">¿Qué canales se conectan?</p>
-                <p className="text-sm text-gray-400">WhatsApp Business, tu Página de Facebook (Messenger) y el Instagram Direct vinculado a esa Página.</p>
-              </div>
-              <div>
                 <p className="text-sm font-bold text-indigo-400 mb-1">¿Puedo usar mi mismo número?</p>
                 <p className="text-sm text-gray-400">Sí, puedes vincular tu número actual o activar una línea nueva.</p>
               </div>
               <div>
+                <p className="text-sm font-bold text-indigo-400 mb-1">¿Necesito un número nuevo?</p>
+                <p className="text-sm text-gray-400">Recomendamos usar una línea dedicada para el bot. Si usas tu número personal, se convertirá en WhatsApp Business API y perderás el acceso desde la app normal de WhatsApp.</p>
+              </div>
+              <div>
                 <p className="text-sm font-bold text-indigo-400 mb-1">¿Puedo desconectarlo después?</p>
-                <p className="text-sm text-gray-400">Sí, puedes desconectar cualquier canal en cualquier momento desde esta pantalla.</p>
+                <p className="text-sm text-gray-400">Sí, puedes desconectar tu WhatsApp en cualquier momento.</p>
               </div>
             </div>
           </div>
