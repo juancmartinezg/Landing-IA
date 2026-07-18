@@ -2,7 +2,60 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**API v306 + Bot v284 + Video_Worker (v3/pro + closing-frame) + Remarketing v9 + Frontend `872f68b`** — AI Storyboard Engine planificado + Video funcional + fixes críticos (10 jun 2026)
+**API (SaaS_API_Handler) + Bot (WhatsApp_Typebot_Bridge) + ERP_Handler (Facturación DIAN, Lambda nueva) + Video_Worker + Remarketing + Frontend `e65c8d5`** — Facturación electrónica DIAN + Inbox multicanal (WhatsApp/Instagram/Messenger) + Integraciones + fixes de seguridad (18 jul 2026)
+### 18 jul 2026 — Sprint Facturación DIAN + Integraciones Multicanal (IG/Messenger) 🧾🔌
+**API (SaaS_API_Handler $LATEST) + Bot (WhatsApp_Typebot_Bridge $LATEST) + ERP_Handler (Lambda NUEVA, 6ta activa) + Frontend `e65c8d5`**
+Sesión larga: se construyó el módulo de **facturación electrónica DIAN** (provider-agnostic, multi-tenant), se cableó el **inbox multicanal** (Instagram Direct + Messenger además de WhatsApp) de punta a punta, se creó la página **Integraciones**, se taparon fugas de tokens y se resolvió (parcialmente) el **SSL de escuelatirojmc.com**. Cambios en el bot fueron quirúrgicos con fallback — WhatsApp intacto.
+
+#### 🧾 MÓDULO FACTURACIÓN ELECTRÓNICA DIAN — ERP_Handler (Lambda nueva) · PR #6 (merged)
+- ✅ **Arquitectura provider-agnostic:** capa `providers/` con `base` + `factory` + implementaciones `stub` (pruebas), `factus`, `dataico`, `hka`, `alegra`. El proveedor tecnológico (el autorizado ante DIAN) se elige por config de empresa.
+- ✅ **Multi-tenant por `company_id`:** numeración, resoluciones DIAN, datos de emisor, logo y proveedor — todo en DynamoDB, nada hardcodeado.
+- ✅ **Motor de impuestos** (`tax_engine`): IVA incluido o adicional por línea.
+- ✅ **OCR** de RUT (`rut_ocr`) y de resolución DIAN (`resolucion_ocr`) para autocompletar configuración.
+- ✅ **Emisión manual** y **emisión desde pagos** (hook `bot_hook` en el bridge).
+- ✅ **Representación gráfica** estilo Alegra: `GET /erp/facturacion/representacion?id=<factura_id>` (logo, emisor, adquiriente, numeración, líneas, códigos cortos, IVA, total, valor en letras, QR, CUFE, firmas, autorización, banner de pruebas).
+- ✅ **Fix idempotencia:** las emisiones manuales sin referencia de pago ya NO se bloquean entre sí (`manual-<uuid>`); los pagos con referencia conservan idempotencia para evitar doble factura.
+- ✅ **Campos ampliados de factura:** forma de pago, medio de pago, fecha de vencimiento, orden de compra, notas y descuento por línea.
+- ✅ **Ítems reutilizables ("Mis ítems"):** store separado del catálogo, CRUD, detección de duplicados. Códigos cortos: catálogo `SRV-###`, ítems propios `ITM-###`.
+
+#### 🔌 INBOX MULTICANAL — Instagram Direct + Messenger (Bot + API, quirúrgico)
+- ✅ **Entrantes IG/Messenger a `MessagesLog`:** el bridge ahora registra los DMs entrantes de Instagram (`ig_<igsid>`) y Messenger (`fb_<psid>`) con su `channel`, para que el hilo aparezca en el Chat del dashboard (antes solo WhatsApp registraba).
+- ✅ **Nombre real del remitente:** `get_instagram_profile()` y `get_messenger_profile()` consultan Graph API (`name`/`username` / `first_name+last_name`) y guardan el nombre en el lead y la sesión.
+- ✅ **Fix función compartida `update_session_context`:** ya **deriva el canal real** (`ig_`/`fb_`/whatsapp) en vez de forzar `whatsapp`, y **no pisa nombres reales** con "Desconocido" (solo pone placeholder si no hay ninguno). Este era el bug del "📸 Unknown".
+- ✅ **`/conversations/send` enruta por canal:** `ig_` → Instagram (`me/messages` con `fb_page_token`), `fb_` → Messenger, resto → WhatsApp (idéntico a antes). Sin añadir `57` a IDs sociales. Fallback con error claro si falta el token del canal.
+
+#### 🔒 SEGURIDAD + DESCONEXIÓN (API)
+- ✅ **Fuga de tokens tapada:** `/config` ya NO envía `meta_access_token` NI `fb_page_token` al frontend. El frontend sí ve `page_id`, `page_name`, `ig_id`, `channels_enabled`, `phone_number_id`, `waba_id`.
+- ✅ **Nuevo endpoint `POST /channels/disconnect`:** desconecta WhatsApp / Instagram / Facebook por separado sin tocar los demás (conserva `fb_page_token` si Messenger o IG siguen usándolo). Validado (canal inválido → 400).
+
+#### 🖥️ FRONTEND (aplicado por el usuario · SHA `e65c8d5` · TypeScript OK)
+- ✅ **Página "Integraciones"** (renombrada de "WhatsApp", misma ruta `/dashboard/whatsapp`): tarjetas de WhatsApp 💚, Instagram Direct 📸 y Facebook/Messenger 💬 con estado Conectado/No conectado, IDs/nombres, botón Desconectar por canal y botón único "Conectar con Facebook" (Embedded Signup que trae todo el multicanal). Menú lateral: "WhatsApp" → "Integraciones" 🔌.
+- ✅ **Módulo Facturación:** representación gráfica (botón **Ver**), campos ampliados del documento, pestaña **Mis ítems**, sección emisor + proveedor tecnológico en Configuración. `interface Linea` con campo `descuento`.
+
+#### 🌐 SSL escuelatirojmc.com (infra AWS Amplify)
+- ✅ Diagnóstico: el sitio está en **Amplify** (no CloudFront propio); el certificado gestionado venció porque faltaba el registro de verificación en DNS.
+- ✅ Se recreó la asociación del dominio (nuevo cert emitido) → nuevo destino **`d2v5xqyglqk7wx.cloudfront.net`**. DNS actualizado: `@`/`www`/`admin` → ese destino; `certificados` → `dfdzdpc7gh5qj.cloudfront.net`.
+- ⚠️ **Pendiente cerrar:** verificación final (Amplify AVAILABLE + HTTPS válido en apex/www/admin sin `ERR_CERT_DATE_INVALID`).
+
+#### 📌 Lecciones nuevas
+- **#84:** Cada producto de la app de Meta (WhatsApp / Messenger / Instagram) tiene su **propio webhook**. Que WhatsApp funcione no implica que Messenger reciba: hay que configurar cada uno.
+- **#85:** `pages_messaging` en **acceso estándar** solo entrega webhooks de personas con **rol en la app** (admin/dev/tester). "Antes funcionaba desde mi cuenta" ≠ funciona ahora si cambió el rol/acceso.
+- **#86:** Cuidado con funciones CRM **compartidas** entre canales (`update_session_context`): forzaba `channel="whatsapp"` y `customer_name="Desconocido"`, pisando el enriquecimiento de IG/Messenger.
+- **#87:** La **idempotencia** no debe aplicarse a emisiones manuales sin referencia de pago (generaba falsos "ya existe factura").
+- **#88:** Auditar los payloads "públicos": `/config` estaba filtrando `fb_page_token` al frontend.
+- **#89:** El **ZIP desplegado del bridge** contiene un hook ERP que NO está en el repo → repo desincronizado. Parchear el artefacto real y conservar el hook (`# === ERP: facturacion electronica`) hasta commitearlo.
+
+#### ⏳ Pendientes inmediatos
+1. **Messenger:** llegan **0 eventos `object=page`** al webhook pese a config 100% correcta (URL, token, página suscrita a `messages`, activado). Bloqueado por acceso estándar de `pages_messaging` → **probar con una cuenta Tester de la app**. (La consola de Meta no deja probar/generar token: se queda en blanco al pegar el token.)
+2. **Meta App Review:** subir screencast del ciclo completo (DM entra con nombre → responder desde el panel → llega a IG) para `instagram_basic` **y** `instagram_manage_messages`. Test calls ya hechas (HTTP 200; tardan hasta 24 h en reflejarse).
+3. **SSL:** cerrar verificación final (Amplify AVAILABLE + HTTPS válido en apex/www/admin).
+4. **Repo backend:** commitear al repo el hook ERP que hoy vive solo en el artefacto desplegado del bridge.
+5. **Facturación funcional:** configurar emisor/logo/resolución/proveedor tecnológico, emitir factura y revisar el layout de la representación gráfica con datos reales.
+
+#### 🏆 Producción actual
+**SaaS_API_Handler ($LATEST) + WhatsApp_Typebot_Bridge ($LATEST) + ERP_Handler (nueva) + Video_Worker + Remarketing + Frontend `e65c8d5`.**
+**6 Lambdas activas.** Facturación DIAN provider-agnostic desplegada. Inbox multicanal (WhatsApp + Instagram Direct + Messenger) con nombre real y routing por canal. Página Integraciones con desconexión por canal. Tokens ya no se filtran al frontend.
+
 ### 10 jun 2026 — Sprint Ads: Video funcional + image_hook + AI Storyboard Engine 🦁🎬
 **API v302→v306 + Bot v284 + Video_Worker (múltiples iteraciones) + Frontend `872f68b`**
 Sesión de 2 días (9-10 jun). Video IA funcional con cierre premium. Fix email crítico. image_hook en copies. Roadmap completo del AI Storyboard Engine aprobado.
