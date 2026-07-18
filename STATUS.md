@@ -3,6 +3,20 @@
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
 **API (SaaS_API_Handler) + Bot (WhatsApp_Typebot_Bridge) + ERP_Handler (Facturación DIAN, Lambda nueva) + Video_Worker + Remarketing + Frontend `e65c8d5`** — Facturación electrónica DIAN + Inbox multicanal (WhatsApp/Instagram/Messenger) + Integraciones + fixes de seguridad (18 jul 2026)
+### 18 jul 2026 — Consolidación de respaldo: rama única = producción 🗂️
+
+**Backend (repo `chatbot_escuela`) sincronizado con producción real:**
+- Se descargó el código realmente desplegado de las **7 Lambdas** de prod (us-east-1) y se alineó el repo archivo por archivo. `py_compile` OK. Secretos viven en env/DynamoDB.
+- Lambdas respaldadas: `WhatsApp_Typebot_Bridge` (hook ERP + multicanal IG/Messenger), `SaaS_API_Handler` (routing por canal, `/config` sin tokens, `/channels/disconnect`), `ERP_Handler`, `SaaS_Template_Manager`, `WhatsApp_Remarketing`, `promote-memory-candidates`, `Video_Worker`.
+- **PR #7 mergeado** → la rama por defecto (`devin/1774429312-payment-scheduling-flow`) es ahora la **única fuente de verdad = producción**.
+- Limpieza: se borraron 7 ramas obsoletas/no desplegadas. Quedan solo 2: la rama por defecto (prod) y `frontend/dashboard`.
+- Respaldo (bundle+zip) guardado de las ramas con trabajo único no desplegado (`carousel-catalog-fix`, `ssm-secrets`, `saas-generic-refactor`, `init`) por si se retoman.
+
+**Seguridad (aceptado):** el repo (privado) aún contiene `google_service_account.json`, pero **producción NO lo expone** — el bridge lee el service-account desde env var `GOOGLE_SERVICE_ACCOUNT_JSON` / DynamoDB; el archivo no está en ningún ZIP desplegado.
+
+**Nota:** la mejora `ssm-secrets` NO se aplicó; prod usa env var + DynamoDB (no SSM). Rama descartada.
+
+**Pendientes abiertos:** App Review Instagram (screencast), SSL escuelatirojmc.com, config real de facturación DIAN (emisor/logo/resolución/PT), Messenger (pausado: 0 eventos `object=page`).
 ### 18 jul 2026 — Sprint Facturación DIAN + Integraciones Multicanal (IG/Messenger) 🧾🔌
 **API (SaaS_API_Handler $LATEST) + Bot (WhatsApp_Typebot_Bridge $LATEST) + ERP_Handler (Lambda NUEVA, 6ta activa) + Frontend `e65c8d5`**
 Sesión larga: se construyó el módulo de **facturación electrónica DIAN** (provider-agnostic, multi-tenant), se cableó el **inbox multicanal** (Instagram Direct + Messenger además de WhatsApp) de punta a punta, se creó la página **Integraciones**, se taparon fugas de tokens y se resolvió (parcialmente) el **SSL de escuelatirojmc.com**. Cambios en el bot fueron quirúrgicos con fallback — WhatsApp intacto.
