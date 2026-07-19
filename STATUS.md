@@ -949,7 +949,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - [x] **M25** Fix `value=regular_price` en Sincronizar y CRM manual (antes mandaba anticipo o 0) ✅
 
 #### Validación + observabilidad
-- [ ] **M19** Test event code mode — validar primeros 5 eventos antes de producción
+- [x] **M19** Test event code mode ✅ (`_send_meta_event` acepta `test_event_code`, `WhatsApp_Typebot_Bridge/lambda_function.py:1896`)
 - [ ] **M20** Dashboard "Match Rate" por tenant en `/admin/tenants/{id}` — qué % de hashes matchearon usuarios reales en Meta
 - [x] **M21** Tabla `AdsAttribution` (PK company_id, SK campaign#phone#event#epoch, GSI campaign-event-index, TTL 365d, PITR) + integración bot wrapper + endpoint `GET /ads/attribution` con métricas agregadas (Bot v14 + API v49) ✅
 #### Bonus de la sesión 28-29 abril (Bloque M completo + B6.5 + G1+G2)
@@ -2571,11 +2571,13 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ### Barra 1 — Features construidos del proyecto total
 █████████████████████████████████░ 99.9%
 ### Barra 2 — Pendientes cerrados de los abiertos (actualizada 23 mayo)
-████████░░░░░░░░░░░░░░░░░░░ 32% (8/25 items)
+██████████████████░░░░░░░░ 72% (18/25 items) — auditoría 19 jul: Bug #44/#69/#70/Sprint E.1a/E.2/M19 ya estaban resueltos en código
 **Inventario de pendientes** al 23 mayo 2026:
 - 🟢 **Cerrados sesión 22-23 mayo**: Bug #45 (customer_email canónico), external_id arrays, country/region/zip CAPI, sync-meta-leads retroactivo, apply-action 4 acciones, analyze MAX_TOKENS, mark-paid-manual end-to-end, validación Match Rate Graph Explorer.
-- 🔴 Deuda técnica reciente: **2 de 4 abiertos** (UI post_booking_messages, test E2E remarketing, código fantasma saas_products Fase 3). Bug #44 carrusel skip CERRADO,.
-- 🟥 **Bugs revenue-critical nuevos detectados**: Bug #69 (variantes Ads inservibles — solo hook 125 chars) + Bug #70 (imágenes IA wizard no respetan referencias).
+- 🔴 Deuda técnica reciente: **2 de 4 abiertos** (UI post_booking_messages, test E2E remarketing, código fantasma saas_products Fase 3). Bug #44 carrusel skip ✅ CERRADO (guard exige flow_state activo + slug, no solo slug — `WhatsApp_Typebot_Bridge/lambda_function.py:9262`).
+
+- ✅ **Bugs revenue-critical CERRADOS** (verificado 19 jul): Bug #69 (variantes Ads — endpoint `/ads/generate-ad-variants` genera copy completo 400-600 chars + business_profile) + Bug #70 (imágenes IA — refs pasadas como inlineData REAL a Gemini, `SaaS_API_Handler/lambda_function.py:1609`).
+
 - 🟠 Sprint E sin terminar: **2 abiertos** (Frontend wizard locale + selector idioma, Cron poll templates Meta).
 - 🟡 Backlog menor: **5 abiertos** (B6.5.6 Push FCM ads, B6.5.10 sistema aprende post-apply, M19 Test event code, M20 Dashboard Match Rate por tenant, D-4 Cron expire feature overrides, C5 Eventos timeline enriquecido).
 - 🟧 Frontend pequeños: **2 abiertos** (Dropdown selector templates en `/dashboard/templates`, Sección "Multicanal" visible en landing).
