@@ -31,7 +31,7 @@ Se cerró el módulo de facturación electrónica **a nivel de código**. Solo q
 6. Switch a `produccion` + `modo_facturacion` deseado.
 #### 📌 Lecciones nuevas
 - **#90:** El "proveedor tecnológico" no es solo contratar la cuenta — los drivers PT son scaffold sin probar; hay que afinar campos contra el sandbox real antes de producción.
-- **#91:** Envío de factura al cliente es obligación DIAN — el `core.py` no lo hacía. Helper Resain propio (fire-and-forget) lo resuelve sin depender de que el PT lo entregue.
+- **#91:** Envío de factura al cliente es obligación DIAN — el `core.py` no lo hacía. Helper Resend propio (fire-and-forget) lo resuelve sin depender de que el PT lo entregue.
 - **#92:** `ERP_Handler` no tenía `~/.deploy_erp.sh` — deploy manual (`update-function-code` + `publish-version`). Crear el script para futuros deploys del ERP.
 #### 🔴 Pendiente de seguridad
 - **Rotar `GEMINI_API_KEY` y `RESEND_API_KEY`** — expuestas en chat de trabajo durante la sesión.
@@ -1681,7 +1681,7 @@ Por: **v69** — billing LS + CAPI individual + plantilla ventas v2 + fix CORS)
 - **Recuperación**: leer config de versión publicada anterior (v8) con `aws lambda get-function-configuration --qualifier 8` + restaurar con `--cli-input-json file://config.json` que permite JSON estructurado correcto.
 - **Lección 54 (CRÍTICA)**: NUNCA usar `update-function-configuration --environment` con shorthand `Variables={K=V}`. **SIEMPRE** patrón leer→modificar→escribir con `--cli-input-json file://...json` que incluye TODAS las env vars. Aplica a Lambda, RDS parameter groups, ECS task definitions — cualquier API AWS que reciba "el set completo" de variables.
 #### Pendientes reales identificados (próxima sesión)
-- **Bug #44 carrusel skip** (`last_service_slug` huérfano sin lifecycle): guard en L8321-8325 chequea solo `last_service_slug` poblado sin importar `flow_state`. Cliente recurrente con servicio viejo pide catálogo → solo texto, NO carrusel. Fix quirúrgico ~30min.
+- **Bug #44 carrusel skip** (`last_service_slug` huérfano sin lifecycle): guard en L8321-8325 chequea solo `last_service_slug` poblado sin importar `flow_state`. Cliente recurrente con servicio viejo pide catálogo → solo texto, NO carrusel. Fix quirúrgico ~30min. (CERRADO)
 - **Bug #45 customer_email no se persiste en `Leads_CRM_v2`**: bot LEE de Wompi pero NUNCA escribe a CRM. 0/100 leads JMC tienen email. Webhook Wompi recibe email del cliente al pagar pero no se persiste. Match Rate Lead bajo. Fix ~1h.
 - **UI editable de `post_booking_messages`** por servicio: hoy se setea en DDB manual (JMC tiene 3 mensajes globales OK pero cada tenant nuevo necesita poder editarlos desde UI). Estimado 2h frontend.
 - **Limpieza código fantasma saas_products** (Fase 3): ~80 líneas + 2 tablas DDB pendientes de borrar tras 7 días sin regresiones.
@@ -2574,7 +2574,7 @@ sleep 10 && aws lambda publish-version --function-name NOMBRE --description "vXX
 ████████░░░░░░░░░░░░░░░░░░░ 32% (8/25 items)
 **Inventario de pendientes** al 23 mayo 2026:
 - 🟢 **Cerrados sesión 22-23 mayo**: Bug #45 (customer_email canónico), external_id arrays, country/region/zip CAPI, sync-meta-leads retroactivo, apply-action 4 acciones, analyze MAX_TOKENS, mark-paid-manual end-to-end, validación Match Rate Graph Explorer.
-- 🔴 Deuda técnica reciente: **2 de 4 abiertos** (UI post_booking_messages, test E2E remarketing, código fantasma saas_products Fase 3). Bug #44 carrusel skip pendiente.
+- 🔴 Deuda técnica reciente: **2 de 4 abiertos** (UI post_booking_messages, test E2E remarketing, código fantasma saas_products Fase 3). Bug #44 carrusel skip CERRADO,.
 - 🟥 **Bugs revenue-critical nuevos detectados**: Bug #69 (variantes Ads inservibles — solo hook 125 chars) + Bug #70 (imágenes IA wizard no respetan referencias).
 - 🟠 Sprint E sin terminar: **2 abiertos** (Frontend wizard locale + selector idioma, Cron poll templates Meta).
 - 🟡 Backlog menor: **5 abiertos** (B6.5.6 Push FCM ads, B6.5.10 sistema aprende post-apply, M19 Test event code, M20 Dashboard Match Rate por tenant, D-4 Cron expire feature overrides, C5 Eventos timeline enriquecido).
