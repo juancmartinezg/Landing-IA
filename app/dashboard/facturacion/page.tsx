@@ -6,17 +6,15 @@ import { useAuth } from '../../providers';
 // NEXT_PUBLIC_ERP_API_URL=https://<tu-erp-lambda-url>.lambda-url.us-east-1.on.aws
 const ERP_URL = process.env.NEXT_PUBLIC_ERP_API_URL || '';
 
-type Tab = 'facturas' | 'nueva' | 'terceros' | 'items' | 'config' | 'bulk';
+type Tab = 'facturas' | 'nueva' | 'terceros' | 'config' | 'bulk';
 
 interface Linea {
   codigo: string;
-  prod_id?: string;
   descripcion: string;
   cantidad: number;
   precio_unitario: number;
   precio_iva_incluido: boolean;
   iva: number;
-  descuento: number;
 }
 
 const MODOS = [
@@ -26,6 +24,15 @@ const MODOS = [
   { id: 'AUTOMATICA_SIEMPRE', label: 'Automatica siempre' },
   { id: 'MANUAL_BOTON', label: 'Manual (boton en el CRM)' },
   { id: 'CONSUMIDOR_FINAL', label: 'Siempre a consumidor final' },
+];
+
+// Que hace el bot cuando el cliente PIDE factura en el chat.
+// Se guarda en facturacion_config.factura_request_action (lo lee el bridge).
+const FACTURA_ACTIONS = [
+  { id: '', label: 'No intervenir (el bot responde normal)' },
+  { id: 'PREGUNTAR', label: 'Pedir el RUT / datos al cliente' },
+  { id: 'HUMANO', label: 'Pasar a un asesor humano' },
+  { id: 'MANUAL', label: 'Tomar nota en el CRM (gestion manual)' },
 ];
 
 const TIPO_DOC = [
@@ -64,80 +71,26 @@ export default function FacturacionPage() {
   };
 
   // ---- Config ----
-  const [cfg, setCfg] = useState<any>({ modo_facturacion: 'OFF', pedir_rut: true, pt_proveedor: 'stub', ambiente: 'habilitacion', emisor: {}, numeracion: {} });
+  const [cfg, setCfg] = useState<any>({ modo_facturacion: 'OFF', pedir_rut: true, pt_proveedor: 'stub', ambiente: 'habilitacion', emisor: {}, numeracion: {}, factura_request_action: '', mensaje_pedir_rut: '', mensaje_factura_manual: '' });
   const loadConfig = () => {
     if (!ERP_URL) return;
     fetch(`${ERP_URL}/erp/facturacion/config`, { headers: h })
       .then(r => r.json()).then(d => { if (d && Object.keys(d).length) setCfg({ ...cfg, ...d }); }).catch(() => {});
   };
 
-  // ---- Catalogo de productos/servicios ----
-  const [productos, setProductos] = useState<any[]>([]);
-  const loadProductos = () => {
-    if (!ERP_URL) return;
-    fetch(`${ERP_URL}/erp/facturacion/productos`, { headers: h })
-      .then(r => r.json()).then(d => setProductos(d.productos || [])).catch(() => {});
-  };
-  const elegirProducto = (i: number, id: string) => {
-    const p = productos.find((x: any) => (x.id || x.slug) === id);
-    setLineas(lineas.map((l, idx) => idx !== i ? l : (
-      p ? { ...l, prod_id: id, codigo: p.codigo || p.slug || p.id || l.codigo, descripcion: p.nombre || p.descripcion || l.descripcion, precio_unitario: p.precio || l.precio_unitario, iva: (p.iva !== undefined && p.iva !== null) ? p.iva : l.iva }
-        : { ...l, prod_id: '' }
-    )));
-  };
-
-  // ---- Mis items (reusables, fuera del catalogo del bot) ----
-  const [misItems, setMisItems] = useState<any[]>([]);
-  const emptyItemForm = { id: '', codigo: '', nombre: '', precio: 0, iva: 19 };
-  const [itemForm, setItemForm] = useState<any>(emptyItemForm);
-  const loadItems = () => {
-    if (!ERP_URL) return;
-    fetch(`${ERP_URL}/erp/facturacion/items`, { headers: h })
-      .then(r => r.json()).then(d => setMisItems(d.items || [])).catch(() => {});
-  };
-  const guardarItemBackend = async (payload: any, after?: (d: any) => void) => {
-    try {
-      const res = await fetch(`${ERP_URL}/erp/facturacion/items`, { method: 'POST', headers: hj, body: JSON.stringify(payload) });
-      const d = await res.json();
-      if (d.error) { showToast('Error: ' + d.error); return; }
-      showToast((d.actualizado ? 'Item actualizado: ' : 'Item guardado: ') + (d.nombre || payload.nombre));
-      loadProductos(); loadItems();
-      if (after) after(d);
-    } catch { showToast('Error guardando el item'); }
-  };
-  const guardarItemForm = async () => {
-    if (!itemForm.nombre?.trim()) { showToast('Nombre requerido'); return; }
-    await guardarItemBackend(itemForm, () => setItemForm(emptyItemForm));
-  };
-  const borrarItemGuardado = async (id: string) => {
-    if (!window.confirm('Eliminar este item?')) return;
-    await fetch(`${ERP_URL}/erp/facturacion/items/${encodeURIComponent(id)}`, { method: 'DELETE', headers: h });
-    loadProductos(); loadItems();
-  };
-  const guardarItem = async (i: number) => {
-    const l = lineas[i];
-    if (!ERP_URL) { showToast('Falta NEXT_PUBLIC_ERP_API_URL'); return; }
-    if (!l.descripcion?.trim()) { showToast('Escribe la descripcion del item'); return; }
-    const norm = (s: string) => (s || '').trim().toLowerCase();
-    const dup = productos.find((p: any) => (l.codigo && norm(p.codigo) === norm(l.codigo)) || norm(p.nombre) === norm(l.descripcion));
-    if (dup && !window.confirm(`Ya existe "${dup.nombre}"${dup.origen === 'catalogo' ? ' (en el catalogo)' : ' (en tus items)'}. Guardar/actualizar de todas formas?`)) return;
-    await guardarItemBackend({ codigo: l.codigo, nombre: l.descripcion, descripcion: l.descripcion, precio: l.precio_unitario, iva: l.iva },
-      (d: any) => setLineas(prev => prev.map((x, idx) => idx === i ? { ...x, prod_id: d.id, codigo: d.codigo || x.codigo } : x)));
-  };
-
-  useEffect(() => { loadFacturas(); loadTerceros(); loadConfig(); loadProductos(); loadItems(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { loadFacturas(); loadTerceros(); loadConfig(); /* eslint-disable-next-line */ }, []);
 
   // ---- Nueva factura ----
   const [nf, setNf] = useState({
     tipo: 'FEV', consumidor_final: false,
     adquiriente: { tipo_doc: '13', numero_doc: '', dv: '', nombre_razon_social: '', email: '', telefono: '', direccion: '' },
-    forma_pago: '1', medio_pago: '10', fecha_venc: '', orden_compra: '', notas: '',
+    medio_pago: '10',
   });
-  const [lineas, setLineas] = useState<Linea[]>([{ codigo: '', descripcion: '', cantidad: 1, precio_unitario: 0, precio_iva_incluido: true, iva: 19, descuento: 0 }]);
+  const [lineas, setLineas] = useState<Linea[]>([{ codigo: '', descripcion: '', cantidad: 1, precio_unitario: 0, precio_iva_incluido: true, iva: 19 }]);
   const [emitting, setEmitting] = useState(false);
   const [rutLoading, setRutLoading] = useState(false);
 
-  const addLinea = () => setLineas([...lineas, { codigo: '', descripcion: '', cantidad: 1, precio_unitario: 0, precio_iva_incluido: true, iva: 19, descuento: 0 }]);
+  const addLinea = () => setLineas([...lineas, { codigo: '', descripcion: '', cantidad: 1, precio_unitario: 0, precio_iva_incluido: true, iva: 19 }]);
   const rmLinea = (i: number) => setLineas(lineas.filter((_, idx) => idx !== i));
   const setLn = (i: number, k: keyof Linea, v: any) => setLineas(lineas.map((l, idx) => idx === i ? { ...l, [k]: v } : l));
 
@@ -163,11 +116,9 @@ export default function FacturacionPage() {
         lineas: lineas.map(l => ({
           codigo: l.codigo || 'SVC', descripcion: l.descripcion, cantidad: l.cantidad,
           precio_unitario: l.precio_unitario, precio_iva_incluido: l.precio_iva_incluido,
-          descuento: l.descuento || 0,
           impuestos: l.iva > 0 ? [{ tipo: 'IVA', tarifa: l.iva }] : [],
         })),
-        forma_pago: nf.forma_pago, medio_pago: nf.medio_pago,
-        fecha_venc: nf.fecha_venc, notas: nf.notas, origen: 'crm_manual',
+        medio_pago: nf.medio_pago, origen: 'crm_manual',
       };
       const res = await fetch(`${ERP_URL}/erp/facturacion/emitir`, { method: 'POST', headers: hj, body: JSON.stringify(payload) });
       const d = await res.json();
@@ -182,40 +133,18 @@ export default function FacturacionPage() {
     if (!ERP_URL) { showToast('Falta NEXT_PUBLIC_ERP_API_URL'); return; }
     setRutLoading(true);
     try {
-      // Reescala/reencoda a JPEG: soluciona HEIC de iPhone y evita el limite de 6MB del request
-      const b64: string = await new Promise((resolve, reject) => {
-        if (file.type === 'application/pdf') {
-          const r = new FileReader();
-          r.onload = () => resolve((r.result as string).split(',')[1] || '');
-          r.onerror = () => reject(new Error('pdf'));
-          r.readAsDataURL(file);
-          return;
-        }
-        const url = URL.createObjectURL(file);
-        const im = new window.Image();
-        im.onload = () => {
-          const max = 1600;
-          const scale = Math.min(1, max / Math.max(im.width, im.height));
-          const w = Math.round(im.width * scale), h = Math.round(im.height * scale);
-          const c = document.createElement('canvas');
-          c.width = w; c.height = h;
-          const ctx = c.getContext('2d');
-          if (!ctx) { reject(new Error('canvas')); return; }
-          ctx.drawImage(im, 0, 0, w, h);
-          URL.revokeObjectURL(url);
-          resolve(c.toDataURL('image/jpeg', 0.85).split(',')[1] || '');
-        };
-        im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img')); };
-        im.src = url;
+      const b64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1] || '');
+        reader.readAsDataURL(file);
       });
-      const mime = file.type === 'application/pdf' ? 'application/pdf' : 'image/jpeg';
       const res = await fetch(`${ERP_URL}/erp/facturacion/rut`, {
         method: 'POST', headers: hj,
-        body: JSON.stringify({ imagen_b64: b64, mime_type: mime }),
+        body: JSON.stringify({ imagen_b64: b64, mime_type: file.type || 'image/jpeg' }),
       });
       const d = await res.json();
       const t = d.tercero || {};
-      if (!t.numero_doc) { showToast(d.error ? ('Error: ' + d.error) : 'No se pudo leer el RUT. Ingresa los datos manualmente.'); return; }
+      if (!t.numero_doc) { showToast('No se pudo leer el RUT. Ingresa los datos manualmente.'); return; }
       setNf({ ...nf, consumidor_final: false, adquiriente: {
         tipo_doc: t.tipo_doc || '31', numero_doc: t.numero_doc || '', dv: t.dv || '',
         nombre_razon_social: t.nombre_razon_social || '', email: t.email || '',
@@ -233,24 +162,6 @@ export default function FacturacionPage() {
     await fetch(`${ERP_URL}/erp/facturacion/terceros`, { method: 'POST', headers: hj, body: JSON.stringify(nuevoTercero) });
     showToast('Cliente guardado'); setNuevoTercero({ tipo_doc: '13', numero_doc: '', dv: '', nombre_razon_social: '', email: '', telefono: '', direccion: '' }); loadTerceros();
   };
-  const buscarClientePorDoc = (doc: string) => {
-    const q = (doc || '').trim();
-    if (!q) return;
-    const t = terceros.find((x: any) => String(x.numero_doc || x.tercero_id || '') === q);
-    if (t) {
-      setNf({ ...nf, consumidor_final: false, adquiriente: {
-        tipo_doc: t.tipo_doc || nf.adquiriente.tipo_doc || '13',
-        numero_doc: t.numero_doc || t.tercero_id || q,
-        dv: t.dv || '', nombre_razon_social: t.nombre_razon_social || '',
-        email: t.email || '', telefono: t.telefono || '', direccion: t.direccion || '',
-      }});
-      showToast('Cliente encontrado: ' + (t.nombre_razon_social || q));
-    } else {
-      setNuevoTercero({ tipo_doc: nf.adquiriente.tipo_doc || '13', numero_doc: q, dv: '', nombre_razon_social: '', email: '', telefono: '', direccion: '' });
-      setTab('terceros');
-      showToast('Cliente no registrado. Créalo aquí y vuelve a la factura.');
-    }
-  };
   const borrarTercero = async (doc: string) => {
     await fetch(`${ERP_URL}/erp/facturacion/terceros/${encodeURIComponent(doc)}`, { method: 'DELETE', headers: h });
     loadTerceros();
@@ -267,50 +178,6 @@ export default function FacturacionPage() {
   };
   const setEmisor = (k: string, v: string) => setCfg({ ...cfg, emisor: { ...(cfg.emisor || {}), [k]: v } });
   const setNum = (k: string, v: any) => setCfg({ ...cfg, numeracion: { ...(cfg.numeracion || {}), [k]: v } });
-  const setNumMany = (obj: any) => setCfg((c: any) => ({ ...c, numeracion: { ...(c.numeracion || {}), ...obj } }));
-  const [resoLoading, setResoLoading] = useState(false);
-  const leerResolucion = async (file: File) => {
-    if (!ERP_URL) { showToast('Falta NEXT_PUBLIC_ERP_API_URL'); return; }
-    setResoLoading(true);
-    try {
-      const b64: string = await new Promise((resolve, reject) => {
-        if (file.type === 'application/pdf') {
-          const r = new FileReader();
-          r.onload = () => resolve((r.result as string).split(',')[1] || '');
-          r.onerror = () => reject(new Error('pdf'));
-          r.readAsDataURL(file);
-          return;
-        }
-        const url = URL.createObjectURL(file);
-        const im = new window.Image();
-        im.onload = () => {
-          const max = 1800;
-          const scale = Math.min(1, max / Math.max(im.width, im.height));
-          const w = Math.round(im.width * scale), h = Math.round(im.height * scale);
-          const c = document.createElement('canvas');
-          c.width = w; c.height = h;
-          const ctx = c.getContext('2d');
-          if (!ctx) { reject(new Error('canvas')); return; }
-          ctx.drawImage(im, 0, 0, w, h);
-          URL.revokeObjectURL(url);
-          resolve(c.toDataURL('image/jpeg', 0.85).split(',')[1] || '');
-        };
-        im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img')); };
-        im.src = url;
-      });
-      const mime = file.type === 'application/pdf' ? 'application/pdf' : 'image/jpeg';
-      const res = await fetch(`${ERP_URL}/erp/facturacion/resolucion`, {
-        method: 'POST', headers: hj,
-        body: JSON.stringify({ documento_b64: b64, mime_type: mime }),
-      });
-      const d = await res.json();
-      const n = d.numeracion || {};
-      if (!n.numero_formulario && !n.prefijo) { showToast('No se pudo leer la resolucion. Ingresa los datos manualmente.'); return; }
-      setNumMany(n);
-      showToast('Resolucion leida: ' + (n.prefijo || '') + ' ' + (n.numero_formulario || ''));
-    } catch { showToast('Error leyendo la resolucion'); }
-    finally { setResoLoading(false); }
-  };
 
   // ---- Bulk ----
   const [bulkPreview, setBulkPreview] = useState<any>(null);
@@ -349,22 +216,11 @@ export default function FacturacionPage() {
     return map[estado] || 'bg-white/5 text-gray-400';
   };
   const cop = (n: number) => '$' + (n || 0).toLocaleString('es-CO');
-  const verFactura = async (f: any) => {
-    if (!ERP_URL || !f?.factura_id) { showToast('Factura sin ID'); return; }
-    try {
-      const res = await fetch(`${ERP_URL}/erp/facturacion/representacion?id=${encodeURIComponent(f.factura_id)}`, { headers: h });
-      const html = await res.text();
-      const w = window.open('', '_blank');
-      if (w) { w.document.open(); w.document.write(html); w.document.close(); }
-      else showToast('Permite las ventanas emergentes para ver la factura');
-    } catch { showToast('No se pudo abrir la factura'); }
-  };
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'facturas', label: 'Facturas' },
     { id: 'nueva', label: 'Nueva factura' },
     { id: 'terceros', label: 'Clientes' },
-    { id: 'items', label: 'Mis items' },
     { id: 'bulk', label: 'Carga masiva' },
     { id: 'config', label: 'Configuracion' },
   ];
@@ -413,7 +269,6 @@ export default function FacturacionPage() {
                       <th className="text-right px-3 py-3">Total</th>
                       <th className="text-center px-3 py-3">Estado</th>
                       <th className="text-left px-5 py-3 hidden md:table-cell">CUFE</th>
-                      <th className="px-3 py-3"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -425,7 +280,6 @@ export default function FacturacionPage() {
                         <td className="px-3 py-3 text-right">{cop(f.total)}</td>
                         <td className="px-3 py-3 text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${badge(f.estado)}`}>{f.estado}</span></td>
                         <td className="px-5 py-3 hidden md:table-cell text-[10px] text-gray-500 font-mono">{(f.cufe || '').slice(0, 16)}{f.cufe ? '…' : ''}</td>
-                        <td className="px-3 py-3 text-right"><button onClick={() => verFactura(f)} className="text-indigo-400 text-xs font-bold hover:text-indigo-300">Ver</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -459,12 +313,8 @@ export default function FacturacionPage() {
                   {TIPO_DOC.map(t => <option key={t.id} value={t.id} className="bg-gray-900">{t.label}</option>)}
                 </select>
                 <div className="flex gap-2">
-                  <input className={inputCls} placeholder="Numero de documento" value={nf.adquiriente.numero_doc}
-                    onChange={e => setNf({ ...nf, adquiriente: { ...nf.adquiriente, numero_doc: e.target.value } })}
-                    onBlur={e => buscarClientePorDoc(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); buscarClientePorDoc((e.target as HTMLInputElement).value); } }} />
+                  <input className={inputCls} placeholder="Numero de documento" value={nf.adquiriente.numero_doc} onChange={e => setNf({ ...nf, adquiriente: { ...nf.adquiriente, numero_doc: e.target.value } })} />
                   <input className={`${inputCls} w-20`} placeholder="DV" value={nf.adquiriente.dv} onChange={e => setNf({ ...nf, adquiriente: { ...nf.adquiriente, dv: e.target.value } })} />
-                  <button type="button" onClick={() => buscarClientePorDoc(nf.adquiriente.numero_doc)} className="px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold whitespace-nowrap">Buscar</button>
                 </div>
                 <input className={inputCls} placeholder="Nombre / Razon social" value={nf.adquiriente.nombre_razon_social} onChange={e => setNf({ ...nf, adquiriente: { ...nf.adquiriente, nombre_razon_social: e.target.value } })} />
                 <input className={inputCls} placeholder="Email" value={nf.adquiriente.email} onChange={e => setNf({ ...nf, adquiriente: { ...nf.adquiriente, email: e.target.value } })} />
@@ -475,39 +325,6 @@ export default function FacturacionPage() {
           </div>
 
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
-            <h3 className="font-bold mb-4">Datos del documento</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="text-xs text-gray-400">Forma de pago
-                <select className={inputCls} value={nf.forma_pago} onChange={e => setNf({ ...nf, forma_pago: e.target.value })}>
-                  <option value="1" className="bg-gray-900">Contado</option>
-                  <option value="2" className="bg-gray-900">Credito</option>
-                </select>
-              </label>
-              <label className="text-xs text-gray-400">Medio de pago
-                <select className={inputCls} value={nf.medio_pago} onChange={e => setNf({ ...nf, medio_pago: e.target.value })}>
-                  <option value="10" className="bg-gray-900">Efectivo</option>
-                  <option value="42" className="bg-gray-900">Consignacion bancaria</option>
-                  <option value="47" className="bg-gray-900">Transferencia</option>
-                  <option value="48" className="bg-gray-900">Tarjeta credito</option>
-                  <option value="49" className="bg-gray-900">Tarjeta debito</option>
-                  <option value="20" className="bg-gray-900">Cheque</option>
-                </select>
-              </label>
-              {nf.forma_pago === '2' && (
-                <label className="text-xs text-gray-400">Fecha de vencimiento
-                  <input type="date" className={inputCls} value={nf.fecha_venc} onChange={e => setNf({ ...nf, fecha_venc: e.target.value })} />
-                </label>
-              )}
-              <label className="text-xs text-gray-400">Orden de compra (opcional)
-                <input className={inputCls} placeholder="N de orden" value={nf.orden_compra} onChange={e => setNf({ ...nf, orden_compra: e.target.value })} />
-              </label>
-            </div>
-            <label className="text-xs text-gray-400 block mt-3">Notas / Observaciones
-              <textarea className={inputCls} rows={2} placeholder="Notas visibles en la factura" value={nf.notas} onChange={e => setNf({ ...nf, notas: e.target.value })} />
-            </label>
-          </div>
-
-          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold">Items</h3>
               <button onClick={addLinea} className="text-xs font-bold text-indigo-400 hover:text-indigo-300">+ Agregar linea</button>
@@ -515,26 +332,9 @@ export default function FacturacionPage() {
             <div className="space-y-3">
               {lineas.map((l, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                  <input className={`${inputCls} col-span-4 md:col-span-2`} placeholder="Codigo" value={l.codigo} onChange={e => setLn(i, 'codigo', e.target.value)} />
-                  <select className={`${inputCls} col-span-5 md:col-span-8`} value={l.prod_id || ''} onChange={e => elegirProducto(i, e.target.value)}>
-                    <option value="" className="bg-gray-900">— Producto manual (escribe abajo) —</option>
-                    <optgroup label="Catalogo">
-                      {productos.filter((p: any) => p.origen !== 'factura').map((p: any) => (
-                        <option key={p.id || p.slug} value={p.id || p.slug} className="bg-gray-900">{p.nombre}{p.precio ? ` — ${cop(Math.round(p.precio))}` : ''}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Mis items">
-                      {productos.filter((p: any) => p.origen === 'factura').map((p: any) => (
-                        <option key={p.id || p.slug} value={p.id || p.slug} className="bg-gray-900">{p.nombre}{p.precio ? ` — ${cop(Math.round(p.precio))}` : ''}</option>
-                      ))}
-                    </optgroup>
-                  </select>
-                  <button type="button" onClick={() => guardarItem(i)} title="Guardar este item para reusarlo (no entra al catalogo del bot)"
-                    className="col-span-3 md:col-span-2 px-2 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold whitespace-nowrap">💾 Guardar item</button>
                   <input className={`${inputCls} col-span-12 md:col-span-4`} placeholder="Descripcion" value={l.descripcion} onChange={e => setLn(i, 'descripcion', e.target.value)} />
                   <input type="number" className={`${inputCls} col-span-3 md:col-span-1`} placeholder="Cant" value={l.cantidad} onChange={e => setLn(i, 'cantidad', parseFloat(e.target.value) || 0)} />
                   <input type="number" className={`${inputCls} col-span-5 md:col-span-2`} placeholder="Precio" value={l.precio_unitario} onChange={e => setLn(i, 'precio_unitario', parseFloat(e.target.value) || 0)} />
-                  <input type="number" className={`${inputCls} col-span-4 md:col-span-1`} placeholder="Desc $" title="Descuento en pesos" value={l.descuento} onChange={e => setLn(i, 'descuento', parseFloat(e.target.value) || 0)} />
                   <select className={`${inputCls} col-span-4 md:col-span-2`} value={l.iva} onChange={e => setLn(i, 'iva', parseFloat(e.target.value))}>
                     <option value={19} className="bg-gray-900">IVA 19%</option>
                     <option value={5} className="bg-gray-900">IVA 5%</option>
@@ -609,58 +409,6 @@ export default function FacturacionPage() {
         </div>
       )}
 
-      {/* ===== MIS ITEMS ===== */}
-      {tab === 'items' && (
-        <div className="space-y-6">
-          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
-            <h3 className="font-bold mb-1">{itemForm.id ? 'Editar item' : 'Nuevo item'}</h3>
-            <p className="text-xs text-gray-500 mb-4">Items propios reusables. NO entran al catalogo del bot; solo aparecen al facturar.</p>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <input className={inputCls} placeholder="Codigo" value={itemForm.codigo} onChange={e => setItemForm({ ...itemForm, codigo: e.target.value })} />
-              <input className={`${inputCls} md:col-span-2`} placeholder="Nombre / Descripcion" value={itemForm.nombre} onChange={e => setItemForm({ ...itemForm, nombre: e.target.value })} />
-              <input type="number" className={inputCls} placeholder="Precio" value={itemForm.precio} onChange={e => setItemForm({ ...itemForm, precio: parseFloat(e.target.value) || 0 })} />
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
-              <select className={`${inputCls} md:w-48`} value={itemForm.iva} onChange={e => setItemForm({ ...itemForm, iva: parseFloat(e.target.value) })}>
-                <option value={19} className="bg-gray-900">IVA 19%</option>
-                <option value={5} className="bg-gray-900">IVA 5%</option>
-                <option value={0} className="bg-gray-900">Excluido/0%</option>
-              </select>
-              <div className="flex gap-3">
-                {itemForm.id && <button onClick={() => setItemForm(emptyItemForm)} className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-bold">Cancelar</button>}
-                <button onClick={guardarItemForm} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm font-bold">{itemForm.id ? 'Actualizar item' : 'Guardar item'}</button>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white/[0.03] border border-white/5 rounded-2xl overflow-hidden">
-            {misItems.length === 0 ? <div className="p-8 text-center text-gray-500 text-sm">Aun no tienes items propios. Se crean aqui o con "Guardar item" en Nueva factura.</div> : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b border-white/5 text-xs text-gray-500 uppercase tracking-widest">
-                    <th className="text-left px-5 py-3">Codigo</th><th className="text-left px-3 py-3">Nombre</th>
-                    <th className="text-right px-3 py-3">Precio</th><th className="text-left px-3 py-3 hidden sm:table-cell">IVA</th><th className="px-5 py-3"></th>
-                  </tr></thead>
-                  <tbody>
-                    {misItems.map((it: any, i: number) => (
-                      <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
-                        <td className="px-5 py-3 font-mono text-xs">{it.codigo || '—'}</td>
-                        <td className="px-3 py-3">{it.nombre}</td>
-                        <td className="px-3 py-3 text-right">{cop(Math.round(it.precio || 0))}</td>
-                        <td className="px-3 py-3 hidden sm:table-cell text-gray-400">{it.iva}%</td>
-                        <td className="px-5 py-3 text-right whitespace-nowrap">
-                          <button onClick={() => setItemForm({ id: it.id, codigo: it.codigo || '', nombre: it.nombre || '', precio: it.precio || 0, iva: it.iva ?? 19 })} className="text-indigo-400 text-xs mr-4">Editar</button>
-                          <button onClick={() => borrarItemGuardado(it.id)} className="text-red-400 text-xs">Eliminar</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* ===== BULK ===== */}
       {tab === 'bulk' && (
         <div className="space-y-6">
@@ -702,21 +450,27 @@ export default function FacturacionPage() {
             <select className={inputCls} value={cfg.modo_facturacion} onChange={e => setCfg({ ...cfg, modo_facturacion: e.target.value })}>
               {MODOS.map(m => <option key={m.id} value={m.id} className="bg-gray-900">{m.label}</option>)}
             </select>
-            <label className="text-xs text-gray-400 block mt-4">Tratamiento del IVA al facturar
-              <select className={inputCls} value={cfg.factura_iva_modo || 'INCLUIDO'} onChange={e => setCfg({ ...cfg, factura_iva_modo: e.target.value })}>
-                <option value="INCLUIDO" className="bg-gray-900">IVA incluido en el precio (no cobra de mas al cliente)</option>
-                <option value="ADICIONAL" className="bg-gray-900">IVA adicional (se suma al pedir factura)</option>
-              </select>
-            </label>
-            <p className="text-xs text-gray-500 mt-1">
-              {(cfg.factura_iva_modo || 'INCLUIDO') === 'ADICIONAL'
-                ? 'El bot preguntara por la factura ANTES del link (o cobrara el IVA aparte). El cliente paga precio + IVA.'
-                : 'El precio ya trae el IVA; la factura solo lo desglosa. El cliente no paga nada extra.'}
-            </p>
             <label className="flex items-center gap-2 text-sm text-gray-400 mt-4">
               <input type="checkbox" checked={!!cfg.pedir_rut} onChange={e => setCfg({ ...cfg, pedir_rut: e.target.checked })} />
               Pedir el RUT por WhatsApp (lectura automatica con IA)
             </label>
+          </div>
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
+            <h3 className="font-bold mb-1">Cuando el cliente pide factura en el chat</h3>
+            <p className="text-xs text-gray-500 mb-4">Elige que debe hacer el bot al detectar que un cliente solicita factura.</p>
+            <select className={inputCls} value={cfg.factura_request_action || ''} onChange={e => setCfg({ ...cfg, factura_request_action: e.target.value })}>
+              {FACTURA_ACTIONS.map(a => <option key={a.id || 'none'} value={a.id} className="bg-gray-900">{a.label}</option>)}
+            </select>
+            {cfg.factura_request_action === 'PREGUNTAR' && (
+              <textarea className={`${inputCls} mt-3`} rows={2}
+                placeholder="Mensaje al pedir el RUT (opcional). Ej: Con gusto te facturamos, enviame tu RUT o numero de documento y nombre completo."
+                value={cfg.mensaje_pedir_rut || ''} onChange={e => setCfg({ ...cfg, mensaje_pedir_rut: e.target.value })} />
+            )}
+            {cfg.factura_request_action === 'MANUAL' && (
+              <textarea className={`${inputCls} mt-3`} rows={2}
+                placeholder="Mensaje de gestion manual (opcional). Ej: Tomamos nota de tu solicitud de factura, nuestro equipo la gestionara."
+                value={cfg.mensaje_factura_manual || ''} onChange={e => setCfg({ ...cfg, mensaje_factura_manual: e.target.value })} />
+            )}
           </div>
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
             <h3 className="font-bold mb-4">Datos del emisor</h3>
@@ -727,95 +481,19 @@ export default function FacturacionPage() {
               <input className={inputCls} placeholder="Email" value={cfg.emisor?.email || ''} onChange={e => setEmisor('email', e.target.value)} />
               <input className={inputCls} placeholder="Direccion" value={cfg.emisor?.direccion || ''} onChange={e => setEmisor('direccion', e.target.value)} />
               <input className={inputCls} placeholder="Codigo DANE municipio" value={cfg.emisor?.municipio_dane || ''} onChange={e => setEmisor('municipio_dane', e.target.value)} />
-              <input className={inputCls} placeholder="Telefono" value={cfg.emisor?.telefono || ''} onChange={e => setEmisor('telefono', e.target.value)} />
-              <input className={inputCls} placeholder="Sitio web" value={cfg.emisor?.web || ''} onChange={e => setEmisor('web', e.target.value)} />
-              <input className={inputCls} placeholder="Responsabilidad fiscal (ej. Responsable de IVA e INC)" value={cfg.emisor?.responsabilidad || ''} onChange={e => setEmisor('responsabilidad', e.target.value)} />
-              <input className={inputCls} placeholder="URL del logo (https://...)" value={cfg.emisor?.logo_url || ''} onChange={e => setEmisor('logo_url', e.target.value)} />
             </div>
           </div>
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
-            <h3 className="font-bold mb-1">Proveedor tecnologico (PT)</h3>
-            <p className="text-xs text-gray-500 mb-4">Software AUTORIZADO ante la DIAN que transmite la factura. En pruebas no aplica. Al conectar el PT real, estos datos salen en la factura.</p>
+            <h3 className="font-bold mb-4">Resolucion y numeracion DIAN</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="text-xs text-gray-400">Proveedor
-                <select className={inputCls} value={cfg.pt_proveedor || 'stub'} onChange={e => setCfg({ ...cfg, pt_proveedor: e.target.value })}>
-                  <option value="stub" className="bg-gray-900">Pruebas (stub)</option>
-                  <option value="factus" className="bg-gray-900">Factus</option>
-                  <option value="dataico" className="bg-gray-900">Dataico</option>
-                  <option value="hka" className="bg-gray-900">HKA</option>
-                  <option value="alegra" className="bg-gray-900">Alegra</option>
-                </select>
-              </label>
-              <label className="text-xs text-gray-400">Ambiente
-                <select className={inputCls} value={cfg.ambiente || 'habilitacion'} onChange={e => setCfg({ ...cfg, ambiente: e.target.value })}>
-                  <option value="habilitacion" className="bg-gray-900">Habilitacion / Pruebas</option>
-                  <option value="produccion" className="bg-gray-900">Produccion</option>
-                </select>
-              </label>
-              <input className={inputCls} placeholder="Razon social del PT (ej. Soluciones Alegra S.A.S)" value={cfg.pt_razon_social || ''} onChange={e => setCfg({ ...cfg, pt_razon_social: e.target.value })} />
-              <input className={inputCls} placeholder="NIT del PT (ej. 900.559.088-2)" value={cfg.pt_nit || ''} onChange={e => setCfg({ ...cfg, pt_nit: e.target.value })} />
-              <input className={inputCls} placeholder="Nombre del software (ej. clientes.bot)" value={cfg.pt_software || ''} onChange={e => setCfg({ ...cfg, pt_software: e.target.value })} />
+              <input className={inputCls} placeholder="Prefijo (ej. FE)" value={cfg.numeracion?.prefijo || ''} onChange={e => setNum('prefijo', e.target.value)} />
+              <input className={inputCls} placeholder="Numero de resolucion" value={cfg.numeracion?.resolucion_numero || ''} onChange={e => setNum('resolucion_numero', e.target.value)} />
+              <input className={inputCls} placeholder="Clave tecnica" value={cfg.numeracion?.clave_tecnica || ''} onChange={e => setNum('clave_tecnica', e.target.value)} />
+              <div className="flex gap-2">
+                <input type="number" className={inputCls} placeholder="Rango desde" value={cfg.numeracion?.rango_desde || ''} onChange={e => setNum('rango_desde', parseInt(e.target.value) || 0)} />
+                <input type="number" className={inputCls} placeholder="Rango hasta" value={cfg.numeracion?.rango_hasta || ''} onChange={e => setNum('rango_hasta', parseInt(e.target.value) || 0)} />
+              </div>
             </div>
-          </div>
-          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold">Resolucion y numeracion DIAN</h3>
-              <label className="cursor-pointer text-xs px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500">
-                {resoLoading ? 'Leyendo…' : '📄 Subir resolucion DIAN'}
-                <input type="file" accept="image/*,application/pdf" className="hidden" disabled={resoLoading}
-                  onChange={e => e.target.files?.[0] && leerResolucion(e.target.files[0])} />
-              </label>
-            </div>
-            <p className="text-xs text-gray-500 mb-4">Sube el documento de autorizacion de la DIAN y se completan los campos solos.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="text-xs text-gray-400">Nombre de la numeracion
-                <input className={inputCls} placeholder="Ej. FVE VENTAS" value={cfg.numeracion?.nombre || ''} onChange={e => setNum('nombre', e.target.value)} />
-              </label>
-              <label className="text-xs text-gray-400">Proxima factura (consecutivo)
-                <input type="number" className={inputCls} placeholder="Ej. 122" value={cfg.numeracion?.proxima_factura || ''} onChange={e => setNum('proxima_factura', parseInt(e.target.value) || 0)} />
-              </label>
-              <label className="text-xs text-gray-400">Prefijo
-                <input className={inputCls} placeholder="Ej. FEE" value={cfg.numeracion?.prefijo || ''} onChange={e => setNum('prefijo', e.target.value)} />
-              </label>
-              <label className="text-xs text-gray-400">Numero de formulario / resolucion
-                <input className={inputCls} placeholder="Ej. 18764108490776" value={cfg.numeracion?.resolucion_numero || ''} onChange={e => setNum('resolucion_numero', e.target.value)} />
-              </label>
-              <label className="text-xs text-gray-400">Vigencia desde
-                <input type="date" className={inputCls} value={cfg.numeracion?.vigencia_desde || ''} onChange={e => setNum('vigencia_desde', e.target.value)} />
-              </label>
-              <label className="text-xs text-gray-400">Vigencia hasta
-                <input type="date" className={inputCls} value={cfg.numeracion?.vigencia_hasta || ''} onChange={e => setNum('vigencia_hasta', e.target.value)} />
-              </label>
-              <label className="text-xs text-gray-400">Desde el numero
-                <input type="number" className={inputCls} placeholder="Ej. 28" value={cfg.numeracion?.rango_desde || ''} onChange={e => setNum('rango_desde', parseInt(e.target.value) || 0)} />
-              </label>
-              <label className="text-xs text-gray-400">Hasta el numero
-                <input type="number" className={inputCls} placeholder="Ej. 500" value={cfg.numeracion?.rango_hasta || ''} onChange={e => setNum('rango_hasta', parseInt(e.target.value) || 0)} />
-              </label>
-              <label className="text-xs text-gray-400">Clave tecnica (POS/doc. soporte)
-                <input className={inputCls} placeholder="Opcional" value={cfg.numeracion?.clave_tecnica || ''} onChange={e => setNum('clave_tecnica', e.target.value)} />
-              </label>
-              <label className="text-xs text-gray-400">Tipo de documento
-                <input className={inputCls} placeholder="Factura de venta" value={cfg.numeracion?.tipo_documento || ''} onChange={e => setNum('tipo_documento', e.target.value)} />
-              </label>
-            </div>
-            <div className="flex flex-wrap gap-4 mt-4">
-              <label className="flex items-center gap-2 text-sm text-gray-400">
-                <input type="checkbox" checked={cfg.numeracion?.numeracion_automatica !== false} onChange={e => setNum('numeracion_automatica', e.target.checked)} />
-                Numeracion automatica
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-400">
-                <input type="checkbox" checked={cfg.numeracion?.numeracion_electronica !== false} onChange={e => setNum('numeracion_electronica', e.target.checked)} />
-                Numeracion electronica
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-400">
-                <input type="checkbox" checked={!!cfg.numeracion?.preferida} onChange={e => setNum('preferida', e.target.checked)} />
-                Preferida
-              </label>
-            </div>
-            <label className="text-xs text-gray-400 block mt-4">Texto de autorizacion
-              <textarea className={inputCls + ' h-24'} placeholder="Texto de la autorizacion DIAN" value={cfg.numeracion?.texto_autorizacion || ''} onChange={e => setNum('texto_autorizacion', e.target.value)} />
-            </label>
           </div>
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
             <h3 className="font-bold mb-4">Proveedor tecnologico (PT)</h3>
