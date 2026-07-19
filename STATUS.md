@@ -2,7 +2,39 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**API (SaaS_API_Handler) + Bot (WhatsApp_Typebot_Bridge) + ERP_Handler (Facturación DIAN, Lambda nueva) + Video_Worker + Remarketing + Frontend `e65c8d5`** — Facturación electrónica DIAN + Inbox multicanal (WhatsApp/Instagram/Messenger) + Integraciones + fixes de seguridad (18 jul 2026)
+**API (SaaS_API_Handler) + Bot (WhatsApp_Typebot_Bridge v288) + ERP_Handler (Facturación DIAN, v2) + Video_Worker + Remarketing + Frontend `60ba859`** — Cierre módulo Facturación DIAN (código completo) + fixes previos (19 jul 2026)
+### 19 jul 2026 — Sprint Cierre Facturación DIAN 🧾✅
+**Bot v288 + ERP_Handler v2 + Frontend `60ba859`** (PR #8 mergeado + fixes en artefacto desplegado)
+Se cerró el módulo de facturación electrónica **a nivel de código**. Solo queda gestión externa (contratar PT + cargar resolución DIAN). Cambios quirúrgicos con `try/except` fire-and-forget — WhatsApp y pagos intactos.
+#### 🐛 Fix monto DIAN (Bot v288)
+- ✅ **PR #8 base**: el hook ERP (`WhatsApp_Typebot_Bridge/lambda_function.py:4930`) facturaba el **anticipo** (`StudentPaymentState.amount`), no el precio real. Fix: resuelve `regular_price` del catálogo + IVA por config del tenant (`ERP_Handler/facturacion/bot_hook.py:83-85`).
+- ✅ **Parche adicional (v288)**: cerrados 2 huecos DIAN latentes — `promotional_price` (promo>regular, factura de más en promos) + `pax_count` (factura de menos en grupos). Replica la misma decisión de precio que `trigger_payment_flow` (`WhatsApp_Typebot_Bridge/lambda_function.py:4593-4599`). Validado E2E con datos reales: anticipo $140k → factura $280k (1 pax) / $840k (3 pax).
+#### 🖥️ Frontend facturación (Frontend `60ba859` — 6 cambios en `app/dashboard/facturacion/page.tsx`)
+- ✅ **A** — Bloque UI **IVA global** (`factura_iva_pct` + `factura_iva_modo`) que alimenta el fix del PR #8 en flujo automático del bot.
+- ✅ **B** — Bloque UI **credenciales del PT** (`pt_credenciales`: client_id/secret/username/password), condicional si el proveedor ≠ stub. Alimenta `get_provider` (`ERP_Handler/facturacion/providers/factory.py:29`).
+- ✅ **C** — Columna Acciones en tabla facturas: botón **Ver** (representación gráfica) + **Anular** (nota crédito) con handler `anularFactura`.
+#### 📧 Envío de factura al cliente por email (ERP v2 — obligación DIAN)
+- ✅ **Nuevo helper** `ERP_Handler/facturacion/mailer.py`: envía la factura al adquiriente vía Resend (misma API del bridge). Fire-and-forget, multi-tenant (marca + remitente del emisor), incluye link PDF del PT + "Ver factura".
+- ✅ **Enganchado** en `emitir()` (`ERP_Handler/facturacion/core.py:220-224`): solo si `resultado.exito` y el adquiriente tiene email.
+- ✅ **Env vars ERP**: agregadas `RESEND_API_KEY` + `ERP_PUBLIC_URL` (patrón no destructivo, lección #54). 7 keys totales conservadas.
+- ✅ **Test E2E producción**: factura stub JMC (número 4, total $50k, IVA calculado correcto $7.983,19) → correo entregado a `mailadministrador@gmail.com` ✅.
+#### 🔍 Auditoría del módulo — qué tiene y qué falta
+- ✅ **Núcleo DIAN completo**: emisión FEV + NC/ND, CUFE/CUDE, QR, numeración atómica, motor de impuestos (IVA/INC/ICA/retenciones/AIU), idempotencia, terceros, ítems, carga masiva, representación gráfica HTML, OCR RUT/resolución, multi-PT, emisión automática desde pago del bot.
+- ⚠️ **Providers = "scaffold funcional"**: `ERP_Handler/facturacion/providers/factus.py` tiene OAuth2 + payload + llamada HTTP real, pero NO probado contra API real (campos "según doc"). Enchufar PT real = credenciales + probar sandbox + afinar campos.
+- ⚠️ **NO es un ERP contable** (sin cartera/inventario/contabilidad/reportes tributarios) — por diseño. El moat es CRM+WhatsApp IA+Ads, no competir con Siigo. Integración externa si un cliente lo necesita.
+#### ⏳ Pendientes para ENCENDER producción (gestión, no código)
+1. **Contratar PT** (Factus recomendado: API-first + barato) → credenciales sandbox.
+2. Meter credenciales en la UI (`app/dashboard/facturacion/page.tsx:550-560`) + PT=`factus`, ambiente=`habilitacion`.
+3. Cargar **resolución DIAN real** (número, prefijo, rango) — UI o OCR. Hoy JMC la tiene vacía.
+4. Emitir 1 factura en habilitación → afinar campos que Factus rechace en `ERP_Handler/facturacion/providers/factus.py`.
+5. Confirmar que el PT entrega la factura o que basta con el email propio (ya cubierto).
+6. Switch a `produccion` + `modo_facturacion` deseado.
+#### 📌 Lecciones nuevas
+- **#90:** El "proveedor tecnológico" no es solo contratar la cuenta — los drivers PT son scaffold sin probar; hay que afinar campos contra el sandbox real antes de producción.
+- **#91:** Envío de factura al cliente es obligación DIAN — el `core.py` no lo hacía. Helper Resain propio (fire-and-forget) lo resuelve sin depender de que el PT lo entregue.
+- **#92:** `ERP_Handler` no tenía `~/.deploy_erp.sh` — deploy manual (`update-function-code` + `publish-version`). Crear el script para futuros deploys del ERP.
+#### 🔴 Pendiente de seguridad
+- **Rotar `GEMINI_API_KEY` y `RESEND_API_KEY`** — expuestas en chat de trabajo durante la sesión.
 ### 18 jul 2026 — Consolidación de respaldo: rama única = producción 🗂️
 
 **Backend (repo `chatbot_escuela`) sincronizado con producción real:**
