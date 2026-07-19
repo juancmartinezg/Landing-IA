@@ -71,7 +71,7 @@ export default function FacturacionPage() {
   };
 
   // ---- Config ----
-  const [cfg, setCfg] = useState<any>({ modo_facturacion: 'OFF', pedir_rut: true, pt_proveedor: 'stub', ambiente: 'habilitacion', emisor: {}, numeracion: {}, factura_request_action: '', mensaje_pedir_rut: '', mensaje_factura_manual: '' });
+  const [cfg, setCfg] = useState<any>({ modo_facturacion: 'OFF', pedir_rut: true, pt_proveedor: 'stub', ambiente: 'habilitacion', emisor: {}, numeracion: {}, pt_credenciales: {}, factura_iva_pct: 0, factura_iva_modo: 'INCLUIDO', factura_request_action: '', mensaje_pedir_rut: '', mensaje_factura_manual: '' });
   const loadConfig = () => {
     if (!ERP_URL) return;
     fetch(`${ERP_URL}/erp/facturacion/config`, { headers: h })
@@ -166,6 +166,17 @@ export default function FacturacionPage() {
     await fetch(`${ERP_URL}/erp/facturacion/terceros/${encodeURIComponent(doc)}`, { method: 'DELETE', headers: h });
     loadTerceros();
   };
+  const anularFactura = async (factura_id: string) => {
+    if (!factura_id) { showToast('Factura sin ID'); return; }
+    const motivo = window.prompt('Motivo de anulacion (nota credito):', '');
+    if (motivo === null) return;
+    try {
+      const res = await fetch(`${ERP_URL}/erp/facturacion/anular`, { method: 'POST', headers: hj, body: JSON.stringify({ factura_id, motivo }) });
+      const d = await res.json();
+      if (d.error) showToast('Error: ' + d.error);
+      else { showToast('Nota credito emitida'); loadFacturas(); }
+    } catch { showToast('Error de red'); }
+  };
 
   // ---- Config guardar ----
   const [savingCfg, setSavingCfg] = useState(false);
@@ -178,6 +189,7 @@ export default function FacturacionPage() {
   };
   const setEmisor = (k: string, v: string) => setCfg({ ...cfg, emisor: { ...(cfg.emisor || {}), [k]: v } });
   const setNum = (k: string, v: any) => setCfg({ ...cfg, numeracion: { ...(cfg.numeracion || {}), [k]: v } });
+  const setCred = (k: string, v: string) => setCfg({ ...cfg, pt_credenciales: { ...(cfg.pt_credenciales || {}), [k]: v } });
 
   // ---- Bulk ----
   const [bulkPreview, setBulkPreview] = useState<any>(null);
@@ -269,6 +281,7 @@ export default function FacturacionPage() {
                       <th className="text-right px-3 py-3">Total</th>
                       <th className="text-center px-3 py-3">Estado</th>
                       <th className="text-left px-5 py-3 hidden md:table-cell">CUFE</th>
+                      <th className="text-center px-3 py-3">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -280,6 +293,15 @@ export default function FacturacionPage() {
                         <td className="px-3 py-3 text-right">{cop(f.total)}</td>
                         <td className="px-3 py-3 text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${badge(f.estado)}`}>{f.estado}</span></td>
                         <td className="px-5 py-3 hidden md:table-cell text-[10px] text-gray-500 font-mono">{(f.cufe || '').slice(0, 16)}{f.cufe ? '…' : ''}</td>
+                        <td className="px-3 py-3 text-center whitespace-nowrap">
+                          <a href={`${ERP_URL}/erp/facturacion/representacion?id=${encodeURIComponent(f.factura_id || f.id || '')}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="text-indigo-400 hover:text-indigo-300 text-xs font-bold mr-3">Ver</a>
+                          {f.estado !== 'ANULADA' && (
+                            <button onClick={() => anularFactura(f.factura_id || f.id || '')}
+                              className="text-red-400 hover:text-red-300 text-xs font-bold">Anular</button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -456,6 +478,21 @@ export default function FacturacionPage() {
             </label>
           </div>
           <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
+            <h3 className="font-bold mb-1">IVA por defecto (facturacion automatica)</h3>
+            <p className="text-xs text-gray-500 mb-4">Se aplica cuando el bot factura solo (sin lineas manuales). En emision manual el IVA se elige por linea.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <select className={inputCls} value={cfg.factura_iva_pct ?? 0} onChange={e => setCfg({ ...cfg, factura_iva_pct: parseFloat(e.target.value) })}>
+                <option value={0} className="bg-gray-900">0% (exento / excluido)</option>
+                <option value={5} className="bg-gray-900">5%</option>
+                <option value={19} className="bg-gray-900">19%</option>
+              </select>
+              <select className={inputCls} value={cfg.factura_iva_modo || 'INCLUIDO'} onChange={e => setCfg({ ...cfg, factura_iva_modo: e.target.value })}>
+                <option value="INCLUIDO" className="bg-gray-900">IVA incluido en el precio</option>
+                <option value="ADICIONAL" className="bg-gray-900">IVA adicional (se suma al precio)</option>
+              </select>
+            </div>
+          </div>
+          <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
             <h3 className="font-bold mb-1">Cuando el cliente pide factura en el chat</h3>
             <p className="text-xs text-gray-500 mb-4">Elige que debe hacer el bot al detectar que un cliente solicita factura.</p>
             <select className={inputCls} value={cfg.factura_request_action || ''} onChange={e => setCfg({ ...cfg, factura_request_action: e.target.value })}>
@@ -510,6 +547,17 @@ export default function FacturacionPage() {
                 <option value="produccion" className="bg-gray-900">Produccion</option>
               </select>
             </div>
+            {cfg.pt_proveedor && cfg.pt_proveedor !== 'stub' && (
+              <div className="mt-4">
+                <p className="text-xs text-gray-500 mb-3">Credenciales del proveedor (te las entrega el PT al contratar). Se guardan cifradas.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <input className={inputCls} placeholder="Client ID" value={cfg.pt_credenciales?.client_id || ''} onChange={e => setCred('client_id', e.target.value)} />
+                  <input className={inputCls} type="password" placeholder="Client Secret" value={cfg.pt_credenciales?.client_secret || ''} onChange={e => setCred('client_secret', e.target.value)} />
+                  <input className={inputCls} placeholder="Usuario / Email API" value={cfg.pt_credenciales?.username || ''} onChange={e => setCred('username', e.target.value)} />
+                  <input className={inputCls} type="password" placeholder="Contrasena / API Key" value={cfg.pt_credenciales?.password || ''} onChange={e => setCred('password', e.target.value)} />
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex justify-end">
             <button onClick={guardarConfig} disabled={savingCfg} className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 font-bold text-sm">
