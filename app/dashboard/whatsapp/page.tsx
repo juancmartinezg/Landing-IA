@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../providers';
 import Link from 'next/link';
+import WhatsAppNumbersCard from './WhatsAppNumbersCard';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const META_APP_ID = '27398458396409385';
 const META_CONFIG_ID = '997214322992918';
@@ -379,6 +380,7 @@ export default function IntegracionesPage() {
               </div>
             </div>
           </div>
+          <WhatsAppNumbersCard companyId={user?.companyId || ''} />
           <h3 className="font-bold mb-4">Acciones rápidas</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link href="/dashboard/chat" className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 hover:border-indigo-500/30 transition-all group">
