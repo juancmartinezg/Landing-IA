@@ -248,9 +248,29 @@ export default function CRMPage() {
     }, 400);
     return () => clearTimeout(timer);
   }, [search, user?.companyId]);
+  // Busqueda server-side: recorre TODO el historico del tenant, no solo
+  // los leads ya cargados en pantalla.
+  const [serverLeads, setServerLeads] = useState<any[]>([]);
+  const [searchingServer, setSearchingServer] = useState(false);
   useEffect(() => {
-    let result = serverLeads !== null ? serverLeads : leads;
-    if (search && serverLeads === null) {
+    const q = search.trim();
+    if (q.length < 3) { setServerLeads([]); setSearchingServer(false); return; }
+    setSearchingServer(true);
+    const t = setTimeout(() => {
+      fetch(`${API_URL}/leads?search=${encodeURIComponent(q)}&limit=200`, { headers: { 'client-id': user?.companyId || '' } })
+        .then(res => res.json())
+        .then(data => setServerLeads(data.leads || []))
+        .catch(() => setServerLeads([]))
+        .finally(() => setSearchingServer(false));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search, user?.companyId]);
+  useEffect(() => {
+    const known = new Set(serverLeads.map((l: any) => l.contact_id || l.phoneNumber));
+    let result = search.trim().length >= 3
+      ? [...serverLeads, ...leads.filter(l => !known.has(l.contact_id || l.phoneNumber))]
+      : leads;
+    if (search && search.trim().length < 3) {
       const s = search.toLowerCase();
       result = result.filter(l =>
         (l.customer_name || '').toLowerCase().includes(s) ||
@@ -287,7 +307,7 @@ export default function CRMPage() {
     }
     setFiltered(result);
     setPage(1);
-  }, [search, filterStatus, filterTag, filterProduct, filterAgent, filterCampaign, leads]);
+  }, [search, filterStatus, filterTag, filterProduct, filterAgent, filterCampaign, leads, serverLeads]);
   const loadDetail = (phone: string) => {
     fetch(`${API_URL}/leads?phone=${phone}`, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
@@ -869,7 +889,7 @@ export default function CRMPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar..."
+          placeholder={searching ? 'Buscando en todo el historial...' : 'Buscar (nombre, telefono, email, documento)'}
           className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-indigo-500 text-white"
         />
         <div className="flex gap-2">
