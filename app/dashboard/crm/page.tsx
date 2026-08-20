@@ -82,8 +82,6 @@ export default function CRMPage() {
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [aiInsight, setAiInsight] = useState<any>(null);
   const [loadingAi, setLoadingAi] = useState(false);
-  const [serverLeads, setServerLeads] = useState<any[] | null>(null);
-  const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [page, setPage] = useState(1);
@@ -227,27 +225,6 @@ export default function CRMPage() {
     }
     setPiiActionLoading(false);
   };
-  // Búsqueda server-side: con 3+ caracteres consulta TODO el histórico del tenant
-  // (nombre, teléfono, email, documento, username), no solo los leads ya cargados.
-  useEffect(() => {
-    const term = search.trim();
-    if (term.length < 3) {
-      setServerLeads(null);
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = setTimeout(() => {
-      fetch(`${API_URL}/leads?search=${encodeURIComponent(term)}`, {
-        headers: { 'client-id': user?.companyId || '' },
-      })
-        .then(res => res.json())
-        .then(data => setServerLeads(data.leads || []))
-        .catch(() => setServerLeads(null))
-        .finally(() => setSearching(false));
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [search, user?.companyId]);
   // Busqueda server-side: recorre TODO el historico del tenant, no solo
   // los leads ya cargados en pantalla.
   const [serverLeads, setServerLeads] = useState<any[]>([]);
@@ -889,7 +866,7 @@ export default function CRMPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={searching ? 'Buscando en todo el historial...' : 'Buscar (nombre, telefono, email, documento)'}
+          placeholder={searchingServer ? 'Buscando en todo el historial...' : 'Buscar (nombre, telefono, email, documento)'}
           className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-indigo-500 text-white"
         />
         <div className="flex gap-2">
