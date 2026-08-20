@@ -40,6 +40,8 @@ export default function ChatPage() {
   // === Shared ===
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const searchRef = useRef('');
+  useEffect(() => { searchRef.current = search; }, [search]);
   const [search, setSearch] = useState('');
   const [takenOver, setTakenOver] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -119,7 +121,11 @@ export default function ChatPage() {
   const msgCountByPhoneRef = useRef<Record<string, number>>({});
   // Cargar conversaciones del bot
   const loadBotConvs = () => {
-    fetch(`${API_URL}/conversations/active`, { headers: { 'client-id': user?.companyId || '' } })
+    const q = searchRef.current.trim();
+    const url = q.length >= 3
+      ? `${API_URL}/conversations/active?search=${encodeURIComponent(q)}`
+      : `${API_URL}/conversations/active`;
+    fetch(url, { headers: { 'client-id': user?.companyId || '' } })
       .then(res => res.json())
       .then(data => {
         const convs = data.conversations || [];
