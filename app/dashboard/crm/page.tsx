@@ -82,6 +82,8 @@ export default function CRMPage() {
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [aiInsight, setAiInsight] = useState<any>(null);
   const [loadingAi, setLoadingAi] = useState(false);
+  const [serverLeads, setServerLeads] = useState<any[] | null>(null);
+  const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [page, setPage] = useState(1);
@@ -225,9 +227,30 @@ export default function CRMPage() {
     }
     setPiiActionLoading(false);
   };
+  // Búsqueda server-side: con 3+ caracteres consulta TODO el histórico del tenant
+  // (nombre, teléfono, email, documento, username), no solo los leads ya cargados.
   useEffect(() => {
-    let result = leads;
-    if (search) {
+    const term = search.trim();
+    if (term.length < 3) {
+      setServerLeads(null);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const timer = setTimeout(() => {
+      fetch(`${API_URL}/leads?search=${encodeURIComponent(term)}`, {
+        headers: { 'client-id': user?.companyId || '' },
+      })
+        .then(res => res.json())
+        .then(data => setServerLeads(data.leads || []))
+        .catch(() => setServerLeads(null))
+        .finally(() => setSearching(false));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search, user?.companyId]);
+  useEffect(() => {
+    let result = serverLeads !== null ? serverLeads : leads;
+    if (search && serverLeads === null) {
       const s = search.toLowerCase();
       result = result.filter(l =>
         (l.customer_name || '').toLowerCase().includes(s) ||

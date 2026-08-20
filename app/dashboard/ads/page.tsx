@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../providers';
+import AdsAlertsCard from './AdsAlertsCard';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export default function AdsPage() {
   const { user } = useAuth();
@@ -1209,6 +1210,7 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
       )}
       {tab === 'recommendations' && (
         <div>
+          <AdsAlertsCard companyId={user?.companyId || ''} />
           <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 mb-4">
             <h3 className="font-bold text-sm mb-1">🎯 Recomendaciones IA — análisis del funnel completo</h3>
             <p className="text-[10px] text-gray-400 leading-relaxed">
