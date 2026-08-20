@@ -41,8 +41,14 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const searchRef = useRef('');
-  useEffect(() => { searchRef.current = search; }, [search]);
   const [search, setSearch] = useState('');
+  useEffect(() => {
+    searchRef.current = search;
+    const q = search.trim();
+    if (q.length > 0 && q.length < 3) return;
+    const t = setTimeout(() => { loadBotConvs(); }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
   const [takenOver, setTakenOver] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<any>(null);
@@ -495,7 +501,7 @@ export default function ChatPage() {
   const filteredBot = botConvs.filter(c => {
     // En vivo (bot): conversaciones activas del bot, sin incluir las asignadas a agente
     if (c.assigned_agent_id) return false;
-    if (!search) return true;
+    if (!search || search.trim().length >= 3) return true;
     const s = search.toLowerCase();
     return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
   });
@@ -504,7 +510,7 @@ export default function ChatPage() {
     const hasAgent = !!c.assigned_agent_id;
     const isPaused = c.flow_state === 'PAUSED_FOR_HUMAN';
     if (!hasAgent && !isPaused) return false;
-    if (!search) return true;
+    if (!search || search.trim().length >= 3) return true;
     const s = search.toLowerCase();
     return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
   });
