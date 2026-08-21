@@ -2,57 +2,7 @@
 > **Única fuente de verdad** del estado del proyecto.
 > Reemplaza las hojas de ruta dispersas en chats.
 > Marca `[x]` cuando cierres una tarea.
-**API (SaaS_API_Handler $LATEST) + Bot (WhatsApp_Typebot_Bridge $LATEST) + ERP_Handler (Facturación DIAN, v2) + Video_Worker + Remarketing + Frontend `d93a63a`** — WhatsApp multi-número + usernames/BSUID, CRM/bandeja con histórico completo, Ads Webhooks de Meta (alertas + reglas) y Aria al día (20 ago 2026)
-### 20 ago 2026 — Sprint SaaS: multi-número, usernames WhatsApp, histórico rescatable, Ads Webhooks y Aria al día 🧩✅
-**API (SaaS_API_Handler $LATEST) + Bot (WhatsApp_Typebot_Bridge $LATEST) + Frontend `d93a63a`** — PRs de respaldo #11, #12, #13, #14, #15. Todo por tenant (`company_id`), nada hardcodeado.
-
-#### 📱 WhatsApp multi-número por tenant + modo por número (PR #11)
-- ✅ Un negocio puede conectar **varios números**; cada uno en modo **`bot`** (responde la IA) o **`asesor`** (solo humano).
-- ✅ Endpoints: `GET/POST/PUT/DELETE /whatsapp/numbers` (`handle_wa_numbers_list`, `handle_wa_number_upsert`, `handle_wa_number_set_mode`, `handle_wa_number_delete`). El número principal guarda su modo en `config_pro.wa_default_mode`; los adicionales en su propio ítem.
-- ⚠️ Incidente: un deploy pisó estos endpoints y se restauraron el mismo día → **lección #93**.
-
-#### 🆔 WhatsApp con nombre de usuario (username/BSUID) (PR #12)
-- ✅ Meta ya manda `contacts[].user_id` / `from_user_id` (**BSUID**, ej. `CO.1020…`) y `profile.username`. Se guardan como `wa_username` y `wa_bsuid` en sesión y `Leads_CRM_v2`.
-- ✅ **Identidad BSUID-aware**: teléfono cuando existe (comportamiento idéntico al anterior) → BSUID cuando el cliente **oculta el número**. Antes esos mensajes se descartaban por `Missing id/sender`.
-- ✅ **Causa raíz del envío corregida**: para responderle a un BSUID hay que usar el campo **`recipient`**, no `to` (si va en `to`, Meta lo parsea como teléfono → error `131009 "phone number is malformed"`). Aplica a texto, interactivos y plantillas.
-- ✅ **Red de seguridad**: si Meta rechaza un BSUID (`131009`/`131062`), el lead se marca `needs_human` y se avisa al dueño una vez.
-- ✅ Validado en vivo: 8 leads con BSUID entraron el mismo día; los 2 que estaban bloqueados (`peluzapeluza`, `matias`) recibieron respuesta con HTTP 200 tras el fix. La atribución de campaña también funciona para ellos.
-- ✅ **Nombres con acento**: el nombre extraído por el modelo llegaba cortado en la letra acentuada ("Peña" → "Pe"). Guard `_is_truncated_prefix` + no sobrescribir un nombre ya verificado en CRM. Corregidos 3 casos reales sobre 8.928 leads revisados. Los datos que viajan a Meta (CAPI) no se vieron afectados: usan `customer_first_name`/`customer_last_name` del flujo PII.
-
-#### 🔎 Ningún cliente se pierde: CRM y bandeja sobre el histórico completo (PR #13)
-- ✅ **Problema real**: un comprador dejó de aparecer tanto en la bandeja como en el CRM (sesión con TTL de 7 días + el CRM devolvía solo la primera página, 665 de 8.646 leads). Al llamar el cliente no se pudo dar información.
-- ✅ `GET /leads?search=` busca en **todo el histórico del tenant** (nombre, teléfono completo o parcial, email, documento, username), insensible a acentos (`peña` = `Pena`), con `limit`/`cursor` y `next_cursor`. La respuesta del listado ya no arrastra `conversation_history` (600 KB → 215 KB).
-- ✅ `GET /conversations/active?search=` incluye conversaciones **con sesión vencida**, reconstruidas desde `MessagesLog` (retención 1 año) y marcadas como cerradas.
-- ✅ Frontend `d93a63a`: buscador server-side en `app/dashboard/crm/page.tsx` y `app/dashboard/chat/page.tsx` (`tsc --noEmit` 0 errores, build 55/55).
-
-#### 📣 Ads Webhooks de Meta — alertas push + reglas de umbral por tenant (PR #14)
-- ✅ Callback `object=ad_account` sobre el endpoint existente (verificación `hub.challenge` + firma HMAC) y resolución de tenant por `ad_account_id`.
-- ✅ Alertas: `effective_status` (anuncio rechazado o que dejó de entregar), `creative_fatigue`, `ad_recommendations`, `in_process_ad_objects`, `with_issues_ad_objects`.
-- ✅ **Reglas de umbral por tenant** (gasto, CPA, CPC, clics, resultados…) con acción **`notify`** o **`pause`**; CRUD en `/ads/webhooks/rules` sincronizado con `POST /act_<id>/subscriptions` y baja vía `status=DISABLED`/DELETE.
-- ✅ Catálogo de métricas y ventanas validado contra la API real. **La doc de Meta no es exacta**: `today_spent` y `cost_per_messaging_*` no son triggers válidos, toda regla de métrica exige `time_preset`, y los hitos solo aceptan `LIFETIME` con mínimos (gasto ≥1000, impresiones ≥1000, clics ≥10, resultados ≥5) → **lección #94**.
-- ✅ Verificado en vivo: `/ads/webhooks/status` conectado con 6 campos suscritos. Frontend: tarjeta `app/dashboard/ads/AdsAlertsCard.tsx`.
-- ⚠️ La acción `pause` se validó sobre una campaña ya pausada (no se tocó pauta activa).
-
-#### 🤖 Aria (asistente del dashboard) actualizada (PR #15)
-- ✅ Su prompt estaba congelado: guía de 10 secciones cuando el dashboard tiene **24 rutas**, y sin saber de facturación DIAN, multi-número/modo asesor, usernames, búsqueda histórica ni alertas de Meta. Además la lista de acciones tenía numeración duplicada.
-- ✅ **Contexto real del tenant**: moneda, timezone, números de WhatsApp con su modo, PII pendiente de revisar, estado de las alertas de Meta + nº de reglas, y estado DIAN (modo, proveedor, ambiente, qué hacer cuando piden factura). Cada bloque aislado en `try/except` para que un módulo sin configurar no rompa el chat.
-- ✅ **Totales correctos**: el contexto usaba una sola página del GSI (678 de 8.914 leads) → helper paginado con proyección mínima.
-- ✅ **8 acciones nuevas**: `search_lead` (histórico completo), `list_whatsapp_numbers`, `set_whatsapp_mode`, `ads_alerts_status`, `list_ads_rules`, `toggle_ads_rule`, `query_pii_pending`, `query_invoicing`. Guía reescrita con los nombres reales del menú.
-- ✅ Seguridad: las consultas se ejecutan directo; toda mutación sigue pidiendo confirmación (`needs_confirmation: true`) — verificado con `set_whatsapp_mode`.
-- ✅ Probado en vivo: total de leads correcto, `search_lead "Luis Osvaldo"` devuelve el lead con teléfono/email/estado, y describe bien DIAN, números y alertas.
-
-#### 📌 Lecciones nuevas
-- **#93:** antes de desplegar una Lambda, comparar el artefacto vivo con el repo; un deploy desde una copia vieja borra endpoints recién añadidos.
-- **#94:** la doc de Meta va por detrás de la API; el catálogo que consume el frontend debe traer solo lo que la API acepta de verdad, para que el usuario no pueda crear una regla que Meta rechaza.
-- **#95:** las instrucciones de frontend deben ser **BUSCA (bloque exacto) → REEMPLAZA (bloque exacto)**, nunca "agrega esta línea"; así se rompió un build por orden de hooks (`search` usada antes de declararse).
-- **#96:** una sesión con TTL no puede ser la fuente de verdad de la bandeja ni del CRM: el listado debe apoyarse en el historial persistido, o los clientes más valiosos desaparecen a los 7 días.
-
-#### ⏳ Pendientes reales
-1. Crear las primeras reglas de umbral de Ads en el panel (hoy: conectado, 0 reglas) y validar `pause` sobre una campaña activa autorizada.
-2. Que el bot no afirme "te envié el correo" sin confirmar el envío, y que "no me llega el correo" no dispare reagendamiento (el envío de correo en sí ya funciona).
-3. `AdsAttribution` no registra compras nuevas desde may-2026: la atribución está correcta en CRM y en Meta, pero un tablero que lea esa tabla mostraría ROI incompleto.
-4. Sigue abierto de antes: App Review de Instagram (screencast), SSL `escuelatirojmc.com`, config real DIAN (PT + resolución), Messenger pausado.
-
+**API (SaaS_API_Handler) + Bot (WhatsApp_Typebot_Bridge v288) + ERP_Handler (Facturación DIAN, v2) + Video_Worker + Remarketing + Frontend `60ba859`** — Cierre módulo Facturación DIAN (código completo) + fixes previos (19 jul 2026)
 ### 19 jul 2026 — Sprint Cierre Facturación DIAN 🧾✅
 **Bot v288 + ERP_Handler v2 + Frontend `60ba859`** (PR #8 mergeado + fixes en artefacto desplegado)
 Se cerró el módulo de facturación electrónica **a nivel de código**. Solo queda gestión externa (contratar PT + cargar resolución DIAN). Cambios quirúrgicos con `try/except` fire-and-forget — WhatsApp y pagos intactos.
