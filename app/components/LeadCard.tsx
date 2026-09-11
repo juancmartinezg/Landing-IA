@@ -41,6 +41,7 @@ export default function LeadCard({
   const [markPaidNotes, setMarkPaidNotes] = useState('');
   const [markPaidSendCapi, setMarkPaidSendCapi] = useState(true);
   const [markPaidIsDeposit, setMarkPaidIsDeposit] = useState(false);
+  const [markPaidPax, setMarkPaidPax] = useState(1);
   const [markPaidSubmitting, setMarkPaidSubmitting] = useState(false);
   const [internalServices, setInternalServices] = useState<any[]>([]);
   const [reminderText, setReminderText] = useState('');
@@ -190,14 +191,15 @@ export default function LeadCard({
     } catch { alert('❌ Error de conexión'); }
     setReportingMeta(false);
   };
-  const computePrice = (svc: any, isDeposit: boolean) => {
+  const computePrice = (svc: any, isDeposit: boolean, pax: number = 1) => {
     if (!svc) return 0;
     const pricing = svc.pricing || {};
     const regular = Number(pricing.promotional_price || pricing.regular_price || 0);
     const deposit = Number(pricing.deposit_required || 0);
-    if (isDeposit && deposit > 0) return deposit;
-    if (isDeposit && deposit === 0) return Math.round(regular / 2); // fallback 50%
-    return regular;
+    const n = Math.max(1, Number(pax) || 1);
+    if (isDeposit && deposit > 0) return deposit * n;
+    if (isDeposit && deposit === 0) return Math.round(regular / 2) * n; // fallback 50%
+    return regular * n;
   };
   const openMarkPaid = () => {
     // Si hay pago PENDING del bot, ya sabemos el servicio + si es anticipo
@@ -208,12 +210,14 @@ export default function LeadCard({
     const regularPrice = Number(pendingService?.pricing?.regular_price || pendingService?.pricing?.promotional_price || 0);
     // Detectar si el monto pendiente es anticipo (50% o deposit_required)
     const isPendingDeposit = pendingAmount > 0 && regularPrice > 0 && pendingAmount < regularPrice;
+    const pendingPax = Math.max(1, Number(p.pax_count || p.pax_confirmed || 1) || 1);
     setMarkPaidSlug(pendingSlug);
     setMarkPaidIsDeposit(isPendingDeposit);
+    setMarkPaidPax(pendingPax);
     if (pendingAmount > 0) {
       setMarkPaidAmount(String(pendingAmount));
     } else if (pendingService) {
-      setMarkPaidAmount(String(computePrice(pendingService, isPendingDeposit)));
+      setMarkPaidAmount(String(computePrice(pendingService, isPendingDeposit, pendingPax)));
     } else {
       setMarkPaidAmount('');
     }
@@ -232,6 +236,7 @@ export default function LeadCard({
         method: 'POST', headers: h,
         body: JSON.stringify({
           phone, service_slug: markPaidSlug, amount: amountNum,
+          pax_count: markPaidPax,
           payment_method: markPaidMethod, notes: markPaidNotes.trim(),
           send_capi: markPaidSendCapi,
         }),
@@ -251,20 +256,29 @@ export default function LeadCard({
     setMarkPaidSubmitting(false);
   };
   const generatePaymentLink = async () => {
-    const amount = prompt('💳 Monto del link de pago (COP):', '250000');
+    const paxStr = prompt('👥 ¿Cuántas personas?', String(p.pax_count || p.pax_confirmed || 1));
+    if (paxStr === null) return;
+    const pax = Math.max(1, Number(paxStr) || 1);
+    const list = internalServices.length > 0 ? internalServices : servicesList;
+    const svc = list.find((s: any) => s.slug === (p.service_slug || ''))
+      || list.find((s: any) => s.name === (p.service_name || l.service_of_interest || ''));
+    const suggested = svc ? computePrice(svc, true, pax) : 250000;
+    const amount = prompt(`💳 Monto del link de pago (COP) — ${pax} persona(s):`, String(suggested));
     if (!amount || isNaN(Number(amount))) return;
-    const desc = prompt('Descripción:', p.service_name || l.service_of_interest || 'Pago');
+    const baseName = svc?.name || p.service_name || l.service_of_interest || 'Pago';
+    const desc = prompt('Descripción:', pax > 1 ? `${baseName} (${pax} personas)` : baseName);
     if (!desc) return;
     try {
       const res = await fetch(`${API_URL}/payments/generate-link`, {
-        method: 'POST', headers: h, body: JSON.stringify({ phone, amount: Number(amount), description: desc }),
+        method: 'POST', headers: h,
+        body: JSON.stringify({ phone, amount: Number(amount), description: desc, pax_count: pax, service_slug: svc?.slug || '' }),
       });
       const data = await res.json();
       const paymentUrl = data.url || data.payment_url;
       if (res.ok && paymentUrl) {
         await fetch(`${API_URL}/conversations/send`, {
           method: 'POST', headers: h,
-          body: JSON.stringify({ phone, content: `💳 *Link de pago*\n\n${desc}\n💰 $${Number(amount).toLocaleString()} COP\n\n👉 ${paymentUrl}\n\n🔒 Pago seguro` }),
+          body: JSON.stringify({ phone, content: `💳 *Link de pago*\n\n${desc}\n👥 ${pax} persona(s)\n💰 $${Number(amount).toLocaleString()} COP\n\n👉 ${paymentUrl}\n\n🔒 Pago seguro` }),
         });
         alert('✅ Link enviado al cliente');
       } else {
@@ -719,8 +733,9 @@ export default function LeadCard({
       {showMarkPaid && (() => {
         const list = internalServices.length > 0 ? internalServices : servicesList;
         const selectedSvc = list.find((s: any) => s.slug === markPaidSlug);
-        const regularPrice = Number(selectedSvc?.pricing?.regular_price || selectedSvc?.pricing?.promotional_price || 0);
-        const depositPrice = Number(selectedSvc?.pricing?.deposit_required || 0) || Math.round(regularPrice / 2);
+        const unitPrice = Number(selectedSvc?.pricing?.regular_price || selectedSvc?.pricing?.promotional_price || 0);
+        const regularPrice = unitPrice * markPaidPax;
+        const depositPrice = (Number(selectedSvc?.pricing?.deposit_required || 0) || Math.round(unitPrice / 2)) * markPaidPax;
         const hasPending = !!p.status && p.status !== 'PAGADO';
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={() => !markPaidSubmitting && setShowMarkPaid(false)}>
@@ -754,7 +769,7 @@ export default function LeadCard({
                   <select value={markPaidSlug} onChange={e => {
                     setMarkPaidSlug(e.target.value);
                     const svc = list.find((s: any) => s.slug === e.target.value);
-                    if (svc) setMarkPaidAmount(String(computePrice(svc, markPaidIsDeposit)));
+                    if (svc) setMarkPaidAmount(String(computePrice(svc, markPaidIsDeposit, markPaidPax)));
                   }}
                     className="w-full bg-[#0B0F1A] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-emerald-500 text-white">
                     <option value="">— Seleccionar servicio —</option>
@@ -767,6 +782,17 @@ export default function LeadCard({
                   {list.length === 0 && (
                     <p className="text-[10px] text-yellow-400 mt-1">⚠️ No hay servicios en el catálogo</p>
                   )}
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">👥 Personas / cupos</label>
+                  <input type="number" min={1} value={markPaidPax}
+                    onChange={e => {
+                      const n = Math.max(1, Number(e.target.value) || 1);
+                      setMarkPaidPax(n);
+                      if (selectedSvc) setMarkPaidAmount(String(computePrice(selectedSvc, markPaidIsDeposit, n)));
+                    }}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-emerald-500 text-white" />
+                  <p className="text-[9px] text-gray-500 mt-1">La reserva y la captura de datos de asistentes se hacen para {markPaidPax} persona(s).</p>
                 </div>
                 {selectedSvc && (
                   <div>
