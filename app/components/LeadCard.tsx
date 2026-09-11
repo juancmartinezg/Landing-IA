@@ -268,7 +268,7 @@ export default function LeadCard({
     const svc = list.find((s: any) => s.slug === (p.service_slug || ''))
       || list.find((s: any) => s.name === (p.service_name || l.service_of_interest || ''));
     const suggested = svc ? computePrice(svc, true, pax) : 250000;
-    const desc = prompt('Descripción:', pax > 1 ? `${baseName} (${pax} ${unitLabel})` : baseName);
+    const amount = prompt(`💳 Monto del link de pago (COP) — ${pax} ${unitOf(pax)}:`, String(suggested));
     if (!amount || isNaN(Number(amount))) return;
     const baseName = svc?.name || p.service_name || l.service_of_interest || 'Pago';
     const desc = prompt('Descripción:', pax > 1 ? `${baseName} (${pax} ${unitLabel})` : baseName);
