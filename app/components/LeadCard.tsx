@@ -44,6 +44,9 @@ export default function LeadCard({
   const [markPaidPax, setMarkPaidPax] = useState(1);
   const [markPaidSubmitting, setMarkPaidSubmitting] = useState(false);
   const [internalServices, setInternalServices] = useState<any[]>([]);
+  const [unitLabel, setUnitLabel] = useState('personas');
+  const [unitLabelSingular, setUnitLabelSingular] = useState('persona');
+  const unitOf = (n: number) => (Number(n) === 1 ? unitLabelSingular : unitLabel);
   const [reminderText, setReminderText] = useState('');
   const [reminderDate, setReminderDate] = useState('');
   const [reminders, setReminders] = useState<any[]>([]);
@@ -88,13 +91,15 @@ export default function LeadCard({
   // puede pasar [] inline (nuevo array cada render) → loop infinito.
   useEffect(() => {
     if (!companyId) return;
-    if (servicesList.length > 0) {
-      setInternalServices(servicesList);
-      return;
-    }
+    const fromParent = servicesList.length > 0;
+    if (fromParent) setInternalServices(servicesList);
     fetch(`${API_URL}/services`, { headers: { 'client-id': companyId } })
       .then(r => r.json())
-      .then(d => setInternalServices(d.services || []))
+      .then(d => {
+        if (!fromParent) setInternalServices(d.services || []);
+        if (d.unit_label) setUnitLabel(String(d.unit_label));
+        if (d.unit_label_singular) setUnitLabelSingular(String(d.unit_label_singular));
+      })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId]);
@@ -256,14 +261,14 @@ export default function LeadCard({
     setMarkPaidSubmitting(false);
   };
   const generatePaymentLink = async () => {
-    const paxStr = prompt('👥 ¿Cuántas personas?', String(p.pax_count || p.pax_confirmed || 1));
+    const paxStr = prompt(`👥 ¿Cuántas ${unitLabel}?`, String(p.pax_count || p.pax_confirmed || 1));
     if (paxStr === null) return;
     const pax = Math.max(1, Number(paxStr) || 1);
     const list = internalServices.length > 0 ? internalServices : servicesList;
     const svc = list.find((s: any) => s.slug === (p.service_slug || ''))
       || list.find((s: any) => s.name === (p.service_name || l.service_of_interest || ''));
     const suggested = svc ? computePrice(svc, true, pax) : 250000;
-    const amount = prompt(`💳 Monto del link de pago (COP) — ${pax} persona(s):`, String(suggested));
+    const desc = prompt('Descripción:', pax > 1 ? `${baseName} (${pax} ${unitLabel})` : baseName);
     if (!amount || isNaN(Number(amount))) return;
     const baseName = svc?.name || p.service_name || l.service_of_interest || 'Pago';
     const desc = prompt('Descripción:', pax > 1 ? `${baseName} (${pax} personas)` : baseName);
@@ -278,7 +283,7 @@ export default function LeadCard({
       if (res.ok && paymentUrl) {
         await fetch(`${API_URL}/conversations/send`, {
           method: 'POST', headers: h,
-          body: JSON.stringify({ phone, content: `💳 *Link de pago*\n\n${desc}\n👥 ${pax} persona(s)\n💰 $${Number(amount).toLocaleString()} COP\n\n👉 ${paymentUrl}\n\n🔒 Pago seguro` }),
+          body: JSON.stringify({ phone, content: `💳 *Link de pago*\n\n${desc}\n👥 ${pax} ${unitOf(pax)}\n💰 $${Number(amount).toLocaleString()} COP\n\n👉 ${paymentUrl}\n\n🔒 Pago seguro` }),
         });
         alert('✅ Link enviado al cliente');
       } else {
@@ -407,7 +412,7 @@ export default function LeadCard({
         {phoneNorm && <Row label="📞 WhatsApp" value={`+${phoneNorm}`} />}
         <Row label="👁 Visitas" value={l.visit_count} />
         <Row label="💬 Sesión" value={sessionState || '-'} />
-        {pax > 1 && <Row label="👥 Asistentes" value={`${pax} personas`} color="text-emerald-400" />}
+                  <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">👥 {unitLabel}</label>
         {l.import_source && <Row label="📤 Origen" value={l.import_source === 'csv_import' ? 'Importado' : l.import_source} />}
       </div>
       {/* === ATRIBUCIÓN === */}
@@ -792,7 +797,7 @@ export default function LeadCard({
                       if (selectedSvc) setMarkPaidAmount(String(computePrice(selectedSvc, markPaidIsDeposit, n)));
                     }}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-emerald-500 text-white" />
-                  <p className="text-[9px] text-gray-500 mt-1">La reserva y la captura de datos de asistentes se hacen para {markPaidPax} persona(s).</p>
+                  <p className="text-[9px] text-gray-500 mt-1">El pago y el flujo post-pago se registran para {markPaidPax} {unitOf(markPaidPax)}.</p>
                 </div>
                 {selectedSvc && (
                   <div>
