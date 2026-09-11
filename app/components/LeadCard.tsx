@@ -271,7 +271,7 @@ export default function LeadCard({
     const desc = prompt('Descripción:', pax > 1 ? `${baseName} (${pax} ${unitLabel})` : baseName);
     if (!amount || isNaN(Number(amount))) return;
     const baseName = svc?.name || p.service_name || l.service_of_interest || 'Pago';
-    const desc = prompt('Descripción:', pax > 1 ? `${baseName} (${pax} personas)` : baseName);
+    const desc = prompt('Descripción:', pax > 1 ? `${baseName} (${pax} ${unitLabel})` : baseName);
     if (!desc) return;
     try {
       const res = await fetch(`${API_URL}/payments/generate-link`, {
@@ -412,7 +412,7 @@ export default function LeadCard({
         {phoneNorm && <Row label="📞 WhatsApp" value={`+${phoneNorm}`} />}
         <Row label="👁 Visitas" value={l.visit_count} />
         <Row label="💬 Sesión" value={sessionState || '-'} />
-                  <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">👥 {unitLabel}</label>
+        {pax > 1 && <Row label="👥 Cantidad" value={`${pax} ${unitLabel}`} color="text-emerald-400" />}
         {l.import_source && <Row label="📤 Origen" value={l.import_source === 'csv_import' ? 'Importado' : l.import_source} />}
       </div>
       {/* === ATRIBUCIÓN === */}
@@ -789,7 +789,7 @@ export default function LeadCard({
                   )}
                 </div>
                 <div>
-                  <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">👥 Personas / cupos</label>
+                  <label className="block text-[10px] text-gray-500 uppercase tracking-widest mb-1">👥 {unitLabel}</label>
                   <input type="number" min={1} value={markPaidPax}
                     onChange={e => {
                       const n = Math.max(1, Number(e.target.value) || 1);
