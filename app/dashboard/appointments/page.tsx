@@ -191,8 +191,15 @@ export default function AppointmentsPage() {
                       </div>
                       <div>
                         <p className="font-bold">{apt.service_name}</p>
-                        <p className="text-sm text-gray-400">{apt.phoneNumber}</p>
-                        <p className="text-xs text-gray-500">{apt.scheduled_type || 'personalizado'}</p>
+                        <p className="text-sm text-gray-400">{apt.customer_name ? `${apt.customer_name} · ` : ''}{apt.phoneNumber}</p>
+                        <p className="text-xs text-gray-500">{apt.scheduled_type || 'personalizado'}{(apt.pax_count || 1) > 1 ? ` · ${apt.pax_count} cupos` : ''}</p>
+                        <p className="text-[10px] mt-1">
+                          {apt.schedule_confirmed
+                            ? <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">✅ Confirmada por el cliente</span>
+                            : (apt.reminders_sent?.length || 0) > 0
+                              ? <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">⏰ Recordatorio enviado · sin confirmar</span>
+                              : <span className="px-2 py-0.5 rounded-full bg-white/5 text-gray-500">Sin recordatorio aún</span>}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right flex flex-col items-end gap-1">
