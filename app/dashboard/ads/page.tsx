@@ -59,6 +59,10 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
   const [searchingCity, setSearchingCity] = useState(false);
   const [searchingInterest, setSearchingInterest] = useState(false);
   const [toolLoading, setToolLoading] = useState('');
+  const [toolResult, setToolResult] = useState<{ key: string; text: string } | null>(null);
+  const ToolResult = ({ k }: { k: string }) => toolResult?.key === k ? (
+    <div className="mt-3 bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-gray-300 whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto">{toolResult.text}</div>
+  ) : null;
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
   const h = { 'client-id': user?.companyId || '' };
   // Cache en localStorage (5 min) para evitar refetches al cambiar de tab
@@ -915,11 +919,12 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                     setToolLoading('narrative');
                     const res = await fetch(`${API_URL}/ads/narrative?period=${period}${selectedAccountId ? `&ad_account_id=${encodeURIComponent(selectedAccountId)}` : ''}`, { headers: h });
                     const data = await res.json();
-                    showToast(data.narrative || 'Sin datos');
+                    setToolResult({ key: 'narrative', text: data.narrative || 'Sin datos' });
                     setToolLoading('');
                   }} className="text-[9px] px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 font-bold transition-all disabled:opacity-50">
                     {toolLoading === 'narrative' ? '⏳ Generando...' : 'Generar resumen'}
                   </button>
+                  <ToolResult k="narrative" />
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                   <h4 className="text-xs font-bold mb-2">🌎 Por región</h4>
@@ -928,11 +933,12 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                     const res = await fetch(`${API_URL}/ads/geo-breakdown?period=${period}${selectedAccountId ? `&ad_account_id=${encodeURIComponent(selectedAccountId)}` : ''}`, { headers: h });
                     const data = await res.json();
                     const top = (data.regions || []).slice(0, 5).map((r: any) => `${r.region}: $${r.spend.toLocaleString()}`).join('\n');
-                    showToast(top || 'Sin datos geo');
+                    setToolResult({ key: 'geo', text: top || 'Sin datos geo' });
                     setToolLoading('');
                   }} className="text-[9px] px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-bold transition-all disabled:opacity-50">
                     {toolLoading === 'geo' ? '⏳ Cargando...' : 'Ver regiones'}
                   </button>
+                  <ToolResult k="geo" />
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                   <h4 className="text-xs font-bold mb-2">✅ Estado del sistema</h4>
@@ -941,11 +947,12 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                     const res = await fetch(`${API_URL}/ads/check-landing`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: '{}' });
                     const data = await res.json();
                     const msg = (data.checks || []).map((c: any) => `${c.ok ? '✅' : '❌'} ${c.check}: ${c.detail}`).join('\n');
-                    showToast(msg);
+                    setToolResult({ key: 'check', text: msg || 'Sin datos' });
                     setToolLoading('');
                   }} className="text-[9px] px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all disabled:opacity-50">
                     {toolLoading === 'check' ? '⏳ Verificando...' : 'Verificar'}
                   </button>
+                  <ToolResult k="check" />
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
                   <h4 className="text-xs font-bold mb-2">⚠️ Errores</h4>
@@ -953,12 +960,13 @@ const [tab, setTab] = useState<'metrics' | 'campaigns' | 'audiences' | 'recommen
                     setToolLoading('errors');
                     const res = await fetch(`${API_URL}/ads/errors`, { headers: h });
                     const data = await res.json();
-                    if (data.count > 0) showToast(`${data.count} campañas con problemas: ${data.errors.map((e: any) => e.name).join(', ')}`);
-                    else showToast('✅ Sin errores detectados');
+                    if (data.count > 0) setToolResult({ key: 'errors', text: `${data.count} campañas con problemas:\n${data.errors.map((e: any) => `• ${e.name}`).join('\n')}` });
+                    else setToolResult({ key: 'errors', text: '✅ Sin errores detectados' });
                     setToolLoading('');
                   }} className="text-[9px] px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 font-bold transition-all disabled:opacity-50">
                     {toolLoading === 'errors' ? '⏳ Buscando...' : 'Detectar errores'}
                   </button>
+                  <ToolResult k="errors" />
                 </div>
               </div>             
             </>
