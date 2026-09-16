@@ -233,7 +233,7 @@ export default function WizardPage() {
     try {
       // Refrescar quota antes (descuenta 1 wizard por ronda)
       showToast(`⏳ Generando ${toGenerate} imagen${toGenerate > 1 ? 'es' : ''} más... (descuenta 1 wizard)`);
-      const ir = await fetch(`${API_URL}/ads/wizard/generate-images-preview`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ image_prompts: (plan.image_prompts || []).slice(0, toGenerate), brand_asset_urls: refMode === 'real' ? selectedRefs : [], append: true }) });
+      const ir = await fetch(`${API_URL}/ads/wizard/generate-images-preview`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ image_prompts: (plan.image_prompts || []).slice(0, toGenerate), brand_asset_urls: refMode === 'real' ? selectedRefs : [], service_slug: selectedSlug, append: true }) });
       const id = await ir.json();
       if (id.ok) {
         const offset = previewImages.length;
@@ -256,7 +256,7 @@ export default function WizardPage() {
     setGeneratingImages(true);
     try {
       showToast(`⏳ Conservando ${conservadas.length}, generando ${aReemplazar} nuevas...`);
-      const ir = await fetch(`${API_URL}/ads/wizard/generate-images-preview`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ image_prompts: (plan.image_prompts || []).slice(0, aReemplazar), brand_asset_urls: refMode === 'real' ? selectedRefs : [], append: true }) });
+      const ir = await fetch(`${API_URL}/ads/wizard/generate-images-preview`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ image_prompts: (plan.image_prompts || []).slice(0, aReemplazar), brand_asset_urls: refMode === 'real' ? selectedRefs : [], service_slug: selectedSlug, append: true }) });
       const id = await ir.json();
       if (id.ok) {
         // Reindexar conservadas (0..n) + nuevas a continuación
@@ -291,7 +291,7 @@ export default function WizardPage() {
         p = sd.plan; setPlan(p); setGeneratingPlan(false);
       }
       showToast('⏳ Generando imágenes con IA...');
-      const ir = await fetch(`${API_URL}/ads/wizard/generate-images-preview`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ image_prompts: p.image_prompts || [], brand_asset_urls: refMode === 'real' ? selectedRefs : [] }) });
+      const ir = await fetch(`${API_URL}/ads/wizard/generate-images-preview`, { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ image_prompts: p.image_prompts || [], brand_asset_urls: refMode === 'real' ? selectedRefs : [], service_slug: selectedSlug }) });
       const id = await ir.json();
       if (id.ok) { setPreviewImages(id.images || []); showToast(`✅ ${id.total_ok} imágenes en ${id.elapsed_seconds}s`); }
       else showToast('❌ ' + (id.error || 'Error'));
