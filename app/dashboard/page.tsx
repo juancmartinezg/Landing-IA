@@ -35,14 +35,21 @@ export default function DashboardPage() {
             <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
               <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Pagos Aprobados</p>
               <p className="text-3xl font-bold text-emerald-400">{analytics?.paid_count || 0}</p>
+              {analytics?.paid_imported_count > 0 && (
+                <p className="text-xs text-gray-500 mt-1">{(analytics.paid_count - analytics.paid_imported_count).toLocaleString()} por el bot · {analytics.paid_imported_count.toLocaleString()} importados</p>
+              )}
             </div>
             <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
               <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Citas Agendadas</p>
               <p className="text-3xl font-bold text-sky-400">{analytics?.scheduled_count || 0}</p>
+              <p className="text-xs text-gray-500 mt-1">{analytics?.scheduled_upcoming || 0} próximas · {analytics?.scheduled_done || 0} realizadas{analytics?.scheduled_cancelled > 0 ? ` · ${analytics.scheduled_cancelled} canceladas` : ''}</p>
             </div>
             <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
               <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Ingresos</p>
               <p className="text-3xl font-bold text-purple-400">${analytics?.total_revenue?.toLocaleString() || 0}</p>
+              {analytics?.revenue_imported > 0 && (
+                <p className="text-xs text-gray-500 mt-1">${(analytics.total_revenue - analytics.revenue_imported).toLocaleString()} por el bot</p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -65,7 +72,7 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-6">
-              <h3 className="font-bold mb-4">Top Servicios</h3>
+              <h3 className="font-bold mb-4">Top Servicios <span className="text-xs text-gray-500 font-normal">(interés de leads)</span></h3>
               {(analytics?.top_services || []).length > 0 ? (
                 analytics.top_services.map((svc: any, i: number) => (
                   <div key={i} className="flex justify-between items-center py-2 border-b border-white/5">

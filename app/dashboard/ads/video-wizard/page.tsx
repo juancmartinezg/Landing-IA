@@ -34,8 +34,24 @@ export default function VideoWizardPage() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiGenerationId, setAiGenerationId] = useState('');
   const [aiBrief, setAiBrief] = useState('');
-  const [aiStyle, setAiStyle] = useState('cinematic');
-  const [aiModel, setAiModel] = useState('wan');
+  // Formato del video (cinematic = b-roll Kling; los demas hablan a camara con Veo)
+  const [aiFormat, setAiFormat] = useState('cinematic');
+  const [aiSceneCount, setAiSceneCount] = useState(3);
+  // Estrategia creativa del servicio (voz del cliente del CRM -> angulos)
+  const [aiStrategy, setAiStrategy] = useState<any>(null);
+  const [aiAngle, setAiAngle] = useState('');
+  const [strategyLoading, setStrategyLoading] = useState(false);
+  const FORMATS: { key: string; label: string; hint: string }[] = [
+    { key: 'cinematic', label: '🎬 Cinematográfico', hint: 'b-roll sin diálogo · Kling' },
+    { key: 'ugc_talking', label: '🤳 UGC hablando a cámara', hint: 'una persona, voz y acento del país · Veo' },
+    { key: 'ugc_product', label: '📦 UGC con producto / app', hint: 'producto en mano o pantalla · Veo' },
+    { key: 'podcast', label: '🎙️ Podcast (dos personas)', hint: 'conversación, plano fijo · Veo' },
+    { key: 'voiceover', label: '🎧 Voz en off sobre b-roll', hint: 'narración, nadie a cámara · Veo' },
+  ];
+  const sceneLabel = (sc: any, i: number) => {
+    const names: any = { hook: 'Gancho', solution: 'La clase', outcome: 'Resultado', problem: 'Problema', mechanism: 'Mecanismo', proof: 'Prueba', benefit: 'Beneficio', body: 'Desarrollo', cta: 'Cierre / CTA' };
+    return `${i + 1} · ${names[sc?.role] || sc?.role || 'Escena'}`;
+  };
   const [aiPolling, setAiPolling] = useState(false);
   const [aiImageUrl, setAiImageUrl] = useState('');
   const [brandImages, setBrandImages] = useState<any[]>([]);
@@ -50,6 +66,27 @@ export default function VideoWizardPage() {
     if (!user?.companyId) return;
     fetch(`${API_URL}/services`, { headers: h }).then(r => r.json()).then(d => setServices(d.services || [])).catch(() => {});
   }, [user?.companyId]);
+  // Estrategia guardada del servicio (si existe) — se usa en storyboard, copies y hooks
+  useEffect(() => {
+    if (!user?.companyId || !selectedSlug) { setAiStrategy(null); setAiAngle(''); return; }
+    fetch(`${API_URL}/ads/strategy?service_slug=${encodeURIComponent(selectedSlug)}`, { headers: h })
+      .then(r => r.json()).then(d => { setAiStrategy(d.strategy || null); setAiAngle(''); }).catch(() => {});
+  }, [user?.companyId, selectedSlug]);
+  const buildStrategy = async () => {
+    if (!selectedSlug) { showToast('⚠️ Selecciona un servicio en el paso anterior'); return; }
+    setStrategyLoading(true);
+    try {
+      showToast('🧠 Analizando conversaciones reales del CRM...');
+      const r = await fetch(`${API_URL}/ads/strategy`, {
+        method: 'POST', headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service_slug: selectedSlug }),
+      });
+      const d = await r.json();
+      if (d.strategy) { setAiStrategy(d.strategy); setAiAngle(''); showToast(`✅ Estrategia lista (${d.strategy.crm_messages_used || 0} mensajes del CRM analizados)`); }
+      else showToast('❌ ' + (d.error || 'No se pudo generar la estrategia'));
+    } catch { showToast('Error de conexión'); }
+    setStrategyLoading(false);
+  };
   const loadLibraryVideos = async () => {
     try {
       const r = await fetch(`${API_URL}/ads/library?type=video&limit=50`, { headers: h });
@@ -140,55 +177,66 @@ export default function VideoWizardPage() {
     }
     setUploading(false);
   };
-  // 1) Genera el plan + las 3 imágenes y se detiene para que las revises
+  // 1) Genera el plan + las imágenes (N escenas) y se detiene para que las revises
   const generateScenes = async () => {
     if (!selectedSlug) { showToast('⚠️ Selecciona un servicio en el paso anterior'); return; }
     setAiGenerating(true);
     try {
-      showToast('🧠 Diseñando el storyboard...');
+      showToast(aiFormat === 'cinematic' ? '🧠 Diseñando el storyboard...' : '🧠 Escribiendo el guion clip a clip...');
+      const isCine = aiFormat === 'cinematic';
       const planRes = await fetch(`${API_URL}/ads/video/plan`, {
         method: 'POST',
         headers: { ...h, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ service_slug: selectedSlug, brief: aiBrief || '', hook_type: 'authority' }),
+        body: JSON.stringify({
+          service_slug: selectedSlug, brief: aiBrief || '', hook_type: 'authority',
+          format: aiFormat, angle_key: aiAngle || '',
+          ...(isCine ? {} : { scenes: aiSceneCount, total_seconds: aiSceneCount * 8 }),
+        }),
       });
       const planData = await planRes.json();
       if (!planData.success || !planData.plan) {
         showToast('❌ ' + (planData.error || 'No se pudo generar el storyboard'));
         setAiGenerating(false); return;
       }
-      showToast('🎨 Generando las 3 escenas...');
+      const planScenes: any[] = planData.plan.scenes || [];
+      showToast(`🎨 Generando las ${planScenes.length} escenas...`);
       const imgRes = await fetch(`${API_URL}/ads/video/storyboard-images`, {
         method: 'POST',
         headers: { ...h, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           plan_id: planData.plan_id,
-          scenes: planData.plan.scenes,
+          scenes: planScenes,
           service_slug: selectedSlug,
+          format: aiFormat,
           reference_image_url: aiImageUrl || '',
         }),
       });
       const imgData = await imgRes.json();
-      if (!imgData.success || (imgData.total_ok || 0) < 3) {
-        showToast('❌ No se pudieron generar las 3 imágenes. Intenta de nuevo.');
+      if (!imgData.success || (imgData.total_ok || 0) < planScenes.length) {
+        showToast(`❌ No se pudieron generar las ${planScenes.length} imágenes. Intenta de nuevo.`);
         setAiGenerating(false); return;
       }
-      const order = ['hook', 'solution', 'outcome'];
-      const scenes = order.map((role) => imgData.scenes.find((s: any) => s.role === role) || { role, image_url: '' });
+      // Mismo orden que el plan (el backend responde por role en cinematic y por index en el resto)
+      const scenes = planScenes.map((ps: any, i: number) =>
+        (imgData.scenes || []).find((s: any) => (s.index !== undefined ? s.index === i : s.role === ps.role)) || { role: ps.role, image_url: '' });
       setAiPlan(planData.plan);
       setAiPlanId(planData.plan_id);
       setAiScenes(scenes);
-      showToast('✅ 3 escenas listas. Revísalas y regenera la que no te guste.');
+      showToast(`✅ ${scenes.length} escenas listas. Revísalas y regenera la que no te guste.`);
     } catch {
       showToast('Error de conexión');
     }
     setAiGenerating(false);
   };
-  // 2) Regenera SOLO una escena (usa regenerate_role del backend)
-  const regenerateScene = async (role: string) => {
+  // 2) Regenera SOLO una escena (regenerate_role en cinematic; regenerate_index en el resto)
+  const regenerateScene = async (idx: number) => {
     if (!aiPlan) return;
-    setRegenRole(role);
+    const role = aiScenes[idx]?.role || '';
+    const key = String(idx);
+    setRegenRole(key);
     try {
-      const hookUrl = (aiScenes.find((s: any) => s.role === 'hook') || {}).image_url || '';
+      const isCine = (aiPlan.format || 'cinematic') === 'cinematic';
+      const hookUrl = (aiScenes[0] || {}).image_url || '';
       const res = await fetch(`${API_URL}/ads/video/storyboard-images`, {
         method: 'POST',
         headers: { ...h, 'Content-Type': 'application/json' },
@@ -196,14 +244,15 @@ export default function VideoWizardPage() {
           plan_id: aiPlanId,
           scenes: aiPlan.scenes,
           service_slug: selectedSlug,
+          format: aiPlan.format || 'cinematic',
           reference_image_url: aiImageUrl || '',
-          regenerate_role: role,
+          ...(isCine ? { regenerate_role: role } : { regenerate_index: idx }),
           hook_image_url: hookUrl,
         }),
       });
       const d = await res.json();
       if (d.success && d.scene?.image_url) {
-        setAiScenes((prev) => prev.map((s: any) => s.role === role ? { ...s, image_url: d.scene.image_url } : s));
+        setAiScenes((prev) => prev.map((s: any, i: number) => i === idx ? { ...s, image_url: d.scene.image_url } : s));
         showToast('✅ Escena regenerada');
       } else {
         showToast('❌ ' + (d.scene?.error || d.error || 'No se pudo regenerar'));
@@ -213,13 +262,12 @@ export default function VideoWizardPage() {
     }
     setRegenRole('');
   };
-  // 3) Anima las 3 escenas aprobadas + concatena
+  // 3) Anima las escenas aprobadas (en orden) + concatena
   const animateScenes = async () => {
-    if (aiScenes.length < 3 || aiScenes.some((s: any) => !s.image_url)) { showToast('⚠️ Faltan escenas'); return; }
+    if (aiScenes.length < 2 || aiScenes.some((s: any) => !s.image_url)) { showToast('⚠️ Faltan escenas'); return; }
     setAiGenerating(true);
     try {
-      const order = ['hook', 'solution', 'outcome'];
-      const sceneImages = order.map((role) => (aiScenes.find((s: any) => s.role === role) || {}).image_url);
+      const sceneImages = aiScenes.map((s: any) => s.image_url);
       showToast('🎬 Animando el video premium (~3 min)...');
       const genRes = await fetch(`${API_URL}/ads/video/generate-premium`, {
         method: 'POST',
@@ -574,47 +622,83 @@ export default function VideoWizardPage() {
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div>
-                  <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Estilo</label>
-                  <select value={aiStyle} onChange={(e) => setAiStyle(e.target.value)}
+                  <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Formato</label>
+                  <select value={aiFormat} onChange={(e) => { setAiFormat(e.target.value); setAiScenes([]); setAiPlan(null); setAiPlanId(''); }}
                     className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
-                    <option value="cinematic">🎬 Cinematográfico</option>
-                    <option value="dynamic">⚡ Dinámico</option>
-                    <option value="smooth">🌊 Suave</option>
+                    {FORMATS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
                   </select>
+                  <p className="text-[9px] text-gray-500 mt-1">{FORMATS.find((f) => f.key === aiFormat)?.hint}</p>
                 </div>
                 <div>
-                  <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Modelo</label>
-                  <select value={aiModel} onChange={(e) => setAiModel(e.target.value)}
-                    className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
-                    <option value="wan">🎯 Video IA Pro (~50s aprox)</option>
-                    <option value="kling">🏆 Video IA Cinematic (~110s)</option>
-                  </select>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Clips</label>
+                  {aiFormat === 'cinematic' ? (
+                    <div className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-400">3 escenas · 15 s</div>
+                  ) : (
+                    <select value={aiSceneCount} onChange={(e) => setAiSceneCount(Number(e.target.value))}
+                      className="w-full bg-[#1a1f2e] border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-500 text-white">
+                      {[2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n} clips · {n * 8} s · {Math.ceil(n * 8 / 15)} crédito{Math.ceil(n * 8 / 15) > 1 ? 's' : ''}</option>)}
+                    </select>
+                  )}
                 </div>
+              </div>
+              {/* Estrategia creativa: voz del cliente (CRM) -> ángulos. Alimenta storyboard, copies y hooks */}
+              <div className="mb-4 border border-white/10 rounded-xl p-3 bg-white/[0.02]">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-gray-300 font-bold">🎯 Estrategia del servicio</p>
+                  <button onClick={buildStrategy} disabled={strategyLoading || !selectedSlug}
+                    className="text-[10px] bg-white/5 hover:bg-white/10 border border-white/10 rounded px-2 py-1 disabled:opacity-50">
+                    {strategyLoading ? '⏳ Analizando CRM...' : aiStrategy ? '🔄 Recalcular' : '🧠 Generar desde el CRM'}
+                  </button>
+                </div>
+                {aiStrategy ? (
+                  <>
+                    <p className="text-[10px] text-gray-400 mb-2">
+                      Nivel de consciencia: <span className="text-purple-300">{aiStrategy.awareness_level}</span>
+                      {aiStrategy.crm_messages_used ? <> · {aiStrategy.crm_messages_used} mensajes reales analizados</> : null}
+                      {aiStrategy.mechanism?.name ? <> · Mecanismo: <span className="text-purple-300">{aiStrategy.mechanism.name}</span></> : null}
+                    </p>
+                    <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Ángulo del video (opcional)</p>
+                    <div className="flex flex-wrap gap-1">
+                      <button onClick={() => setAiAngle('')}
+                        className={`text-[10px] rounded-full px-2 py-1 border ${!aiAngle ? 'bg-purple-600 border-purple-500' : 'border-white/10 hover:bg-white/5'}`}>Auto</button>
+                      {(aiStrategy.angles || []).map((a: any) => (
+                        <button key={a.key} onClick={() => setAiAngle(a.key)} title={a.hook || ""}
+                          className={`text-[10px] rounded-full px-2 py-1 border ${aiAngle === a.key ? 'bg-purple-600 border-purple-500' : 'border-white/10 hover:bg-white/5'} ${(aiStrategy.recommended_angle_keys || []).includes(a.key) ? 'text-emerald-300' : ''}`}>
+                          {a.name || a.key}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[10px] text-gray-500">Sin estrategia guardada. Genérala para que el guion use los dolores, deseos y objeciones reales de tus clientes.</p>
+                )}
               </div>
               {aiGenerating ? (
                 <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-6 text-center">
                   <div className="w-10 h-10 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                  <p className="text-sm font-bold text-purple-300">{aiScenes.length === 3 ? 'Animando el video premium...' : 'Generando las 3 escenas...'}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">{aiScenes.length === 3 ? '~3 min • No cierres esta página' : 'unos segundos...'}</p>
+                  <p className="text-sm font-bold text-purple-300">{aiScenes.length >= 2 ? 'Animando el video premium...' : 'Generando las escenas...'}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{aiScenes.length >= 2 ? '~3-5 min • No cierres esta página' : 'unos segundos...'}</p>
                   {aiGenerationId && <p className="text-[9px] text-gray-600 mt-2 font-mono">ID: {aiGenerationId}</p>}
                 </div>
-              ) : aiScenes.length === 3 ? (
+              ) : aiScenes.length >= 2 ? (
                 <div className="space-y-3">
-                  <p className="text-xs text-gray-300 font-bold">🎬 Revisa las 3 escenas (regenera la que no te guste)</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['hook', 'solution', 'outcome'].map((role) => {
-                      const sc = aiScenes.find((s: any) => s.role === role) || {};
-                      const labels: any = { hook: '1 · Gancho', solution: '2 · La clase', outcome: '3 · Resultado' };
+                  <p className="text-xs text-gray-300 font-bold">🎬 Revisa las {aiScenes.length} escenas (regenera la que no te guste)</p>
+                  {aiPlan?.hook_text && <p className="text-[10px] text-gray-400">Gancho: <span className="text-white">{aiPlan.hook_text}</span>{aiPlan.accent ? <> · 🗣️ {aiPlan.accent}</> : null}</p>}
+                  <div className={`grid gap-2 ${aiScenes.length <= 3 ? 'grid-cols-3' : 'grid-cols-3 md:grid-cols-6'}`}>
+                    {aiScenes.map((sc: any, i: number) => {
+                      const planSc = (aiPlan?.scenes || [])[i] || {};
+                      const vertical = (aiPlan?.format || 'cinematic') !== 'cinematic';
                       return (
-                        <div key={role} className="rounded-lg overflow-hidden border border-white/10 bg-white/[0.02]">
+                        <div key={i} className="rounded-lg overflow-hidden border border-white/10 bg-white/[0.02]">
                           {sc.image_url
-                            ? <img src={sc.image_url} alt={role} className="w-full aspect-square object-cover" />
-                            : <div className="w-full aspect-square flex items-center justify-center text-[10px] text-gray-600">sin imagen</div>}
+                            ? <img src={sc.image_url} alt={sc.role} className={`w-full ${vertical ? 'aspect-[9/16]' : 'aspect-square'} object-cover`} />
+                            : <div className={`w-full ${vertical ? 'aspect-[9/16]' : 'aspect-square'} flex items-center justify-center text-[10px] text-gray-600`}>sin imagen</div>}
                           <div className="p-1.5">
-                            <p className="text-[9px] text-gray-400 mb-1">{labels[role]}</p>
-                            <button onClick={() => regenerateScene(role)} disabled={!!regenRole}
+                            <p className="text-[9px] text-gray-400 mb-1">{sceneLabel(sc, i)}{planSc.seconds ? ` · ${planSc.seconds}s` : ''}</p>
+                            {planSc.dialogue && <p className="text-[9px] text-gray-300 italic mb-1 line-clamp-3" title={planSc.dialogue}>“{planSc.dialogue}”</p>}
+                            <button onClick={() => regenerateScene(i)} disabled={!!regenRole}
                               className="w-full text-[10px] bg-white/5 hover:bg-white/10 border border-white/10 rounded px-1 py-1 disabled:opacity-50">
-                              {regenRole === role ? '⏳...' : '🔄 Regenerar'}
+                              {regenRole === String(i) ? '⏳...' : '🔄 Regenerar'}
                             </button>
                           </div>
                         </div>
@@ -631,7 +715,7 @@ export default function VideoWizardPage() {
               ) : (
                 <button onClick={generateScenes} disabled={!selectedSlug}
                   className="w-full bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-sm font-bold disabled:opacity-50">
-                  🎨 Generar las 3 escenas
+                  {aiFormat === 'cinematic' ? '🎨 Generar las 3 escenas' : `🎨 Escribir guion y generar ${aiSceneCount} clips`}
                 </button>
               )}
             </>
